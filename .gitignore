@@ -1,0 +1,9 @@
+*.d
+*.o
+s3tool
+*~
+libminiocpp.so
+*.a
+*.so
+build/
+*.pc
