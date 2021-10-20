@@ -41,6 +41,7 @@ class S3Client {
   void Submit(const std::string & url, const std::string & uri,
               Http::Method method, Minio::S3ClientIO & io, S3Connection ** conn);
 
+  static std::string ParseCreateMultipartUpload(const std::string & xml);
   static void ParseBucketsList(std::list<Minio::S3::Bucket> & buckets, const std::string & xml);
   static void ParseObjectsList(std::list<Minio::S3::Object> & objects, const std::string & xml);
 
@@ -59,11 +60,6 @@ class S3Client {
   // Upload from local path.
   void PutObject(const std::string & bkt, const std::string & key,
                  const std::string & localpath,
-                 Minio::S3ClientIO & io, S3Connection ** reqPtr = NULL);
-
-  // Upload from io stream to a specific part number for multipart upload_id.
-  void PutObject(const std::string & bkt, const std::string & key,
-                 const int & part_number, const std::string & upload_id,
                  Minio::S3ClientIO & io, S3Connection ** reqPtr = NULL);
 
   // Get object data (GET /key) with specific partNumber.
@@ -100,6 +96,33 @@ class S3Client {
 
   // Remove bucket (bucket.s3.amazonaws.com DELETE /)
   void RemoveBucket(const std::string & bkt, Minio::S3ClientIO & io, S3Connection ** reqPtr = NULL);
+
+  // Multipart APIs
+  // Upload from io stream to a specific part number for multipart upload_id.
+  Minio::S3::CompletePart PutObject(const std::string & bkt,
+                                    const std::string & key,
+                                    const int & part_number,
+                                    const std::string & upload_id,
+                                    Minio::S3ClientIO & io,
+                                    S3Connection ** reqPtr = NULL);
+
+
+  std::string CreateMultipartUpload(const std::string & bkt,
+                                    const std::string & key,
+                                    Minio::S3ClientIO & io,
+                                    S3Connection ** reqPtr = NULL);
+
+  void AbortMultipartUpload(const std::string & bkt,
+                            const std::string & key,
+                            const std::string & upload_id,
+                            S3Connection ** reqPtr = NULL);
+
+  void CompleteMultipartUpload(const std::string & bkt,
+                               const std::string & key,
+                               const std::string & upload_id,
+                               const std::list<Minio::S3::CompletePart> & parts,
+                               Minio::S3ClientIO & io,
+                               S3Connection ** reqPtr = NULL);
 };
 
 #endif /* _S3_H */

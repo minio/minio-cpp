@@ -20,9 +20,13 @@
 #include <vector>
 #include <map>
 #include <sstream>
+#include <algorithm>
+#include <cctype>
+#include <locale>
 
 #include <curlpp/cURLpp.hpp>
 #include <curlpp/Options.hpp>
+#include <pugixml.hpp>
 
 #include "s3.h"
 #include "s3_signature_v2.h"
@@ -46,7 +50,7 @@ namespace Minio
   }
 }
 
-S3Client::S3Client(const string & endpoint, const string & kid, const string & sk):
+S3Client::S3Client(const std::string & endpoint, const std::string & kid, const std::string & sk):
     endpoint(endpoint),
     keyID(kid), secret(sk),
     verbosity(0)
@@ -58,8 +62,14 @@ S3Client::~S3Client()
   // Teardown connections, etc
 }
 
+std::string S3Client::ParseCreateMultipartUpload(const std::string & xml)
+{
+  string data;
+  ExtractXMLXPath(data, "/InitiateMultipartUploadResult/UploadId", xml);
+  return data;
+}
 
-void S3Client::ParseBucketsList(list<Minio::S3::Bucket> & buckets, const string & xml)
+void S3Client::ParseBucketsList(list<Minio::S3::Bucket> & buckets, const std::string & xml)
 {
   string::size_type crsr = 0;
   string data;
@@ -79,7 +89,7 @@ void S3Client::ParseBucketsList(list<Minio::S3::Bucket> & buckets, const string 
   }
 }
 
-void S3Client::ParseObjectsList(list<Minio::S3::Object> & objects, const string & xml)
+void S3Client::ParseObjectsList(list<Minio::S3::Object> & objects, const std::string & xml)
 {
   string::size_type crsr = 0;
   string data;
@@ -114,12 +124,12 @@ void S3Client::ParseObjectsList(list<Minio::S3::Object> & objects, const string 
 void S3Client::ListObjects(Minio::S3::Bucket & bucket, S3Connection ** conn)
 {
   std::ostringstream objectList;
-  S3ClientIO io(NULL, &objectList);
+  Minio::S3ClientIO io(NULL, &objectList);
   ListObjects(bucket.name, io, conn);
   ParseObjectsList(bucket.objects, objectList.str());
 }
 
-string S3Client::SignV2Request(const S3ClientIO & io, const string & uri, const string & mthd)
+string S3Client::SignV2Request(const Minio::S3ClientIO & io, const std::string & uri, const std::string & mthd)
 {
   std::ostringstream sigstrm;
   sigstrm << mthd << "\n";
@@ -166,8 +176,8 @@ struct HeaderCB {
   size_t operator()(char * buf, size_t size, size_t nmemb) {return io.HandleHeader(buf, size, nmemb);}
 };
 
-void S3Client::Submit(const string & url, const string & uri,
-                      Method method, S3ClientIO & io,
+void S3Client::Submit(const std::string & url, const std::string & uri,
+                      Method method, Minio::S3ClientIO & io,
                       S3Connection ** reqPtr)
 {
   string signature;
@@ -219,9 +229,22 @@ void S3Client::Submit(const string & url, const string & uri,
         request.setOpt(new cURLpp::Options::HttpGet(true));
         break;
       case Method::HTTP_PUT:
-        request.setOpt(new cURLpp::Options::Upload(true));
-        request.setOpt(new cURLpp::Options::ReadFunction(cURLpp::Types::ReadFunctionFunctor(ReadDataCB(io))));
-        request.setOpt(new cURLpp::Options::InfileSize(io.bytesToPut));
+        if (io.bytesToPut > 0) {
+          request.setOpt(new cURLpp::Options::Put(true));
+          request.setOpt(new cURLpp::Options::InfileSize(io.bytesToPut));
+          request.setOpt(new cURLpp::Options::ReadFunction(cURLpp::Types::ReadFunctionFunctor(ReadDataCB(io))));
+        } else {
+          request.setOpt(new cURLpp::Options::CustomRequest(methodToString(method)));
+        }
+        break;
+      case Method::HTTP_POST:
+        if (io.bytesToPut > 0) {
+          request.setOpt(new cURLpp::Options::Post(true));
+          request.setOpt(new cURLpp::Options::PostFieldSize(io.bytesToPut));
+          request.setOpt(new cURLpp::Options::ReadFunction(cURLpp::Types::ReadFunctionFunctor(ReadDataCB(io))));
+        } else {
+          request.setOpt(new cURLpp::Options::CustomRequest(methodToString(method)));
+        }
         break;
       case Method::HTTP_HEAD:
         request.setOpt(new cURLpp::Options::Header(true));
@@ -254,8 +277,8 @@ void S3Client::Submit(const string & url, const string & uri,
   }
 }
 
-void S3Client::PutObject(const string & bkt, const string & key,
-                         S3ClientIO & io, S3Connection ** reqPtr)
+void S3Client::PutObject(const std::string & bkt, const std::string & key,
+                         Minio::S3ClientIO & io, S3Connection ** reqPtr)
 {
   std::ostringstream urlstrm;
   urlstrm <<  endpoint << PathSeparator << bkt << PathSeparator << key;
@@ -277,9 +300,9 @@ void S3Client::PutObject(const string & bkt, const string & key,
   Submit(urlstrm.str(), bkt + PathSeparator + key, Method::HTTP_PUT, io, reqPtr);
 }
 
-void S3Client::PutObject(const string & bkt, const string & key,
-                         const string & path,
-                         S3ClientIO & io, S3Connection ** reqPtr)
+void S3Client::PutObject(const std::string & bkt, const std::string & key,
+                         const std::string & path,
+                         Minio::S3ClientIO & io, S3Connection ** reqPtr)
 {
   ifstream fin(path.c_str(), ios_base::binary | ios_base::in);
   if(!fin) {
@@ -291,12 +314,39 @@ void S3Client::PutObject(const string & bkt, const string & key,
   fin.close();
 }
 
-void S3Client::PutObject(const string & bkt, const string & key,
-                         const int & part_number, const string & upload_id,
-                         S3ClientIO & io, S3Connection ** reqPtr)
+// trim from start (in place)
+static inline void ltrim(std::string &s) {
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    }));
+}
+
+// trim from end (in place)
+static inline void rtrim(std::string &s) {
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    }).base(), s.end());
+}
+
+// trim from both ends (in place)
+static inline void trim(std::string &s) {
+    ltrim(s);
+    rtrim(s);
+}
+
+Minio::S3::CompletePart S3Client::PutObject(const std::string & bkt,
+                                            const std::string & key,
+                                            const int & partNumber,
+                                            const std::string & upload_id,
+                                            Minio::S3ClientIO & io,
+                                            S3Connection ** reqPtr)
 {
+  if(partNumber <= 0)
+    throw std::invalid_argument( "received invalid value" );
   std::ostringstream urlstrm;
-  urlstrm <<  endpoint << PathSeparator << bkt << PathSeparator << key;
+  urlstrm <<  endpoint << PathSeparator
+          << bkt << PathSeparator << key
+          << "?partNumber="+ std::to_string(partNumber) + "&uploadId=" + upload_id;
 
   istream & fin = *io.istrm;
   uint8_t md5[EVP_MAX_MD_SIZE];
@@ -313,37 +363,112 @@ void S3Client::PutObject(const string & bkt, const string & key,
   io.bytesToPut = static_cast<size_t>(endOfFile - startOfFile);
 
   Submit(urlstrm.str(), bkt + PathSeparator + key +
-         "?partNumber="+ std::to_string(part_number) + "&uploadId=" + upload_id,
+         "?partNumber="+ std::to_string(partNumber) +
+         "&uploadId=" + upload_id,
          Method::HTTP_PUT, io, reqPtr);
+
+  Minio::S3::CompletePart complPart;
+  complPart.eTag = io.respHeaders.GetWithDefault("ETag", "");
+  trim(complPart.eTag);
+  complPart.partNumber = partNumber;
+  return complPart;
 }
 
-void S3Client::GetObject(const string & bkt, const string & key,
-                         const int & part_number,
-                         S3ClientIO & io, S3Connection ** reqPtr)
+std::string S3Client::CreateMultipartUpload(const std::string & bkt,
+                                            const std::string & key,
+                                            Minio::S3ClientIO & io,
+                                            S3Connection ** reqPtr)
 {
   std::ostringstream urlstrm;
-  urlstrm <<  endpoint << PathSeparator << bkt << PathSeparator << key;
-  Submit(urlstrm.str(), bkt + PathSeparator + key + "?partNumber=" + std::to_string(part_number), Method::HTTP_GET, io, reqPtr);
+  std::ostringstream uploadIDResult;
+  io.ostrm = &uploadIDResult;
+
+  urlstrm <<  endpoint << PathSeparator
+          << bkt << PathSeparator << key
+          << "?uploads";
+
+  Submit(urlstrm.str(), bkt + PathSeparator + key + "?uploads",
+         Method::HTTP_POST, io, reqPtr);
+
+  return ParseCreateMultipartUpload(uploadIDResult.str());
 }
 
-void S3Client::GetObject(const string & bkt, const string & key,
-                         S3ClientIO & io, S3Connection ** reqPtr)
+void S3Client::AbortMultipartUpload(const std::string & bkt,
+                                    const std::string & key,
+                                    const std::string & upload_id,
+                                    S3Connection ** reqPtr)
+{
+  std::ostringstream urlstrm;
+  Minio::S3ClientIO io;
+  urlstrm <<  endpoint << PathSeparator
+          << bkt << PathSeparator << key
+          << "?uploadId=" + upload_id;
+
+  Submit(urlstrm.str(), bkt + PathSeparator + key +
+         "?uploadId=" + upload_id,
+         Method::HTTP_DELETE, io, reqPtr);
+}
+
+void S3Client::CompleteMultipartUpload(const std::string & bkt,
+                                       const std::string & key,
+                                       const std::string & upload_id,
+                                       const std::list<Minio::S3::CompletePart> & parts,
+                                       Minio::S3ClientIO & io,
+                                       S3Connection ** reqPtr)
+{
+  std::ostringstream urlstrm;
+  urlstrm <<  endpoint << PathSeparator
+          << bkt << PathSeparator << key
+          << "?uploadId=" + upload_id;
+
+  std::string completeMultipartRequest;
+  completeMultipartRequest.append("<CompleteMultipartUpload>");
+  for (auto& item : parts) {
+    completeMultipartRequest.append("<Part>");
+    completeMultipartRequest.append("<PartNumber>" + std::to_string(item.partNumber) + "</PartNumber>");
+    completeMultipartRequest.append("<ETag>"+ item.eTag +"</ETag>");
+    completeMultipartRequest.append("</Part>");
+  }
+  completeMultipartRequest.append("</CompleteMultipartUpload>");
+
+  istringstream body(completeMultipartRequest);
+  io.istrm = &body;
+  io.bytesToPut = completeMultipartRequest.length();
+
+  io.reqHeaders.Update("Content-Type", "application/octet-stream");
+  Submit(urlstrm.str(), bkt + PathSeparator + key +
+         "?uploadId=" + upload_id,
+         Method::HTTP_POST, io, reqPtr);
+}
+
+void S3Client::GetObject(const std::string & bkt,
+                         const std::string & key,
+                         const int & partNumber,
+                         Minio::S3ClientIO & io, S3Connection ** reqPtr)
+{
+  std::ostringstream urlstrm;
+  urlstrm <<  endpoint << PathSeparator << bkt << PathSeparator << key << "?partNumber=" + std::to_string(partNumber);
+  Submit(urlstrm.str(), bkt + PathSeparator + key + "?partNumber=" + std::to_string(partNumber), Method::HTTP_GET, io, reqPtr);
+}
+
+void S3Client::GetObject(const std::string & bkt, const std::string & key,
+                         Minio::S3ClientIO & io, S3Connection ** reqPtr)
 {
   std::ostringstream urlstrm;
   urlstrm <<  endpoint << PathSeparator << bkt << PathSeparator << key;
   Submit(urlstrm.str(), bkt + PathSeparator + key, Method::HTTP_GET, io, reqPtr);
 }
 
-void S3Client::StatObject(const string & bkt, const string & key,
-                          S3ClientIO & io, S3Connection ** reqPtr)
+void S3Client::StatObject(const std::string & bkt, const std::string & key,
+                          Minio::S3ClientIO & io, S3Connection ** reqPtr)
 {
   std::ostringstream urlstrm;
   urlstrm <<  endpoint << PathSeparator << bkt << PathSeparator << key;
   Submit(urlstrm.str(), bkt + PathSeparator + key, Method::HTTP_HEAD, io, reqPtr);
 }
 
-void S3Client::DeleteObject(const string & bkt, const string & key,
-                            S3ClientIO & io, S3Connection ** reqPtr)
+void S3Client::DeleteObject(const std::string & bkt, const std::string & key,
+                            Minio::S3ClientIO & io, S3Connection ** reqPtr)
 {
   std::ostringstream urlstrm;
   urlstrm <<  endpoint << PathSeparator << bkt << PathSeparator << key;
@@ -352,7 +477,7 @@ void S3Client::DeleteObject(const string & bkt, const string & key,
 
 void S3Client::CopyObject(const std::string & srcbkt, const std::string & srckey,
                           const std::string & dstbkt, const std::string & dstkey, bool copyMD,
-                          S3ClientIO & io, S3Connection ** reqPtr)
+                          Minio::S3ClientIO & io, S3Connection ** reqPtr)
 {
   std::ostringstream urlstrm;
   urlstrm <<  endpoint << PathSeparator << dstbkt << PathSeparator << dstkey;
@@ -369,12 +494,12 @@ void S3Client::CopyObject(const std::string & srcbkt, const std::string & srckey
 // Buckets
 //************************************************************************************************
 
-void S3Client::ListBuckets(S3ClientIO & io, S3Connection ** reqPtr)
+void S3Client::ListBuckets(Minio::S3ClientIO & io, S3Connection ** reqPtr)
 {
   Submit(endpoint, "", Method::HTTP_GET, io, reqPtr);
 }
 
-void S3Client::MakeBucket(const string & bkt, S3ClientIO & io, S3Connection ** reqPtr)
+void S3Client::MakeBucket(const std::string & bkt, Minio::S3ClientIO & io, S3Connection ** reqPtr)
 {
   std::ostringstream urlstrm;
   urlstrm <<  endpoint << PathSeparator << bkt;
@@ -382,14 +507,14 @@ void S3Client::MakeBucket(const string & bkt, S3ClientIO & io, S3Connection ** r
   Submit(urlstrm.str(), bkt,Method::HTTP_PUT, io, reqPtr);
 }
 
-void S3Client::ListObjects(const string & bkt, S3ClientIO & io, S3Connection ** reqPtr)
+void S3Client::ListObjects(const std::string & bkt, Minio::S3ClientIO & io, S3Connection ** reqPtr)
 {
   std::ostringstream urlstrm;
   urlstrm <<  endpoint << PathSeparator << bkt;
   Submit(urlstrm.str(), bkt, Method::HTTP_GET, io, reqPtr);
 }
 
-void S3Client::RemoveBucket(const string & bkt, S3ClientIO & io, S3Connection ** reqPtr)
+void S3Client::RemoveBucket(const std::string & bkt, Minio::S3ClientIO & io, S3Connection ** reqPtr)
 {
   std::ostringstream urlstrm;
   urlstrm <<  endpoint << PathSeparator << bkt;

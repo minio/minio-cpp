@@ -42,6 +42,8 @@ namespace Minio
       std::string::size_type crsr = 0;
       return ExtractXML(data, crsr, tag, xml);
     }
+
+    bool ExtractXMLXPath(std::string & data, const std::string & xpath, const std::string & xml);
   }
 
   namespace SignatureV2

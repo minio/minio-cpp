@@ -17,6 +17,17 @@ project(miniocpp)
 
 cmake_minimum_required(VERSION 3.10)
 
+macro(set_globals)
+  set(CMAKE_BUILD_TYPE_INIT Release)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+  set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_DEBUG} --coverage")
+  set(CMAKE_EXE_LINKER_FLAGS_COVERAGE "${CMAKE_EXE_LINKER_FLAGS_DEBUG} --coverage")
+  set(CMAKE_SHARED_LINKER_FLAGS_COVERAGE "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} --coverage")
+  set(CMAKE_MODULE_LINKER_FLAGS_COVERAGE "${CMAKE_MODULE_LINKER_FLAGS_DEBUG} --coverage")
+endmacro()
+
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -35,21 +46,35 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/curlpp/include)
 # Look for required libraries
 SET(requiredlibs)
 
-FIND_PACKAGE(CURL)
+include(FindCURL)
+include(FindOpenSSL)
+include("${CMAKE_CURRENT_LIST_DIR}/cmake/modules/FindPugiXML.cmake")
+
+find_package(CURL REQUIRED)
 IF(CURL_FOUND)
-  INCLUDE_DIRECTORIES(${CURL_INCLUDE_DIR})
+  INCLUDE_DIRECTORIES(${CURL_INCLUDE_DIRS})
   SET(requiredlibs ${requiredlibs} ${CURL_LIBRARIES} ${curlpp_BINARY_DIR}/libcurlpp.a)
 ELSE(CURL_FOUND)
   MESSAGE(FATAL_ERROR "Could not find the CURL library and development files.")
 ENDIF(CURL_FOUND)
 
-FIND_PACKAGE(OpenSSL)
+find_package(OpenSSL REQUIRED)
 IF(OPENSSL_FOUND)
   INCLUDE_DIRECTORIES(${OPENSSL_INCLUDE_DIR})
   SET(requiredlibs ${requiredlibs} ${OPENSSL_LIBRARIES} ${LIBCRYPTO}) # bugfix, because libcrypto is not found automatically
 ELSE(OPENSSL_FOUND)
   MESSAGE(FATAL_ERROR "Could not find the OpenSSL library and development files.")
 ENDIF(OPENSSL_FOUND)
+
+find_package(PugiXML REQUIRED)
+IF(PUGIXML_FOUND)
+  INCLUDE_DIRECTORIES(${PUGIXML_INCLUDE_DIR})
+  SET(requiredlibs ${requiredlibs} ${PUGIXML_LIBRARIES})
+ELSE(PUGIXML_FOUND)
+  MESSAGE(FATAL_ERROR "Could not find the pugixml library and development files.")
+ENDIF(PUGIXML_FOUND)
+
+message(STATUS "Found required libs: ${requiredlibs}")
 
 INCLUDE (CheckIncludeFiles)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -61,6 +86,29 @@ SET(MINIOCPP_PATCH_VERSION "1")
 add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(examples)
+
+option(BUILD_DOC "Build documentation" ON)
+
+# check if Doxygen is installed
+find_package(Doxygen)
+if (DOXYGEN_FOUND)
+    # set input and output files
+    set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in)
+    set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+
+    # request to configure the file
+    configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
+    message("Doxygen build started")
+
+    # note the option ALL which allows to build the docs together with the application
+    add_custom_target(doc_doxygen ALL
+        COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Generating API documentation with Doxygen"
+        VERBATIM )
+else (DOXYGEN_FOUND)
+  message("Doxygen need to be installed to generate the doxygen documentation")
+endif (DOXYGEN_FOUND)
 
 configure_file(miniocpp.pc.in miniocpp.pc @ONLY)
 install(FILES ${CMAKE_BINARY_DIR}/miniocpp.pc DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig)

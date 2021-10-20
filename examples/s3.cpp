@@ -1,18 +1,18 @@
-/*
- * Copyright 2008 28msec, Inc.
- * 
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * 
- * http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// MinIO C++ Library for Amazon S3 Compatible Cloud Storage
+// Copyright 2021 MinIO, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include <iostream>
 #include <fstream>
 #include <stdlib.h>
@@ -76,7 +76,7 @@ bool get ( S3Client clnt, const std::string& aBucketName, const std::string& aKe
 {
   S3ClientIO objinfo_io;
   clnt.StatObject(aBucketName, aKey, objinfo_io);
-  
+
   ofstream fout(aFileName.c_str(), ios_base::binary | ios_base::out);
   S3ClientIO io(NULL, &fout);
   io.bytesToGet = objinfo_io.respHeaders.GetWithDefault("Content-Length", 0);
@@ -84,6 +84,49 @@ bool get ( S3Client clnt, const std::string& aBucketName, const std::string& aKe
   if(io.Failure()) {
     std::cerr << "ERROR: failed to get object" << endl;
     std::cerr << "response:\n" << io << endl;
+    return false;
+  }
+  return true;
+}
+
+bool multipart ( S3Client clnt, const std::string& aBucketName, const std::string& aKey, const std::string& aFileName)
+{
+  S3ClientIO io;
+  io.reqHeaders.Update("Content-Type", "text/plain"); // set content-type
+  std::string upload_id = clnt.CreateMultipartUpload(aBucketName, aKey, io);
+  if(io.Failure()) {
+    std::cerr << "ERROR: failed to put object" << endl;
+    std::cerr << "response:\n" << io << endl;
+    std::cerr << "response body:\n" << io.response.str() << endl;
+    return false;
+  }
+  ifstream fin(aFileName.c_str(), ios_base::binary | ios_base::in);
+  if(!fin) {
+    clnt.AbortMultipartUpload(aBucketName, aKey, upload_id);
+    cerr << "Could not read file " << aFileName << endl;
+    return false;
+  }
+  io.Reset();
+  io.istrm = &fin;
+  // upload first part.
+  Minio::S3::CompletePart complPart = clnt.PutObject(aBucketName, aKey, 1, upload_id, io);
+  fin.close();
+  if(io.Failure()) {
+    std::cerr << "ERROR: failed to put object" << endl;
+    std::cerr << "response:\n" << io << endl;
+    std::cerr << "response body:\n" << io.response.str() << endl;
+    clnt.AbortMultipartUpload(aBucketName, aKey, upload_id);
+    return false;
+  }
+  std::list<Minio::S3::CompletePart> parts;
+  parts.push_back(complPart);
+  io.Reset();
+  clnt.CompleteMultipartUpload(aBucketName, aKey, upload_id, parts, io);
+  if(io.Failure()) {
+    std::cerr << "ERROR: failed to put object" << endl;
+    std::cerr << "response:\n" << io << endl;
+    std::cerr << "response body:\n" << io.response.str() << endl;
+    clnt.AbortMultipartUpload(aBucketName, aKey, upload_id);
     return false;
   }
   return true;
@@ -103,6 +146,7 @@ usage()
   std::cout << "          \"put\": put a file on s3" << std::endl;
   std::cout << "          \"get\": get a file from s3" << std::endl;
   std::cout << "          \"del\": delete a file from s3" << std::endl;
+  std::cout << "          \"multipart\": multipart API calls"<< std::endl;
   std::cout << "  -f filename: name of file"  << std::endl;
   std::cout << "  -n name: name of bucket"  << std::endl;
   std::cout << "  -k key: key of the object" << std::endl;
@@ -161,21 +205,31 @@ main ( int argc, char** argv )
       default:
         exit(1);
     }
-  
+
   if (!lAccessKeyId)
-    lAccessKeyId = getenv("AWS_ACCESS_KEY");
+    lAccessKeyId = getenv("ACCESS_KEY");
 
   if (!lSecretAccessKey)
-    lSecretAccessKey = getenv("AWS_SECRET_ACCESS_KEY");
+    lSecretAccessKey = getenv("SECRET_KEY");
+
+  if (!lEndpoint)
+    lEndpoint = getenv("ENDPOINT");
 
   if (!lAccessKeyId) {
     std::cerr << "No Access Key given" << std::endl;
-    std::cerr << "Either use -i as a command line argument or set AWS_ACCESS_KEY as an environmental variable" << std::endl;
+    std::cerr << "Either use -i as a command line argument or set ACCESS_KEY as an environmental variable" << std::endl;
     exit(1);
   }
+
   if (!lSecretAccessKey) {
     std::cerr << "No Secret Access Key given" << std::endl;
-    std::cerr << "Either use -s as a command line argument or set AWS_SECRET_ACCESS_KEY as an environmental variable" << std::endl;
+    std::cerr << "Either use -s as a command line argument or set SECRET_KEY as an environmental variable" << std::endl;
+    exit(1);
+  }
+
+  if (!lEndpoint) {
+    std::cerr << "No Endpoint given" << std::endl;
+    std::cerr << "Either use -e as a command line argument or set ENDPOINT as an environmental variable" << std::endl;
     exit(1);
   }
 
@@ -248,8 +302,24 @@ main ( int argc, char** argv )
       exit(1);
     }
     del(s3, lBucketName, lKey);
-  }
-  else {
+  } else if ( lActionString.compare ( "multipart" ) == 0) {
+    if (!lBucketName) {
+      std::cerr << "No bucket name parameter specified." << std::endl;
+      std::cerr << "Use -n as a command line argument." << std::endl;
+      exit(1);
+    }
+    if (!lKey) {
+      std::cerr << "No key parameter specified." << std::endl;
+      std::cerr << "Use -k as a command line argument." << std::endl;
+      exit(1);
+    }
+    if (!lFileName) {
+      std::cerr << "No file specified." << std::endl;
+      std::cerr << "Use -f as a command line argument" << std::endl;
+      exit(1);
+    }
+    multipart(s3, lBucketName, lKey, lFileName);
+  } else {
     std::cerr << "Invalid action: \"" << lActionString << "\"." << std::endl;
   }
 }

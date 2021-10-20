@@ -19,5 +19,49 @@ In order to build this project, you need the Cross-Platform Make CMake 3.10 or h
 ```
 git clone https://github.com/minio/minio-cpp
 cd minio-cpp; git submodule update; mkdir build; cmake ../;
-make -j4
+make;
 ```
+
+## Example code
+```c++
+#include <iostream>
+#include <fstream>
+#include <stdlib.h>
+#include <getopt.h>
+#include <s3.h>
+
+using namespace Minio;
+
+int
+main ( int argc, char** argv )
+{
+  S3Client s3("https://play.min.io:9000", "minioadmin", "minioadmin");
+  S3ClientIO io;
+  s3.MakeBucket("newbucket", io);
+  if(io.Failure()) {
+    std::cerr << "ERROR: failed to create bucket" << endl;
+    std::cerr << "response:\n" << io << endl;
+    std::cerr << "response body:\n" << io.response.str() << endl;
+    return -1;
+  }
+  return 0;
+}
+```
+
+## Run an example
+Following example runs 'multipart' upload, uploads a single part. You would have to choose a local file to upload for `-f`, and also remote bucket to upload the object to as `-n` and final object name in the bucket as `-k`.
+
+```
+export ACTION="multipart"
+export ACCESS_KEY=minioadmin
+export SECRET_KEY=minioadmin
+export ENDPOINT="https://play.min.io:9000"
+
+./examples/s3 -a ${ACTION} -f <local_filename_to_upload> \
+              -n <remote_bucket> -k <remote_objectname>
+```
+
+Please choose a `<remote_bucket>` that exists.
+
+## License
+This SDK is distributed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0), see [LICENSE](https://github.com/minio/minio-cpp/blob/master/LICENSE) for more information.

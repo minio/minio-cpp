@@ -21,33 +21,38 @@
 
 namespace Minio
 {
-    namespace S3
-    {
-        // Instances of this class represent objects stored on Amazon S3.
-        struct Object {
-           std::string key;
-           std::string lastModified;
-           std::string eTag;
-           std::string size;
+  namespace S3
+  {
+    // Instances of this class represent objects stored on Amazon S3.
+    struct Object {
+      std::string key;
+      std::string lastModified;
+      std::string eTag;
+      std::string size;
     
-           std::string ownerID;
-           std::string ownerDisplayName;
+      std::string ownerID;
+      std::string ownerDisplayName;
     
-           std::string storageClass;
+      std::string storageClass;
     
-           Object() {}
-           size_t GetSize() const {return strtol(size.c_str(), NULL, 0);}
-        };
+      Object() {}
+      size_t GetSize() const {return strtol(size.c_str(), NULL, 0);}
+    };
 
-        struct Bucket {
-           std::string name;
-           std::string creationDate;
+    struct Bucket {
+      std::string name;
+      std::string creationDate;
 
-           std::list<Object> objects;
+      std::list<Object> objects;
           
-           Bucket(const std::string & nm, const std::string & dt): name(nm), creationDate(dt) {}
-        };
-    }
+      Bucket(const std::string & nm, const std::string & dt): name(nm), creationDate(dt) {}
+    };
+
+    struct CompletePart {
+      std::string eTag;
+      int partNumber;
+    };
+  }
 }
 
 #endif /* _S3_TYPES_H */

@@ -19,6 +19,7 @@
 #include <map>
 #include <cmath>
 
+#include "pugixml.hpp"
 #include "s3_signature_v2.h"
 
 using namespace std;
@@ -103,7 +104,25 @@ bool Minio::XML::ExtractXML(std::string & data, std::string::size_type & crsr, c
     crsr = crsr2 + endTag.size();
     return true;
   }
-  data = "";
+  return false;
+}
+
+bool Minio::XML::ExtractXMLXPath(std::string & data, const std::string & xpath, const std::string & xml)
+{
+  pugi::xml_document doc;
+  pugi::xml_parse_result result = doc.load_string(xml.c_str());
+  if (result) {
+    pugi::xpath_node_set nodes = doc.select_nodes(xpath.c_str());
+    for (pugi::xpath_node_set::const_iterator it = nodes.begin(); it != nodes.end(); ++it)
+    {
+      pugi::xpath_node node = *it;
+      for (pugi::xml_node child = node.node().first_child(); child; child = child.next_sibling())
+        {
+          data = child.value();
+          return true;
+        }
+    }
+  }
   return false;
 }
 
