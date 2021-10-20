@@ -291,6 +291,40 @@ void S3Client::PutObject(const string & bkt, const string & key,
   fin.close();
 }
 
+void S3Client::PutObject(const string & bkt, const string & key,
+                         const int & part_number, const string & upload_id,
+                         S3ClientIO & io, S3Connection ** reqPtr)
+{
+  std::ostringstream urlstrm;
+  urlstrm <<  endpoint << PathSeparator << bkt << PathSeparator << key;
+
+  istream & fin = *io.istrm;
+  uint8_t md5[EVP_MAX_MD_SIZE];
+  size_t mdLen = ComputeMD5(md5, fin);
+  io.reqHeaders.Update("Content-MD5", EncodeB64(md5, mdLen));
+
+  fin.clear();
+  fin.seekg(0, std::ios_base::end);
+  ifstream::pos_type endOfFile = fin.tellg();
+  fin.seekg(0, std::ios_base::beg);
+  ifstream::pos_type startOfFile = fin.tellg();
+
+  io.bytesReceived = 0;
+  io.bytesToPut = static_cast<size_t>(endOfFile - startOfFile);
+
+  Submit(urlstrm.str(), bkt + PathSeparator + key +
+         "?partNumber="+ std::to_string(part_number) + "&uploadId=" + upload_id,
+         Method::HTTP_PUT, io, reqPtr);
+}
+
+void S3Client::GetObject(const string & bkt, const string & key,
+                         const int & part_number,
+                         S3ClientIO & io, S3Connection ** reqPtr)
+{
+  std::ostringstream urlstrm;
+  urlstrm <<  endpoint << PathSeparator << bkt << PathSeparator << key;
+  Submit(urlstrm.str(), bkt + PathSeparator + key + "?partNumber=" + std::to_string(part_number), Method::HTTP_GET, io, reqPtr);
+}
 
 void S3Client::GetObject(const string & bkt, const string & key,
                          S3ClientIO & io, S3Connection ** reqPtr)
