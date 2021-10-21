@@ -1,0 +1,79 @@
+\hypertarget{classMinio_1_1Headers}{}\doxysection{Minio\+::Headers Class Reference}
+\label{classMinio_1_1Headers}\index{Minio::Headers@{Minio::Headers}}
+\doxysubsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_a4a51bc3d5d05dfb3a3f0d53993130179}\label{classMinio_1_1Headers_a4a51bc3d5d05dfb3a3f0d53993130179}} 
+typedef Minio\+::\+Http\+::\+Header\+Value\+Collection\+::iterator {\bfseries iterator}
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_a08a669a1cc14f960bd69fdfb75bc106e}\label{classMinio_1_1Headers_a08a669a1cc14f960bd69fdfb75bc106e}} 
+typedef Minio\+::\+Http\+::\+Header\+Value\+Collection\+::const\+\_\+iterator {\bfseries const\+\_\+iterator}
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_a37487302f8b9abb8d01ff65722a60d58}\label{classMinio_1_1Headers_a37487302f8b9abb8d01ff65722a60d58}} 
+iterator {\bfseries begin} ()
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_a8328f4b0ff44ec110d25d6479f0a2d18}\label{classMinio_1_1Headers_a8328f4b0ff44ec110d25d6479f0a2d18}} 
+const\+\_\+iterator {\bfseries begin} () const
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_a8bae68ee334e0a9ece1321cdaab77804}\label{classMinio_1_1Headers_a8bae68ee334e0a9ece1321cdaab77804}} 
+iterator {\bfseries end} ()
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_a67a385c26331ee7265b4701ad5dbfc85}\label{classMinio_1_1Headers_a67a385c26331ee7265b4701ad5dbfc85}} 
+const\+\_\+iterator {\bfseries end} () const
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_a2449bdae6f507c4bdc0855476f58c95c}\label{classMinio_1_1Headers_a2449bdae6f507c4bdc0855476f58c95c}} 
+std\+::pair$<$ iterator, iterator $>$ {\bfseries equal\+\_\+range} (const std\+::string \&key)
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_ae81e7b295ba59e98e80fe238bd4f82fd}\label{classMinio_1_1Headers_ae81e7b295ba59e98e80fe238bd4f82fd}} 
+std\+::pair$<$ const\+\_\+iterator, const\+\_\+iterator $>$ {\bfseries equal\+\_\+range} (const std\+::string \&key) const
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_a98baf00a8b708609eb54ea2c2ba1f601}\label{classMinio_1_1Headers_a98baf00a8b708609eb54ea2c2ba1f601}} 
+void {\bfseries Clear} ()
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_a7bdd7145cc786e33be3d3e8bced11c0a}\label{classMinio_1_1Headers_a7bdd7145cc786e33be3d3e8bced11c0a}} 
+bool {\bfseries Exists} (const std\+::string \&key) const
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_ab3df1cfc12a90ed6a72d8f59ed036838}\label{classMinio_1_1Headers_ab3df1cfc12a90ed6a72d8f59ed036838}} 
+bool {\bfseries Get} (const std\+::string \&key, std\+::string \&value) const
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_a237e897b45d04d43267b15b2819acd1f}\label{classMinio_1_1Headers_a237e897b45d04d43267b15b2819acd1f}} 
+bool {\bfseries Get} (const std\+::string \&key, double \&value) const
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_a1729146600a813e5f74c74d0397e25f0}\label{classMinio_1_1Headers_a1729146600a813e5f74c74d0397e25f0}} 
+bool {\bfseries Get} (const std\+::string \&key, int \&value) const
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_a33284208c06ba1f35448a39154cf35d4}\label{classMinio_1_1Headers_a33284208c06ba1f35448a39154cf35d4}} 
+bool {\bfseries Get} (const std\+::string \&key, long \&value) const
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_a6275de81a3a6694508c44a6d42f682c2}\label{classMinio_1_1Headers_a6275de81a3a6694508c44a6d42f682c2}} 
+bool {\bfseries Get} (const std\+::string \&key, size\+\_\+t \&value) const
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_ab32b5756a04f92b814ca316aa03637b0}\label{classMinio_1_1Headers_ab32b5756a04f92b814ca316aa03637b0}} 
+const std\+::string \& {\bfseries Get\+With\+Default} (const std\+::string \&key, const std\+::string \&default\+Val) const
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_ae5fbe81d37084b3cc8a191a217a0c3b6}\label{classMinio_1_1Headers_ae5fbe81d37084b3cc8a191a217a0c3b6}} 
+double {\bfseries Get\+With\+Default} (const std\+::string \&key, double default\+Val) const
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_a3fe61829f8ff144fd4fecceb43b53127}\label{classMinio_1_1Headers_a3fe61829f8ff144fd4fecceb43b53127}} 
+int {\bfseries Get\+With\+Default} (const std\+::string \&key, int default\+Val) const
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_a96d60bf5761d0313f16aa841a8f55037}\label{classMinio_1_1Headers_a96d60bf5761d0313f16aa841a8f55037}} 
+long {\bfseries Get\+With\+Default} (const std\+::string \&key, long default\+Val) const
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_a94267c8b495df4ef2fd67009d1e73684}\label{classMinio_1_1Headers_a94267c8b495df4ef2fd67009d1e73684}} 
+size\+\_\+t {\bfseries Get\+With\+Default} (const std\+::string \&key, size\+\_\+t default\+Val) const
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_aa10383b0d10edcd541e1e16469aaf312}\label{classMinio_1_1Headers_aa10383b0d10edcd541e1e16469aaf312}} 
+void {\bfseries Insert} (const std\+::string \&key, const std\+::string \&value)
+\item 
+\mbox{\Hypertarget{classMinio_1_1Headers_a112c82d82108d1ab94ef79e2ae6ffedf}\label{classMinio_1_1Headers_a112c82d82108d1ab94ef79e2ae6ffedf}} 
+void {\bfseries Update} (const std\+::string \&key, const std\+::string \&value)
+\end{DoxyCompactItemize}
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+/home/harsha/mygo/src/github.\+com/minio/minio-\/cpp/include/s3\+\_\+headers.\+h\end{DoxyCompactItemize}
