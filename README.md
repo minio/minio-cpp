@@ -14,12 +14,33 @@ This document assumes that you have a working C++ development environment.
 In order to build this project, you need the Cross-Platform Make CMake 3.10 or higher. You can download it from http://www.cmake.org/. In order to build **miniocpp** you need to have the following libraries and their development headers installed.
 
 - libcurl-dev
-- openssl1.1.x 
+- libssl-dev (OpenSSL 1.1.x, preferably)
+- doxygen
+  - `dnf install doxygen -y` on CentOS 8.x
+  - `apt install doxygen -y` on Ubuntu 20.04
+- pugixml
+  - `dnf install pugixml-devel -y` on CentOS 8.x
+  - `apt install libpugixml-dev -y` on Ubuntu 20.04
 
 ```
 git clone https://github.com/minio/minio-cpp
-cd minio-cpp; git submodule update; mkdir build; cmake ../;
-make;
+cd minio-cpp; git submodule init; git submodule update; mkdir build; cd build; cmake ../;
+make
+```
+
+If building pugixml from source, then in the pugixml directory e.g. `/src/pugixml-1.11`
+```
+cmake .
+make
+```
+
+Then you may point PUGIXML to point to custom folders.
+```
+git clone https://github.com/minio/minio-cpp
+cd minio-cpp; git submodule init; git submodule update; mkdir build; cd build;
+cmake -DPUGIXML_INCLUDE_DIR=/src/pugixml-1.11/src \
+      -DCMAKE_PREFIX_PATH=/src/pugixml-1.11 ../;
+make
 ```
 
 ## Example code

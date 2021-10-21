@@ -108,6 +108,7 @@ bool multipart ( S3Client clnt, const std::string& aBucketName, const std::strin
   }
   io.Reset();
   io.istrm = &fin;
+
   // upload first part.
   Minio::S3::CompletePart complPart = clnt.PutObject(aBucketName, aKey, 1, upload_id, io);
   fin.close();
@@ -141,10 +142,10 @@ usage()
   std::cout << "  -e AWS Endpoint" << std::endl;
   std::cout << "  -a <action>: action to perform" << std::endl;
   std::cout << "      action is one of the following:" << std::endl;
-  std::cout << "          \"create\": create a bucket" << std::endl;
-  std::cout << "          \"delete\": delete a bucket" << std::endl;
-  std::cout << "          \"put\": put a file on s3" << std::endl;
-  std::cout << "          \"get\": get a file from s3" << std::endl;
+  std::cout << "          \"mb\": create a bucket" << std::endl;
+  std::cout << "          \"rb\": delete a bucket" << std::endl;
+  std::cout << "          \"up\": put a file on s3" << std::endl;
+  std::cout << "          \"down\": get a file from s3" << std::endl;
   std::cout << "          \"del\": delete a file from s3" << std::endl;
   std::cout << "          \"multipart\": multipart API calls"<< std::endl;
   std::cout << "  -f filename: name of file"  << std::endl;
