@@ -22,6 +22,19 @@
 #include "pugixml.hpp"
 #include "s3_signature_v2.h"
 
+#ifdef EVP_MD_CTX_create
+// newer openssl >= 1.1 has _new and has no _init, _cleanup
+// EVP_MD_CTX is an incomplete/opaque type
+# define EVP_CREATE(c) EVP_MD_CTX *c = EVP_MD_CTX_new()
+# define HMAC_CREATE(c) HMAC_CTX *c = HMAC_CTX_new()
+#else
+// older ssl < 1.1 has no _new but allows ctx on stack
+# define EVP_CREATE(c) EVP_MD_CTX _x##c, *c = &_x##c; EVP_MD_CTX_init(c)
+# define EVP_MD_CTX_destroy(c) EVP_MD_CTX_cleanup(c)
+# define HMAC_CREATE(c) HMAC_CTX _x##c, *c = &_x##c; HMAC_CTX_init(c)
+# define HMAC_CTX_free(c) HMAC_CTX_cleanup(c)
+#endif
+
 using namespace std;
 using namespace Minio;
 
@@ -50,7 +63,7 @@ const std::streamsize kMD5_ChunkSize = 16384;
 const char * hexchars = "0123456789abcdef";
 size_t Minio::SignatureV2::ComputeMD5(uint8_t md5[EVP_MAX_MD_SIZE], std::istream & istrm)
 {
-  EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+  EVP_CREATE(ctx);
   EVP_DigestInit_ex(ctx, EVP_md5(), NULL);
 
   uint8_t * buf = new uint8_t[kMD5_ChunkSize];
@@ -63,7 +76,7 @@ size_t Minio::SignatureV2::ComputeMD5(uint8_t md5[EVP_MAX_MD_SIZE], std::istream
 
   unsigned int mdLen;
   EVP_DigestFinal_ex(ctx, md5, &mdLen);
-  EVP_MD_CTX_free(ctx);
+  EVP_MD_CTX_destroy(ctx);
   return mdLen;
 }
 
@@ -82,7 +95,7 @@ std::string Minio::SignatureV2::ComputeMD5(std::istream & istrm)
 // Generate a signature from a message and secret.
 std::string Minio::SignatureV2::GenerateSignature(const std::string & secret, const std::string & stringToSign)
 {
-  HMAC_CTX *ctx = HMAC_CTX_new();
+  HMAC_CREATE(ctx);
   uint8_t md[EVP_MAX_MD_SIZE];
   unsigned int mdLength = 0;
   HMAC_Init_ex(ctx, secret.c_str(), secret.length(), EVP_sha1(), NULL);
