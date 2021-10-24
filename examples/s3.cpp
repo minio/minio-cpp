@@ -19,6 +19,8 @@
 #include <getopt.h>
 #include <s3.h>
 
+static int debug = 0;
+
 using namespace Minio;
 
 bool createBucket( S3Client clnt, const std::string& aBucketName) {
@@ -89,11 +91,13 @@ bool get ( S3Client clnt, const std::string& aBucketName, const std::string& aKe
   return true;
 }
 
-bool multipart ( S3Client clnt, const std::string& aBucketName, const std::string& aKey, const std::string& aFileName)
+bool multipart ( S3Client clnt, const std::string& aBucketName, const std::string& aKey, const std::string& aFileName,
+		unsigned long partsize)
 {
   S3ClientIO io;
   io.reqHeaders.Update("Content-Type", "text/plain"); // set content-type
   std::string upload_id = clnt.CreateMultipartUpload(aBucketName, aKey, io);
+  if (debug) cerr << "created multipart upload " << upload_id << endl;
   if(io.Failure()) {
     std::cerr << "ERROR: failed to put object" << endl;
     std::cerr << "response:\n" << io << endl;
@@ -106,21 +110,49 @@ bool multipart ( S3Client clnt, const std::string& aBucketName, const std::strin
     cerr << "Could not read file " << aFileName << endl;
     return false;
   }
-  io.Reset();
-  io.istrm = &fin;
-
-  // upload first part.
-  Minio::S3::CompletePart complPart = clnt.PutObject(aBucketName, aKey, 1, upload_id, io);
-  fin.close();
-  if(io.Failure()) {
-    std::cerr << "ERROR: failed to put object" << endl;
-    std::cerr << "response:\n" << io << endl;
-    std::cerr << "response body:\n" << io.response.str() << endl;
-    clnt.AbortMultipartUpload(aBucketName, aKey, upload_id);
-    return false;
-  }
+  unsigned long partnum = 1;
+  const size_t BUFSIZE = 16*1024;
+  std::streamsize rdsize = partsize < BUFSIZE ? partsize : BUFSIZE;
   std::list<Minio::S3::CompletePart> parts;
-  parts.push_back(complPart);
+  while (!fin.eof()) {
+    std::stringstream s;
+    char buf[BUFSIZE];
+    unsigned long left = partsize;
+    if (debug) cerr << "reading part " << partnum << endl;
+    while (!fin.eof() and left > 0) {
+       fin.read(buf, left < rdsize ? left : rdsize);
+       if (!fin.eof() && fin.fail()) {
+           clnt.AbortMultipartUpload(aBucketName, aKey, upload_id);
+           cerr << "error reading " << rdsize << " bytes from " << aFileName << " left=" << left << endl;
+           return false;
+       }
+       std::streamsize nread = fin.gcount();
+       left -= nread;
+       s.write(buf, nread);
+       if (s.fail()) {
+           clnt.AbortMultipartUpload(aBucketName, aKey, upload_id);
+           cerr << "could not save " << nread << " bytes to string" << endl;
+           return false;
+       }
+    }
+    unsigned wsize = s.tellp();
+    if (debug) cerr << "got " << wsize << " for " << partnum << endl;
+    s.seekg(0, std::ios_base::beg);
+    io.Reset();
+    io.istrm = &s;
+    // upload first part.
+    Minio::S3::CompletePart complPart = clnt.PutObject(aBucketName, aKey, partnum, upload_id, io);
+    if(io.Failure()) {
+      std::cerr << "ERROR: failed to put part " << partnum << " of " << aFileName << endl;
+      std::cerr << "response:\n" << io << endl;
+      std::cerr << "response body:\n" << io.response.str() << endl;
+      clnt.AbortMultipartUpload(aBucketName, aKey, upload_id);
+      return false;
+    }
+    parts.push_back(complPart);
+    partnum++;
+  }
+  fin.close();
   io.Reset();
   clnt.CompleteMultipartUpload(aBucketName, aKey, upload_id, parts, io);
   if(io.Failure()) {
@@ -151,6 +183,7 @@ usage()
   std::cout << "  -f filename: name of file"  << std::endl;
   std::cout << "  -n name: name of bucket"  << std::endl;
   std::cout << "  -k key: key of the object" << std::endl;
+  std::cout << "  -m multipartsize: max size of each multipart upload" << std::endl;
 }
 
 int
@@ -163,10 +196,11 @@ main ( int argc, char** argv )
   char* lEndpoint = 0;
   char* lFileName = 0;
   char* lKey = 0;
+  unsigned long mSize = 10*1024*1024;
   int c;
   opterr = 0;
 
-  while ((c = getopt (argc, argv, "hi:k:e:a:n:f:p:mx:d:s:")) != -1)
+  while ((c = getopt (argc, argv, "i:s:e:a:n:f:k:m:dh")) != -1)
     switch (c)
     {
       case 'i':
@@ -190,11 +224,12 @@ main ( int argc, char** argv )
       case 'k':
         lKey = optarg;
         break;
-      case 'h': {
-        usage();
-        exit(1);
-        exit(1);
-      }
+      case 'm':
+	mSize = std::stoul(optarg, 0, 0);
+	break;
+      case 'd':
+	debug++;
+	break;
       case '?':
         if (isprint (optopt))
           fprintf (stderr, "Unknown option `-%c'.\n", optopt);
@@ -202,8 +237,10 @@ main ( int argc, char** argv )
           fprintf (stderr,
               "Unknown option character `\\x%x'.\n",
               optopt);
-        exit(1);
+	// FALLTHROUGH
+      case 'h':
       default:
+        usage();
         exit(1);
     }
 
@@ -319,7 +356,7 @@ main ( int argc, char** argv )
       std::cerr << "Use -f as a command line argument" << std::endl;
       exit(1);
     }
-    multipart(s3, lBucketName, lKey, lFileName);
+    multipart(s3, lBucketName, lKey, lFileName, mSize);
   } else {
     std::cerr << "Invalid action: \"" << lActionString << "\"." << std::endl;
   }
