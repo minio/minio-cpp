@@ -178,7 +178,7 @@ usage()
   std::cout << "          \"rb\": delete a bucket" << std::endl;
   std::cout << "          \"up\": put a file on s3" << std::endl;
   std::cout << "          \"down\": get a file from s3" << std::endl;
-  std::cout << "          \"del\": delete a file from s3" << std::endl;
+  std::cout << "          \"rm\": delete a file from s3" << std::endl;
   std::cout << "          \"multipart\": multipart API calls"<< std::endl;
   std::cout << "  -f filename: name of file"  << std::endl;
   std::cout << "  -n name: name of bucket"  << std::endl;

@@ -39,9 +39,11 @@ jobs:
         sudo cp testdata/localhost.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates
         ./minio server /tmp/test-xl/{1...4}/ & sleep 10
         export ENDPOINT=https://localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin
-        ${{github.workspace}}/build/examples/s3 -a mb -n testbucket
-        ${{github.workspace}}/build/examples/s3 -a rb -n testbucket
-
+        ${{github.workspace}}/build/examples/s3 -d -a mb -n bucketname
+        ${{github.workspace}}/build/examples/s3 -d -a up -f ${{github.workspace}}/testdata/localhost.crt -n bucketname -k objectname
+        ${{github.workspace}}/build/examples/s3 -d -a down -f /tmp/local.crt -n bucketname -k objectname
+        ${{github.workspace}}/build/examples/s3 -d -a rm -n bucketname -k objectname
+        ${{github.workspace}}/build/examples/s3 -d -a rb -n bucketname
     - name: Test
       working-directory: ${{github.workspace}}/build
       # Execute tests defined by the CMake configuration.
