@@ -32,7 +32,15 @@ jobs:
 
     - name: Build
       # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+      run: |
+        cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+        wget https://dl.min.io/server/minio/release/linux-amd64/minio && chmod +x minio
+        mkdir -p ~/.minio/certs/ && cp testdata/localhost.crt ~/.minio/certs/public.crt && cp testdata/localhost.key ~/.minio/certs/private.key
+        sudo cp testdata/localhost.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates
+        ./minio server /tmp/test-xl/{1...4}/ & sleep 10
+        export ENDPOINT=https://localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin
+        ${{github.workspace}}/build/examples/s3 -a mb -n testbucket
+        ${{github.workspace}}/build/examples/s3 -a rb -n testbucket
 
     - name: Test
       working-directory: ${{github.workspace}}/build
