@@ -63,7 +63,7 @@ namespace Minio
       httpDate = "";
       result = "";
       numResult = 0;
-      istrm = NULL;
+      istrm = (i == NULL) ? NULL : i;
       ostrm = (o == NULL)? &response : o;
       bytesToGet = 0; bytesReceived = 0;
       bytesToPut = 0; bytesSent = 0;
