@@ -188,23 +188,9 @@ void S3Client::Submit(const std::string & url, const std::string & uri,
     io.printProgress = true;
 
   try {
-    cURLpp::Easy * req;
-    // create new Easy or reset and reuse old one.
-    if(reqPtr == NULL)//no handle, locally create and delete Easy
-      req = new cURLpp::Easy;
-    else {
-      if(*reqPtr == NULL) {
-        // Create new Easy, save in handle
-        req = *reqPtr = new cURLpp::Easy;
-      }
-      else {
-        // reuse old Easy
-        req = *reqPtr;
-        req->reset();
-      }
-    }
-
-    cURLpp::Easy & request = *req;
+    // myCleanup required to do cleanup of used resources (RAII style) as specified in curlpp docs.
+    curlpp::Cleanup myCleanup;
+    curlpp::Easy request;
 
     std::ostringstream authstrm, datestrm, urlstrm;
     datestrm << "Date: " << io.httpDate;
@@ -262,10 +248,6 @@ void S3Client::Submit(const std::string & url, const std::string & uri,
     io.WillStart();
     request.perform();
     io.DidFinish();
-
-    // If created new Easy for this call, delete it.
-    if(reqPtr == NULL)
-      delete req;
   }
   catch(cURLpp::RuntimeError & e) {
     io.error = true;
