@@ -40,8 +40,6 @@ IF (${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
   MESSAGE(FATAL_ERROR "Please create a separate build directory and call CMake again")
 ENDIF (${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
 
-add_subdirectory(curlpp)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/curlpp/include)
 
 # Look for required libraries
 SET(requiredlibs)
@@ -53,10 +51,13 @@ include("${CMAKE_CURRENT_LIST_DIR}/cmake/modules/FindPugiXML.cmake")
 find_package(CURL REQUIRED)
 IF(CURL_FOUND)
   INCLUDE_DIRECTORIES(${CURL_INCLUDE_DIRS})
-  SET(requiredlibs ${requiredlibs} CURL::libcurl curlpp)
+  SET(requiredlibs ${requiredlibs} CURL::libcurl)
 ELSE(CURL_FOUND)
   MESSAGE(FATAL_ERROR "Could not find the CURL library and development files.")
 ENDIF(CURL_FOUND)
+
+find_package(unofficial-curlpp CONFIG REQUIRED)
+SET(requiredlibs ${requiredlibs} unofficial::curlpp::curlpp)
 
 find_package(OpenSSL REQUIRED)
 IF(OPENSSL_FOUND)
