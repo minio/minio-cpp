@@ -16,7 +16,12 @@
 #include <iostream>
 #include <fstream>
 #include <stdlib.h>
-#include <getopt.h>
+#ifdef _WIN32
+  #include <ciso646>
+  #include "win/getopt.h"
+#else
+  #include <getopt.h>
+#endif
 #include <s3.h>
 
 static int debug = 0;
