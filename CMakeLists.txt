@@ -44,8 +44,6 @@ ENDIF (${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
 # Look for required libraries
 SET(requiredlibs)
 
-include(FindCURL)
-include(FindOpenSSL)
 include("${CMAKE_CURRENT_LIST_DIR}/cmake/modules/FindPugiXML.cmake")
 
 find_package(CURL REQUIRED)
