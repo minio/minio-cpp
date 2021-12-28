@@ -84,7 +84,12 @@ SET(MINIOCPP_PATCH_VERSION "1")
 
 add_subdirectory(include)
 add_subdirectory(src)
-add_subdirectory(examples)
+
+
+option(BUILD_EXAMPLES "Build examples" ON)
+if (BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif (BUILD_EXAMPLES)
 
 option(BUILD_DOC "Build documentation" ON)
 
