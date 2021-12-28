@@ -18,6 +18,7 @@
 #include <string>
 #include <map>
 #include <cmath>
+#include <ctime>
 
 #include "pugixml.hpp"
 #include "s3_signature_v2.h"
@@ -143,7 +144,11 @@ std::string Minio::SignatureV2::HTTP_Date()
 {
   time_t t = time(NULL);
   tm gmt;
+#ifdef _WIN32
+  gmtime_s(&gmt, &t);
+#else
   gmtime_r(&t, &gmt);
+#endif
   char bfr[256];
   size_t n = strftime(bfr, 256, "%a, %d %b %Y %H:%M:%S GMT", &gmt);
   bfr[n] = '\0';

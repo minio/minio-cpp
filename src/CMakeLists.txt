@@ -16,7 +16,7 @@
 SET(SRCS s3.cpp s3_http.cpp s3_io.cpp s3_signature_v2.cpp)
 SET(AWS_INSTALL_LIST)
 
-add_library(miniocpp SHARED ${SRCS})
+add_library(miniocpp STATIC ${SRCS})
 target_link_libraries(miniocpp ${requiredlibs})
 
 SET(AWS_INSTALL_LIST ${AWS_INSTALL_LIST} miniocpp)
