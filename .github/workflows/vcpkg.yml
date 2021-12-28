@@ -24,7 +24,8 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: install vcpkg
-        run: git clone https://github.com/microsoft/vcpkg
+        run: |
+             git clone https://github.com/microsoft/vcpkg
              cd vcpkg
              ./bootstrap-vcpkg.sh 
              ./vcpkg install curlpp pugixml
