@@ -26,7 +26,7 @@ jobs:
     - name: Install vcpkg
       run: |
         git clone https://github.com/microsoft/vcpkg
-        ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+        ./vcpkg/bootstrap-vcpkg.sh
         ./vcpkg/vcpkg integrate install
 
     - name: Configure CMake
