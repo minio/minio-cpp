@@ -30,8 +30,6 @@ jobs:
              git clone https://github.com/microsoft/vcpkg
              cd vcpkg
              ./bootstrap-vcpkg.sh 
-             ./vcpkg integrate install
-             ./vcpkg install curlpp pugixml
              
 
       - name: Configure CMake
