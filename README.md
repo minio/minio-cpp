@@ -21,14 +21,12 @@ git clone https://github.com/minio/minio-cpp; cd minio-cpp;
 
 ### Install all the dependent libraries
 ```
-vcpkg install
+cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=${VCPKGDIR}/scripts/buildsystems/vcpkg.cmake
 ```
 
 ### Build `cmake`
 ```
-mkdir build; cd build;
-cmake -DCMAKE_TOOLCHAIN_FILE=${VCPKGDIR}/scripts/buildsystems/vcpkg.cmake ../
-make -j 4
+cmake --build build
 ```
 
 ## Example code

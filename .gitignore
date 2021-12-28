@@ -9,3 +9,4 @@ build/
 *.pc
 .vs
 CMakeSettings.json
+vcpkg_installed/

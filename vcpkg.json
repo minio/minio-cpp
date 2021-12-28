@@ -1,6 +1,7 @@
 {
   "name": "minio-cpp",
-  "version-string": "0.0.1",
+  "version-string": "0.1.0",
+  "description": "The MinIO C++ Client SDK provides simple APIs to access any Amazon S3 compatible object storage",
   "dependencies": [
     "curlpp",
     "pugixml"
