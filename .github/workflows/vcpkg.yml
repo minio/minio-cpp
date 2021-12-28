@@ -22,7 +22,9 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: checkout source code
+        uses: actions/checkout@v2
+        
       - name: install vcpkg
         run: |
              git clone https://github.com/microsoft/vcpkg
@@ -31,8 +33,6 @@ jobs:
              ./vcpkg integrate install
              ./vcpkg install curlpp pugixml
              
-      - name: checkout source code
-        uses: actions/checkout@v2
 
       - name: Configure CMake
         # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
