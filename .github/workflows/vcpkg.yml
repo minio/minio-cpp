@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: CI
+name: VCPKG-CI
 
 # Controls when the workflow will run
 on:
@@ -23,6 +23,12 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: install vcpkg
+        run: git clone https://github.com/microsoft/vcpkg
+             cd vcpkg
+             ./bootstrap-vcpkg.sh 
+             ./vcpkg install curlpp pugixml
+        
       - uses: actions/checkout@v2
 
       - name: Restore artifacts, or setup vcpkg (do not install any package)
