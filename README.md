@@ -11,51 +11,24 @@ This document assumes that you have a working C++ development environment.
 > NOTE: This library is based on original work https://github.com/cjameshuff/s3tools, but has been completely re-implemented since then.
 
 ## Build Instructions
-In order to build this project, you need the Cross-Platform Make CMake 3.10 or higher. You can download it from http://www.cmake.org/. In order to build **miniocpp** you need to have the following libraries and their development headers installed.
-
-- libcurl-dev
-
-  ```
-  vcpkg install curl
-  ```
+In order to build this project, you need the Cross-Platform Make CMake 3.10 or higher, [vcpkg](https://vcpkg.io/en/index.html). Follow the instructions to build **miniocpp**
 
 
-- libssl-dev (OpenSSL 1.1.x, preferably)
-
-  ```
-  vcpkg install openssl
-  ```
-
-- pugixml
-
-  ```
-  vcpkg install pugixml
-  ```
-
-- doxygen
-  - `dnf install doxygen -y` on CentOS 8.x
-  - `apt install doxygen -y` on Ubuntu 20.04
-  
-
+### Clone the project
 ```
-git clone https://github.com/minio/minio-cpp
-cd minio-cpp; mkdir build; cd build; cmake ../;
-make
+git clone https://github.com/minio/minio-cpp; cd minio-cpp;
 ```
 
-If building pugixml from source, then in the pugixml directory e.g. `/src/pugixml-1.11`
+### Install all the dependent libraries
 ```
-cmake .
-make
+vcpkg install
 ```
 
-Then you may point PUGIXML to point to custom folders.
+### Build `cmake`
 ```
-git clone https://github.com/minio/minio-cpp
-cd minio-cpp; git submodule init; git submodule update; mkdir build; cd build;
-cmake -DPUGIXML_INCLUDE_DIR=/src/pugixml-1.11/src \
-      -DCMAKE_PREFIX_PATH=/src/pugixml-1.11 ../;
-make
+mkdir build; cd build;
+cmake -DCMAKE_TOOLCHAIN_FILE=${VCPKGDIR}/scripts/buildsystems/vcpkg.cmake ../
+make -j 4
 ```
 
 ## Example code
