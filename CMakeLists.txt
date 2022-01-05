@@ -115,5 +115,5 @@ else (DOXYGEN_FOUND)
 endif (DOXYGEN_FOUND)
 
 configure_file(miniocpp.pc.in miniocpp.pc @ONLY)
-install(FILES ${CMAKE_BINARY_DIR}/miniocpp.pc DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig)
+install(FILES ${CMAKE_BINARY_DIR}/miniocpp.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
