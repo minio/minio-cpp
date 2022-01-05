@@ -4,23 +4,18 @@
 
 The MinIO C++ Client SDK provides simple APIs to access any Amazon S3 compatible object storage. This quickstart guide will show you how to install the MinIO client SDK, connect to MinIO, and provide a walkthrough for a simple file uploader. For a complete list of APIs and examples, please take a look at the [MinIO C++ Client API Reference](https://minio-cpp.min.io/)
 
-This document assumes that you have a working C++ development environment.
+This document assumes that you have a working C++ development environment. In order to build this project, you need the Cross-Platform Make CMake 3.10 or higher, [vcpkg](https://vcpkg.io/en/index.html).
 
-## Build Instructions
-In order to build this project, you need the Cross-Platform Make CMake 3.10 or higher, [vcpkg](https://vcpkg.io/en/index.html). Follow the instructions to build **miniocpp**
+## Install from `vcpkg`
+```
+vcpkg install minio-cpp
+```
 
-### Clone the project
+## Source build
+
 ```
 git clone https://github.com/minio/minio-cpp; cd minio-cpp;
-```
-
-### Install all the dependent libraries
-```
 cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=${VCPKGDIR}/scripts/buildsystems/vcpkg.cmake
-```
-
-### Build `cmake`
-```
 cmake --build build
 ```
 
