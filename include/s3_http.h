@@ -21,29 +21,26 @@
 
 using namespace std;
 
-namespace Minio
-{
-    namespace Http
-    {
-        /**
-         * Models Http methods.
-         */
-        enum class Method
-        {
-            HTTP_GET,
-            HTTP_POST,
-            HTTP_DELETE,
-            HTTP_PUT,
-            HTTP_HEAD,
-            HTTP_PATCH
-        };
+namespace Minio {
+namespace Http {
+/**
+ * Models Http methods.
+ */
+enum class Method {
+  HTTP_GET,
+  HTTP_POST,
+  HTTP_DELETE,
+  HTTP_PUT,
+  HTTP_HEAD,
+  HTTP_PATCH
+};
 
-        std::string methodToString(Method enum_val);
+std::string methodToString(Method enum_val);
 
-        const std::string PathSeparator = "/";
+const std::string PathSeparator = "/";
 
-        typedef std::multimap<std::string, std::string> HeaderValueCollection;
-    } // namespace Http
-} // namespace Minio
+typedef std::multimap<std::string, std::string> HeaderValueCollection;
+}  // namespace Http
+}  // namespace Minio
 
 #endif /* _S3_HTTP_H */

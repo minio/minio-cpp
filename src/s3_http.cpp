@@ -15,22 +15,20 @@
 
 #include "s3_http.h"
 
-std::string Minio::Http::methodToString(Minio::Http::Method method)
-{
-  switch(method) {
-  case Minio::Http::Method::HTTP_GET:
-    return "GET";
-  case Minio::Http::Method::HTTP_PUT:
-    return "PUT";
-  case Minio::Http::Method::HTTP_POST:
-    return "POST";
-  case Minio::Http::Method::HTTP_HEAD:
-    return "HEAD";
-  case Minio::Http::Method::HTTP_DELETE:
-    return "DELETE";
-  case Minio::Http::Method::HTTP_PATCH:
-    return "PATCH";
+std::string Minio::Http::methodToString(Minio::Http::Method method) {
+  switch (method) {
+    case Minio::Http::Method::HTTP_GET:
+      return "GET";
+    case Minio::Http::Method::HTTP_PUT:
+      return "PUT";
+    case Minio::Http::Method::HTTP_POST:
+      return "POST";
+    case Minio::Http::Method::HTTP_HEAD:
+      return "HEAD";
+    case Minio::Http::Method::HTTP_DELETE:
+      return "DELETE";
+    case Minio::Http::Method::HTTP_PATCH:
+      return "PATCH";
   }
   return "GET";
 }
-
