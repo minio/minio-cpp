@@ -16,44 +16,46 @@
 #ifndef _S3_SIGNATURE_V2_H
 #define _S3_SIGNATURE_V2_H
 
-#include <iostream>
-#include <string>
-#include <openssl/md5.h>
+#include <openssl/bio.h>
 #include <openssl/buffer.h>
 #include <openssl/hmac.h>
-#include <openssl/bio.h>
+#include <openssl/md5.h>
 
-namespace Minio
-{
-  namespace XML
-  {
-    // A very minimal XML parser.
-    // Extract text enclosed between <tag> and </tag>, starting from crsr
-    // position and leaving crsr at the character index following the end tag.
-    // Does not handle nested <tag>...</tag> constructs, any nested tags must
-    // be of a different type.
-    bool ExtractXML(std::string & data, std::string::size_type & crsr,
-                    const std::string & tag, const std::string & xml);
+#include <iostream>
+#include <string>
 
-    // Same as above, but starts from beginning of xml string. Useful when order of tags is unknown.
-    // Scanning from the beginning every time will be inefficient for large strings and will only
-    // ever return the first instance of a tag, so use appropriately.
-    inline bool ExtractXML(std::string & data, const std::string & tag, const std::string & xml) {
-      std::string::size_type crsr = 0;
-      return ExtractXML(data, crsr, tag, xml);
-    }
+namespace Minio {
+namespace XML {
+// A very minimal XML parser.
+// Extract text enclosed between <tag> and </tag>, starting from crsr
+// position and leaving crsr at the character index following the end tag.
+// Does not handle nested <tag>...</tag> constructs, any nested tags must
+// be of a different type.
+bool ExtractXML(std::string& data, std::string::size_type& crsr,
+                const std::string& tag, const std::string& xml);
 
-    bool ExtractXMLXPath(std::string & data, const std::string & xpath, const std::string & xml);
-  }
-
-  namespace SignatureV2
-  {
-    std::string EncodeB64(uint8_t * data, size_t dataLen);
-    size_t ComputeMD5(uint8_t md5[EVP_MAX_MD_SIZE], std::istream & istrm);
-    std::string ComputeMD5(std::istream & istrm);
-    std::string GenerateSignature(const std::string & secret, const std::string & stringToSign);
-    std::string HTTP_Date();
-  }
+// Same as above, but starts from beginning of xml string. Useful when order of
+// tags is unknown. Scanning from the beginning every time will be inefficient
+// for large strings and will only ever return the first instance of a tag, so
+// use appropriately.
+inline bool ExtractXML(std::string& data, const std::string& tag,
+                       const std::string& xml) {
+  std::string::size_type crsr = 0;
+  return ExtractXML(data, crsr, tag, xml);
 }
+
+bool ExtractXMLXPath(std::string& data, const std::string& xpath,
+                     const std::string& xml);
+}  // namespace XML
+
+namespace SignatureV2 {
+std::string EncodeB64(uint8_t* data, size_t dataLen);
+size_t ComputeMD5(uint8_t md5[EVP_MAX_MD_SIZE], std::istream& istrm);
+std::string ComputeMD5(std::istream& istrm);
+std::string GenerateSignature(const std::string& secret,
+                              const std::string& stringToSign);
+std::string HTTP_Date();
+}  // namespace SignatureV2
+}  // namespace Minio
 
 #endif /* _S3_SIGNATURE_V2_H */
