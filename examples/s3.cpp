@@ -177,9 +177,9 @@ bool multipart(S3Client clnt, const std::string& aBucketName,
 
 void usage() {
   std::cout << "Usage: s3 <options>" << std::endl;
-  std::cout << "  -i AWS Access Key Id" << std::endl;
-  std::cout << "  -s AWS Secret Access Key" << std::endl;
-  std::cout << "  -e AWS Endpoint" << std::endl;
+  std::cout << "  -i Access Key Id" << std::endl;
+  std::cout << "  -s Secret Access Key" << std::endl;
+  std::cout << "  -e S3 Endpoint" << std::endl;
   std::cout << "  -a <action>: action to perform" << std::endl;
   std::cout << "      action is one of the following:" << std::endl;
   std::cout << "          \"mb\": create a bucket" << std::endl;
