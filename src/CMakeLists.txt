@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-SET(SRCS s3.cpp s3_http.cpp s3_io.cpp s3_signature_v2.cpp)
+SET(SRCS args.cc client.cc creds.cc http.cc response.cc signer.cc sse.cc types.cc utils.cc request-builder.cc)
 SET(S3CLIENT_INSTALL_LIST)
 
 add_library(miniocpp STATIC ${SRCS})
