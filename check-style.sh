@@ -10,7 +10,7 @@ function clang_format() {
 }
 
 ec=0
-mapfile -t files < <(find . -iname "*.cpp" -o -iname "*.h")
+mapfile -t files < <(find src include examples tests -iname "*.cc" -o -iname "*.h")
 for file in "${files[@]}"; do
     if ! clang_format "$file"; then
         ec=255

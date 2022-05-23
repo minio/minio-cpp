@@ -10,3 +10,11 @@ build/
 .vs
 CMakeSettings.json
 vcpkg_installed/
+docs/search
+docs/*html
+docs/*png
+docs/*js
+docs/*css
+docs/*svg
+docs/*map
+docs/*md5

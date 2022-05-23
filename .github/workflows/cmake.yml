@@ -39,29 +39,38 @@ jobs:
         ./vcpkg-master/bootstrap-vcpkg.sh
         ./vcpkg-master/vcpkg integrate install
 
-    - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg-master/scripts/buildsystems/vcpkg.cmake
-
-    - name: Build
-      # Build your program with the given configuration
+    - name: Run debug build
       run: |
-        cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
-        wget --quiet https://dl.min.io/server/minio/release/linux-amd64/minio && chmod +x minio
-        mkdir -p ~/.minio/certs/ && cp testdata/localhost.crt ~/.minio/certs/public.crt && cp testdata/localhost.key ~/.minio/certs/private.key
-        sudo cp testdata/localhost.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates
-        export MINIO_CI_CD=true
-        ./minio server /tmp/test-xl/{1...4}/ & sleep 10
-        export ENDPOINT=https://localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin
-        ${{github.workspace}}/build/examples/s3 -d -a mb -n bucketname
-        ${{github.workspace}}/build/examples/s3 -d -a up -f ${{github.workspace}}/testdata/localhost.crt -n bucketname -k objectname
-        ${{github.workspace}}/build/examples/s3 -d -a down -f /tmp/local.crt -n bucketname -k objectname
-        ${{github.workspace}}/build/examples/s3 -d -a rm -n bucketname -k objectname
-        ${{github.workspace}}/build/examples/s3 -d -a rb -n bucketname
+        cmake -B ./build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=./vcpkg-master/scripts/buildsystems/vcpkg.cmake
+        cmake --build ./build --config Debug
+
+    - name: Start MinIO server
+      run: |
+        wget --quiet https://dl.min.io/server/minio/release/linux-amd64/minio
+        chmod +x minio
+        mkdir -p ~/.minio/certs
+        cp ./tests/public.crt ./tests/private.key ~/.minio/certs/
+        sudo cp ./tests/public.crt /usr/local/share/ca-certificates/
+        sudo update-ca-certificates
+        MINIO_CI_CD=true ./minio server /tmp/test-xl/{1...4}/ &
+        sleep 10
+
+    - name: Run tests on debug build
+      run: |
+        S3HOST=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ./build/tests/tests
+
+    - name: Run release build
+      run: |
+        cmake --build ./build --target clean
+        cmake -B ./build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=./vcpkg-master/scripts/buildsystems/vcpkg.cmake
+        cmake --build ./build --config Release
+
+    - name: Run tests on release build
+      run: |
+        S3HOST=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ./build/tests/tests
+
     - name: Test
       working-directory: ${{github.workspace}}/build
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest -C ${{env.BUILD_TYPE}}
-

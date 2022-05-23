@@ -29,7 +29,7 @@ macro(set_globals)
 endmacro()
 
 # specify the C++ standard
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -79,8 +79,8 @@ INCLUDE (CheckIncludeFiles)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 SET(MINIOCPP_MAJOR_VERSION "0")
-SET(MINIOCPP_MINOR_VERSION "0")
-SET(MINIOCPP_PATCH_VERSION "1")
+SET(MINIOCPP_MINOR_VERSION "1")
+SET(MINIOCPP_PATCH_VERSION "0")
 
 add_subdirectory(include)
 add_subdirectory(src)
@@ -90,6 +90,11 @@ option(BUILD_EXAMPLES "Build examples" ON)
 if (BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif (BUILD_EXAMPLES)
+
+option(BUILD_TESTS "Build tests" ON)
+if (BUILD_TESTS)
+    add_subdirectory(tests)
+endif (BUILD_TESTS)
 
 option(BUILD_DOC "Build documentation" ON)
 

@@ -1,7 +1,5 @@
 > NOTE: This project is work in progress.
 
-# MinIO C++ Client SDK for Amazon S3 Compatible Cloud Storage [![Slack](https://slack.min.io/slack?type=svg)](https://slack.min.io) [![Sourcegraph](https://sourcegraph.com/github.com/minio/minio-cpp/-/badge.svg)](https://sourcegraph.com/github.com/minio/minio-cpp?badge) [![Apache V2 License](https://img.shields.io/badge/license-Apache%20V2-blue.svg)](https://github.com/minio/minio-cpp/blob/master/LICENSE)
-
 MinIO C++ SDK is Simple Storage Service (aka S3) client to perform bucket and object operations to any Amazon S3 compatible object storage service.
 
 For a complete list of APIs and examples, please take a look at the [MinIO C++ Client API Reference](https://minio-cpp.min.io/)
@@ -11,13 +9,13 @@ For a complete list of APIs and examples, please take a look at the [MinIO C++ C
 * CMake 3.10 or higher.
 * [vcpkg](https://vcpkg.io/en/index.html).
 
-## Install from `vcpkg`
+## Install from vcpkg
 ```
 vcpkg install minio-cpp
 ```
 
 ## Building source
-```bash
+```
 $ git clone https://github.com/minio/minio-cpp
 $ cd minio-cpp
 $ wget --quiet -O vcpkg-master.zip https://github.com/microsoft/vcpkg/archive/refs/heads/master.zip
@@ -29,7 +27,7 @@ $ cmake --build ./build --config Debug
 ```
 
 ## Example:: file-uploader.cc
-```c++
+```
 #include <client.h>
 
 int main(int argc, char* argv[]) {
