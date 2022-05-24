@@ -40,6 +40,9 @@ IF (${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
   MESSAGE(FATAL_ERROR "Please create a separate build directory and call CMake again")
 ENDIF (${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
 
+IF(CMAKE_COMPILER_IS_GNUCC )
+  set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Werror")
+ENDIF()
 
 # Look for required libraries
 SET(requiredlibs)
