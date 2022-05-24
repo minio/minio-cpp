@@ -13,15 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _MINIO_REQUEST_BUILDER_H
-#define _MINIO_REQUEST_BUILDER_H
+#ifndef _MINIO_REQUEST_H
+#define _MINIO_REQUEST_H
 
 #include "creds.h"
 #include "signer.h"
 
 namespace minio {
 namespace s3 {
-struct RequestBuilder {
+struct Request {
   http::Method method;
   std::string region;
   http::BaseUrl& base_url;
@@ -45,13 +45,13 @@ struct RequestBuilder {
   bool debug = false;
   bool ignore_cert_check = false;
 
-  RequestBuilder(http::Method httpmethod, std::string regionvalue,
-                 http::BaseUrl& baseurl);
-  http::Request Build(creds::Provider* provider = NULL);
+  Request(http::Method httpmethod, std::string regionvalue,
+          http::BaseUrl& baseurl);
+  http::Request ToHttpRequest(creds::Provider* provider = NULL);
 
  private:
   void BuildHeaders(utils::Url& url, creds::Provider* provider);
-};  // struct RequestBuilder
+};  // struct Request
 }  // namespace s3
 }  // namespace minio
-#endif  // #ifndef __MINIO_REQUEST_BUILDER_H
+#endif  // #ifndef __MINIO_REQUEST_H

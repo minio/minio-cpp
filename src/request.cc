@@ -15,13 +15,12 @@
 
 #include "client.h"
 
-minio::s3::RequestBuilder::RequestBuilder(http::Method httpmethod,
-                                          std::string regionvalue,
-                                          http::BaseUrl& baseurl)
+minio::s3::Request::Request(http::Method httpmethod, std::string regionvalue,
+                            http::BaseUrl& baseurl)
     : method(httpmethod), region(regionvalue), base_url(baseurl) {}
 
-void minio::s3::RequestBuilder::BuildHeaders(utils::Url& url,
-                                             creds::Provider* provider) {
+void minio::s3::Request::BuildHeaders(utils::Url& url,
+                                      creds::Provider* provider) {
   headers.Add("Host", url.host);
   headers.Add("User-Agent", user_agent);
 
@@ -88,12 +87,11 @@ void minio::s3::RequestBuilder::BuildHeaders(utils::Url& url,
   }
 }
 
-minio::http::Request minio::s3::RequestBuilder::Build(
+minio::http::Request minio::s3::Request::ToHttpRequest(
     creds::Provider* provider) {
   utils::Url url;
-  if (error::Error err =
-          base_url.BuildUrl(url, method, std::string(region), query_params,
-                            bucket_name, object_name)) {
+  if (error::Error err = base_url.BuildUrl(url, method, region, query_params,
+                                           bucket_name, object_name)) {
     std::cerr << "failed to build url. error=" << err
               << ". This should not happen" << std::endl;
     std::terminate();

@@ -163,40 +163,39 @@ minio::s3::Response minio::s3::Client::GetErrorResponse(
   return response;
 }
 
-minio::s3::Response minio::s3::Client::execute(RequestBuilder& builder) {
-  builder.user_agent = user_agent_;
-  http::Request request = builder.Build(provider_);
-  http::Response resp = request.Execute();
-  if (resp) {
-    Response response;
-    response.status_code = resp.status_code;
-    response.headers = resp.headers;
-    response.data = resp.body;
-    return response;
+minio::s3::Response minio::s3::Client::execute(Request& req) {
+  req.user_agent = user_agent_;
+  http::Request request = req.ToHttpRequest(provider_);
+  http::Response response = request.Execute();
+  if (response) {
+    Response resp;
+    resp.status_code = response.status_code;
+    resp.headers = response.headers;
+    resp.data = response.body;
+    return resp;
   }
 
-  Response response =
-      GetErrorResponse(resp, request.url.path, request.method,
-                       builder.bucket_name, builder.object_name);
-  if (response.code == "NoSuchBucket" || response.code == "RetryHead") {
-    region_map_.erase(builder.bucket_name);
+  Response resp = GetErrorResponse(response, request.url.path, req.method,
+                                   req.bucket_name, req.object_name);
+  if (resp.code == "NoSuchBucket" || resp.code == "RetryHead") {
+    region_map_.erase(req.bucket_name);
   }
 
-  return response;
+  return resp;
 }
 
-minio::s3::Response minio::s3::Client::Execute(RequestBuilder& builder) {
-  Response resp = execute(builder);
+minio::s3::Response minio::s3::Client::Execute(Request& req) {
+  Response resp = execute(req);
   if (resp || resp.code != "RetryHead") return resp;
 
   // Retry only once on RetryHead error.
-  resp = execute(builder);
+  resp = execute(req);
   if (resp || resp.code != "RetryHead") return resp;
 
   std::string code;
   std::string message;
-  HandleRedirectResponse(code, message, resp.status_code, builder.method,
-                         resp.headers, builder.bucket_name);
+  HandleRedirectResponse(code, message, resp.status_code, req.method,
+                         resp.headers, req.bucket_name);
   resp.code = code;
   resp.message = message;
 
@@ -222,13 +221,13 @@ minio::s3::GetRegionResponse minio::s3::Client::GetRegion(
   std::string stored_region = region_map_[std::string(bucket_name)];
   if (!stored_region.empty()) return stored_region;
 
-  RequestBuilder builder(http::Method::kGet, "us-east-1", base_url_);
+  Request req(http::Method::kGet, "us-east-1", base_url_);
   utils::Multimap query_params;
   query_params.Add("location", "");
-  builder.query_params = query_params;
-  builder.bucket_name = bucket_name;
+  req.query_params = query_params;
+  req.bucket_name = bucket_name;
 
-  Response response = Execute(builder);
+  Response response = Execute(req);
   if (!response) return response;
 
   pugi::xml_document xdoc;
@@ -262,12 +261,12 @@ minio::s3::MakeBucketResponse minio::s3::Client::MakeBucket(
   if (region.empty()) region = base_region;
   if (region.empty()) region = "us-east-1";
 
-  RequestBuilder builder(http::Method::kPut, region, base_url_);
-  builder.bucket_name = args.bucket;
+  Request req(http::Method::kPut, region, base_url_);
+  req.bucket_name = args.bucket;
 
   utils::Multimap headers;
   if (args.object_lock) headers.Add("x-amz-bucket-object-lock-enabled", "true");
-  builder.headers = headers;
+  req.headers = headers;
 
   std::string body;
   if (region != "us-east-1") {
@@ -276,10 +275,10 @@ minio::s3::MakeBucketResponse minio::s3::Client::MakeBucket(
        << "<LocationConstraint>" << region << "</LocationConstraint>"
        << "</CreateBucketConfiguration>";
     body = ss.str();
-    builder.body = body;
+    req.body = body;
   }
 
-  Response response = Execute(builder);
+  Response response = Execute(req);
   if (response) region_map_[std::string(args.bucket)] = region;
 
   return response;
@@ -287,10 +286,10 @@ minio::s3::MakeBucketResponse minio::s3::Client::MakeBucket(
 
 minio::s3::ListBucketsResponse minio::s3::Client::ListBuckets(
     ListBucketsArgs args) {
-  RequestBuilder builder(http::Method::kGet, base_url_.region, base_url_);
-  builder.headers = args.extra_headers;
-  builder.query_params = args.extra_query_params;
-  Response resp = Execute(builder);
+  Request req(http::Method::kGet, base_url_.region, base_url_);
+  req.headers = args.extra_headers;
+  req.query_params = args.extra_query_params;
+  Response resp = Execute(req);
   if (!resp) return resp;
   return ListBucketsResponse::ParseXML(resp.data);
 }
@@ -310,9 +309,9 @@ minio::s3::BucketExistsResponse minio::s3::Client::BucketExists(
     return (resp.code == "NoSuchBucket") ? false : resp;
   }
 
-  RequestBuilder builder(http::Method::kHead, region, base_url_);
-  builder.bucket_name = args.bucket;
-  if (Response resp = Execute(builder)) {
+  Request req(http::Method::kHead, region, base_url_);
+  req.bucket_name = args.bucket;
+  if (Response resp = Execute(req)) {
     return true;
   } else {
     return (resp.code == "NoSuchBucket") ? false : resp;
@@ -330,10 +329,10 @@ minio::s3::RemoveBucketResponse minio::s3::Client::RemoveBucket(
     return resp;
   }
 
-  RequestBuilder builder(http::Method::kDelete, region, base_url_);
-  builder.bucket_name = args.bucket;
+  Request req(http::Method::kDelete, region, base_url_);
+  req.bucket_name = args.bucket;
 
-  return Execute(builder);
+  return Execute(req);
 }
 
 minio::s3::AbortMultipartUploadResponse minio::s3::Client::AbortMultipartUpload(
@@ -347,14 +346,14 @@ minio::s3::AbortMultipartUploadResponse minio::s3::Client::AbortMultipartUpload(
     return resp;
   }
 
-  RequestBuilder builder(http::Method::kDelete, region, base_url_);
-  builder.bucket_name = args.bucket;
-  builder.object_name = args.object;
+  Request req(http::Method::kDelete, region, base_url_);
+  req.bucket_name = args.bucket;
+  req.object_name = args.object;
   utils::Multimap query_params;
   query_params.Add("uploadId", args.upload_id);
-  builder.query_params = query_params;
+  req.query_params = query_params;
 
-  return Execute(builder);
+  return Execute(req);
 }
 
 minio::s3::CompleteMultipartUploadResponse
@@ -368,12 +367,12 @@ minio::s3::Client::CompleteMultipartUpload(CompleteMultipartUploadArgs args) {
     return resp;
   }
 
-  RequestBuilder builder(http::Method::kPost, region, base_url_);
-  builder.bucket_name = args.bucket;
-  builder.object_name = args.object;
+  Request req(http::Method::kPost, region, base_url_);
+  req.bucket_name = args.bucket;
+  req.object_name = args.object;
   utils::Multimap query_params;
   query_params.Add("uploadId", args.upload_id);
-  builder.query_params = query_params;
+  req.query_params = query_params;
 
   std::stringstream ss;
   ss << "<CompleteMultipartUpload>";
@@ -387,14 +386,14 @@ minio::s3::Client::CompleteMultipartUpload(CompleteMultipartUploadArgs args) {
   }
   ss << "</CompleteMultipartUpload>";
   std::string body = ss.str();
-  builder.body = body;
+  req.body = body;
 
   utils::Multimap headers;
   headers.Add("Content-Type", "application/xml");
   headers.Add("Content-MD5", utils::Md5sumHash(body));
-  builder.headers = headers;
+  req.headers = headers;
 
-  Response response = Execute(builder);
+  Response response = Execute(req);
   if (!response) return response;
   return CompleteMultipartUploadResponse::ParseXML(
       response.data, response.headers.GetFront("x-amz-version-id"));
@@ -415,16 +414,16 @@ minio::s3::Client::CreateMultipartUpload(CreateMultipartUploadArgs args) {
     return resp;
   }
 
-  RequestBuilder builder(http::Method::kPost, region, base_url_);
-  builder.bucket_name = args.bucket;
-  builder.object_name = args.object;
+  Request req(http::Method::kPost, region, base_url_);
+  req.bucket_name = args.bucket;
+  req.object_name = args.object;
   utils::Multimap query_params;
   query_params.Add("uploads", "");
-  builder.query_params = query_params;
+  req.query_params = query_params;
 
-  builder.headers = args.headers;
+  req.headers = args.headers;
 
-  if (Response resp = Execute(builder)) {
+  if (Response resp = Execute(req)) {
     pugi::xml_document xdoc;
     pugi::xml_parse_result result = xdoc.load_string(resp.data.data());
     if (!result) return error::Error("unable to parse XML");
@@ -447,14 +446,14 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
     return resp;
   }
 
-  RequestBuilder builder(http::Method::kPut, region, base_url_);
-  builder.bucket_name = args.bucket;
-  builder.object_name = args.object;
-  builder.query_params = args.query_params;
-  builder.headers = args.headers;
-  builder.body = args.data;
+  Request req(http::Method::kPut, region, base_url_);
+  req.bucket_name = args.bucket;
+  req.object_name = args.object;
+  req.query_params = args.query_params;
+  req.headers = args.headers;
+  req.body = args.data;
 
-  Response response = Execute(builder);
+  Response response = Execute(req);
   if (!response) return response;
 
   PutObjectResponse resp;
@@ -495,19 +494,19 @@ minio::s3::UploadPartCopyResponse minio::s3::Client::UploadPartCopy(
     return resp;
   }
 
-  RequestBuilder builder(http::Method::kPut, region, base_url_);
-  builder.bucket_name = args.bucket;
-  builder.object_name = args.object;
+  Request req(http::Method::kPut, region, base_url_);
+  req.bucket_name = args.bucket;
+  req.object_name = args.object;
 
   utils::Multimap query_params;
   query_params.AddAll(args.extra_query_params);
   query_params.Add("partNumber", std::to_string(args.part_number));
   query_params.Add("uploadId", args.upload_id);
-  builder.query_params = query_params;
+  req.query_params = query_params;
 
-  builder.headers = args.headers;
+  req.headers = args.headers;
 
-  Response response = Execute(builder);
+  Response response = Execute(req);
   if (!response) return response;
 
   UploadPartCopyResponse resp;
@@ -532,17 +531,17 @@ minio::s3::StatObjectResponse minio::s3::Client::StatObject(
     return resp;
   }
 
-  RequestBuilder builder(http::Method::kHead, region, base_url_);
-  builder.bucket_name = args.bucket;
-  builder.object_name = args.object;
+  Request req(http::Method::kHead, region, base_url_);
+  req.bucket_name = args.bucket;
+  req.object_name = args.object;
   utils::Multimap query_params;
   if (!args.version_id.empty()) {
     query_params.Add("versionId", args.version_id);
-    builder.query_params = query_params;
+    req.query_params = query_params;
   }
-  builder.headers = args.Headers();
+  req.headers = args.Headers();
 
-  Response response = Execute(builder);
+  Response response = Execute(req);
   if (!response) return response;
 
   StatObjectResponse resp = response;
@@ -600,16 +599,16 @@ minio::s3::RemoveObjectResponse minio::s3::Client::RemoveObject(
     return resp;
   }
 
-  RequestBuilder builder(http::Method::kDelete, region, base_url_);
-  builder.bucket_name = args.bucket;
-  builder.object_name = args.object;
+  Request req(http::Method::kDelete, region, base_url_);
+  req.bucket_name = args.bucket;
+  req.object_name = args.object;
   utils::Multimap query_params;
   if (!args.version_id.empty()) {
     query_params.Add("versionId", args.version_id);
-    builder.query_params = query_params;
+    req.query_params = query_params;
   }
 
-  return Execute(builder);
+  return Execute(req);
 }
 
 minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
@@ -652,22 +651,22 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
     return resp;
   }
 
-  RequestBuilder builder(http::Method::kGet, region, base_url_);
-  builder.bucket_name = args.bucket;
-  builder.object_name = args.object;
+  Request req(http::Method::kGet, region, base_url_);
+  req.bucket_name = args.bucket;
+  req.object_name = args.object;
   utils::Multimap query_params;
   if (!args.version_id.empty()) {
     query_params.Add("versionId", std::string(args.version_id));
-    builder.query_params = query_params;
+    req.query_params = query_params;
   }
-  builder.data_callback = [](http::DataCallbackArgs args) -> size_t {
+  req.data_callback = [](http::DataCallbackArgs args) -> size_t {
     std::ofstream* fout = (std::ofstream*)args.user_arg;
     *fout << std::string(args.buffer, args.length);
     return args.size * args.length;
   };
-  builder.user_arg = &fout;
+  req.user_arg = &fout;
 
-  Response response = Execute(builder);
+  Response response = Execute(req);
   fout.close();
   if (response) std::filesystem::rename(temp_filename, args.filename);
   return response;
@@ -688,21 +687,21 @@ minio::s3::GetObjectResponse minio::s3::Client::GetObject(GetObjectArgs args) {
     return resp;
   }
 
-  RequestBuilder builder(http::Method::kGet, region, base_url_);
-  builder.bucket_name = args.bucket;
-  builder.object_name = args.object;
+  Request req(http::Method::kGet, region, base_url_);
+  req.bucket_name = args.bucket;
+  req.object_name = args.object;
   utils::Multimap query_params;
   if (!args.version_id.empty()) {
     query_params.Add("versionId", args.version_id);
-    builder.query_params = query_params;
+    req.query_params = query_params;
   }
-  builder.data_callback = args.data_callback;
-  builder.user_arg = args.user_arg;
+  req.data_callback = args.data_callback;
+  req.user_arg = args.user_arg;
   if (args.ssec != NULL) {
-    builder.headers = args.ssec->Headers();
+    req.headers = args.ssec->Headers();
   }
 
-  return Execute(builder);
+  return Execute(req);
 }
 
 minio::s3::ListObjectsResponse minio::s3::Client::ListObjectsV1(
@@ -722,12 +721,12 @@ minio::s3::ListObjectsResponse minio::s3::Client::ListObjectsV1(
       args.delimiter, args.encoding_type, args.max_keys, args.prefix));
   if (!args.marker.empty()) query_params.Add("marker", args.marker);
 
-  RequestBuilder builder(http::Method::kGet, region, base_url_);
-  builder.bucket_name = args.bucket;
-  builder.query_params = query_params;
-  builder.headers = args.extra_headers;
+  Request req(http::Method::kGet, region, base_url_);
+  req.bucket_name = args.bucket;
+  req.query_params = query_params;
+  req.headers = args.extra_headers;
 
-  Response resp = Execute(builder);
+  Response resp = Execute(req);
   if (!resp) resp;
 
   return ListObjectsResponse::ParseXML(resp.data, false);
@@ -757,12 +756,12 @@ minio::s3::ListObjectsResponse minio::s3::Client::ListObjectsV2(
   }
   if (args.include_user_metadata) query_params.Add("metadata", "true");
 
-  RequestBuilder builder(http::Method::kGet, region, base_url_);
-  builder.bucket_name = args.bucket;
-  builder.query_params = query_params;
-  builder.headers = args.extra_headers;
+  Request req(http::Method::kGet, region, base_url_);
+  req.bucket_name = args.bucket;
+  req.query_params = query_params;
+  req.headers = args.extra_headers;
 
-  Response resp = Execute(builder);
+  Response resp = Execute(req);
   if (!resp) resp;
 
   return ListObjectsResponse::ParseXML(resp.data, false);
@@ -789,12 +788,12 @@ minio::s3::ListObjectsResponse minio::s3::Client::ListObjectVersions(
     query_params.Add("version-id-marker", args.version_id_marker);
   }
 
-  RequestBuilder builder(http::Method::kGet, region, base_url_);
-  builder.bucket_name = args.bucket;
-  builder.query_params = query_params;
-  builder.headers = args.extra_headers;
+  Request req(http::Method::kGet, region, base_url_);
+  req.bucket_name = args.bucket;
+  req.query_params = query_params;
+  req.headers = args.extra_headers;
 
-  Response resp = Execute(builder);
+  Response resp = Execute(req);
   if (!resp) resp;
 
   return ListObjectsResponse::ParseXML(resp.data, true);
@@ -1114,13 +1113,13 @@ minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
     return resp;
   }
 
-  RequestBuilder builder(http::Method::kPut, region, base_url_);
-  builder.bucket_name = args.bucket;
-  builder.object_name = args.object;
-  builder.query_params = args.extra_query_params;
-  builder.headers = headers;
+  Request req(http::Method::kPut, region, base_url_);
+  req.bucket_name = args.bucket;
+  req.object_name = args.object;
+  req.query_params = args.extra_query_params;
+  req.headers = headers;
 
-  Response response = Execute(builder);
+  Response response = Execute(req);
   if (!response) return response;
 
   CopyObjectResponse resp;
