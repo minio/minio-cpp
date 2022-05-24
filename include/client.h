@@ -19,6 +19,7 @@
 #include <fstream>
 
 #include "args.h"
+#include "config.h"
 #include "request-builder.h"
 #include "response.h"
 
@@ -42,6 +43,7 @@ class Client {
   std::map<std::string, std::string> region_map_;
   bool debug_ = false;
   bool ignore_cert_check_ = false;
+  std::string user_agent_ = DEFAULT_USER_AGENT;
 
  public:
   Client(http::BaseUrl& base_url, creds::Provider* provider = NULL);
@@ -49,6 +51,9 @@ class Client {
   void Debug(bool flag) { debug_ = flag; }
 
   void IgnoreCertCheck(bool flag) { ignore_cert_check_ = flag; }
+
+  error::Error SetAppInfo(std::string_view app_name,
+                          std::string_view app_version);
 
   void HandleRedirectResponse(std::string& code, std::string& message,
                               int status_code, http::Method method,

@@ -36,6 +36,17 @@ minio::s3::Client::Client(http::BaseUrl& base_url, creds::Provider* provider)
   provider_ = provider;
 }
 
+minio::error::Error minio::s3::Client::SetAppInfo(
+    std::string_view app_name, std::string_view app_version) {
+  if (app_name.empty() || app_version.empty()) {
+    return error::Error("Application name/version cannot be empty");
+  }
+
+  user_agent_ = std::string(DEFAULT_USER_AGENT) + " " + std::string(app_name) +
+                "/" + std::string(app_version);
+  return error::SUCCESS;
+}
+
 void minio::s3::Client::HandleRedirectResponse(
     std::string& code, std::string& message, int status_code,
     http::Method method, utils::Multimap headers, std::string_view bucket_name,
@@ -153,6 +164,7 @@ minio::s3::Response minio::s3::Client::GetErrorResponse(
 }
 
 minio::s3::Response minio::s3::Client::execute(RequestBuilder& builder) {
+  builder.user_agent = user_agent_;
   http::Request request = builder.Build(provider_);
   http::Response resp = request.Execute();
   if (resp) {
