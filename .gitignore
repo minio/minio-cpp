@@ -18,3 +18,4 @@ docs/*css
 docs/*svg
 docs/*map
 docs/*md5
+include/config.h

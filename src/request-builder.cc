@@ -23,12 +23,7 @@ minio::s3::RequestBuilder::RequestBuilder(http::Method httpmethod,
 void minio::s3::RequestBuilder::BuildHeaders(utils::Url& url,
                                              creds::Provider* provider) {
   headers.Add("Host", url.host);
-
-  if (user_agent.empty()) {
-    headers.Add("User-Agent", "MinIO (Linux; x86_64) minio-cpp/0.1.0");
-  } else {
-    headers.Add("User-Agent", user_agent);
-  }
+  headers.Add("User-Agent", user_agent);
 
   bool md5sum_added = headers.Contains("Content-MD5");
   std::string md5sum;

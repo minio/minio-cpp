@@ -25,6 +25,8 @@ CHECK_INCLUDE_FILES(sys/types.h   HAVE_SYS_TYPES_H)
 CHECK_FUNCTION_EXISTS(strtoimax   HAVE_STRTOIMAX_F)
 CHECK_FUNCTION_EXISTS(strptime    HAVE_STRPTIME_F)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config.h @ONLY)
+
 # install all the headers
 FILE(GLOB files "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
 INSTALL(FILES ${files} DESTINATION include/miniocpp)
