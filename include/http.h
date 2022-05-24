@@ -48,7 +48,7 @@ constexpr const char* MethodToString(Method& method) throw() {
 }
 
 // ExtractRegion extracts region value from AWS S3 host string.
-std::string ExtractRegion(std::string host);
+std::string ExtractRegion(std::string& host);
 
 struct BaseUrl {
   std::string host;

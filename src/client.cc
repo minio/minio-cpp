@@ -16,8 +16,8 @@
 #include "client.h"
 
 minio::utils::Multimap minio::s3::GetCommonListObjectsQueryParams(
-    std::string delimiter, std::string encoding_type, unsigned int max_keys,
-    std::string prefix) {
+    std::string& delimiter, std::string& encoding_type, unsigned int max_keys,
+    std::string& prefix) {
   utils::Multimap query_params;
   query_params.Add("delimiter", delimiter);
   query_params.Add("max-keys", std::to_string(max_keys > 0 ? max_keys : 1000));
@@ -49,7 +49,7 @@ minio::error::Error minio::s3::Client::SetAppInfo(
 
 void minio::s3::Client::HandleRedirectResponse(
     std::string& code, std::string& message, int status_code,
-    http::Method method, utils::Multimap headers, std::string_view bucket_name,
+    http::Method method, utils::Multimap headers, std::string& bucket_name,
     bool retry) {
   switch (status_code) {
     case 301:
@@ -77,7 +77,7 @@ void minio::s3::Client::HandleRedirectResponse(
   }
 
   if (retry && !region.empty() && method == http::Method::kHead &&
-      !bucket_name.empty() && !region_map_[std::string(bucket_name)].empty()) {
+      !bucket_name.empty() && !region_map_[bucket_name].empty()) {
     code = "RetryHead";
     message = "";
   }
@@ -85,7 +85,7 @@ void minio::s3::Client::HandleRedirectResponse(
 
 minio::s3::Response minio::s3::Client::GetErrorResponse(
     http::Response resp, std::string_view resource, http::Method method,
-    std::string_view bucket_name, std::string_view object_name) {
+    std::string& bucket_name, std::string& object_name) {
   if (!resp.error.empty()) return error::Error(resp.error);
 
   Response response;
@@ -203,22 +203,22 @@ minio::s3::Response minio::s3::Client::Execute(Request& req) {
 }
 
 minio::s3::GetRegionResponse minio::s3::Client::GetRegion(
-    std::string_view bucket_name, std::string_view region) {
+    std::string& bucket_name, std::string& region) {
   std::string base_region = base_url_.region;
   if (!region.empty()) {
     if (!base_region.empty() && base_region != region) {
       return error::Error("region must be " + base_region + ", but passed " +
-                          std::string(region));
+                          region);
     }
 
-    return std::string(region);
+    return region;
   }
 
   if (!base_region.empty()) return base_region;
 
   if (bucket_name.empty() || provider_ == NULL) return std::string("us-east-1");
 
-  std::string stored_region = region_map_[std::string(bucket_name)];
+  std::string stored_region = region_map_[bucket_name];
   if (!stored_region.empty()) return stored_region;
 
   Request req(http::Method::kGet, "us-east-1", base_url_);
@@ -242,7 +242,7 @@ minio::s3::GetRegionResponse minio::s3::Client::GetRegion(
     if (base_url_.aws_host) value = "eu-west-1";
   }
 
-  region_map_[std::string(bucket_name)] = value;
+  region_map_[bucket_name] = value;
 
   return value;
 }
@@ -279,7 +279,7 @@ minio::s3::MakeBucketResponse minio::s3::Client::MakeBucket(
   }
 
   Response response = Execute(req);
-  if (response) region_map_[std::string(args.bucket)] = region;
+  if (response) region_map_[args.bucket] = region;
 
   return response;
 }
@@ -656,7 +656,7 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
   req.object_name = args.object;
   utils::Multimap query_params;
   if (!args.version_id.empty()) {
-    query_params.Add("versionId", std::string(args.version_id));
+    query_params.Add("versionId", args.version_id);
     req.query_params = query_params;
   }
   req.data_callback = [](http::DataCallbackArgs args) -> size_t {

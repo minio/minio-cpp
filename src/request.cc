@@ -82,8 +82,11 @@ void minio::s3::Request::BuildHeaders(utils::Url& url,
     if (!creds.SessionToken().empty()) {
       headers.Add("X-Amz-Security-Token", creds.SessionToken());
     }
+
+    std::string access_key = creds.AccessKey();
+    std::string secret_key = creds.SecretKey();
     signer::SignV4S3(method, url.path, region, headers, query_params,
-                     creds.AccessKey(), creds.SecretKey(), sha256, date);
+                     access_key, secret_key, sha256, date);
   }
 }
 

@@ -40,7 +40,7 @@ inline constexpr unsigned int kMinPartSize = 5 * 1024 * 1024;           // 5MiB
 std::string FormatTime(const std::tm* time, const char* format);
 
 // StringToBool converts string to bool.
-bool StringToBool(std::string_view str);
+bool StringToBool(std::string str);
 
 // BoolToString converts bool to string.
 inline const char* const BoolToString(bool b) { return b ? "true" : "false"; }
@@ -74,7 +74,7 @@ std::string Join(std::list<std::string> values, std::string delimiter);
 std::string Join(std::vector<std::string> values, std::string delimiter);
 
 // EncodePath does URL encoding of path. It also normalizes multiple slashes.
-std::string EncodePath(std::string_view path);
+std::string EncodePath(std::string& path);
 
 // Sha256hash computes SHA-256 of data and return hash as hex encoded value.
 std::string Sha256Hash(std::string_view str);

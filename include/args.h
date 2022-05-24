@@ -215,7 +215,7 @@ struct CopyObjectArgs : public ObjectWriteArgs {
 };  // struct CopyObjectArgs
 
 struct ComposeSource : public ObjectConditionalReadArgs {
-  error::Error BuildHeaders(size_t object_size, std::string etag);
+  error::Error BuildHeaders(size_t object_size, std::string &etag);
   size_t ObjectSize();
   utils::Multimap Headers();
 
