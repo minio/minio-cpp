@@ -20,7 +20,7 @@
 
 #include "args.h"
 #include "config.h"
-#include "request-builder.h"
+#include "request.h"
 #include "response.h"
 
 namespace minio {
@@ -62,8 +62,8 @@ class Client {
   Response GetErrorResponse(http::Response resp, std::string_view resource,
                             http::Method method, std::string_view bucket_name,
                             std::string_view object_name);
-  Response execute(RequestBuilder& builder);
-  Response Execute(RequestBuilder& builder);
+  Response execute(Request& req);
+  Response Execute(Request& req);
 
   // S3 APIs
   ListObjectsResponse ListObjectsV1(ListObjectsV1Args args);
