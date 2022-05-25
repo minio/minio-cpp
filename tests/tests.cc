@@ -134,6 +134,39 @@ class Tests {
     }
   }
 
+  void RemoveObjects(std::list<std::string> objects) {
+    minio::s3::RemoveObjectsArgs args;
+    args.bucket = bucket_name_;
+
+    std::list<minio::s3::DeleteObject> delete_objects;
+    for (auto& object : objects) {
+      delete_objects.push_back(minio::s3::DeleteObject{object});
+    }
+
+    std::list<minio::s3::DeleteObject>::iterator i = delete_objects.begin();
+    args.func = [&delete_objects = delete_objects,
+                 &i = i](minio::s3::DeleteObject& object) -> bool {
+      if (i == delete_objects.end()) return false;
+      object = *i;
+      i++;
+      return true;
+    };
+
+    minio::s3::RemoveObjectsResult result = client_.RemoveObjects(args);
+    std::string msg;
+    for (; result; result++) {
+      minio::s3::DeleteError err = *result;
+      if (!err) {
+        throw std::runtime_error("RemoveObjects(): " + err.Error().String());
+      }
+
+      if (msg.empty()) msg = "unable to remove object(s)";
+      msg += "; " + err.object_name;
+      if (!err.version_id.empty()) msg += "?versionId=" + err.version_id;
+    }
+    if (!msg.empty()) throw std::runtime_error("RemoveObjects(): " + msg);
+  }
+
   void MakeBucket() {
     std::cout << "MakeBucket()" << std::endl;
 
@@ -383,13 +416,9 @@ class Tests {
             "ListObjects(): expected: " + std::to_string(object_names.size()) +
             "; got: " + std::to_string(c));
       }
-      for (auto& object_name : object_names) {
-        RemoveObject(bucket_name_, object_name);
-      }
+      RemoveObjects(object_names);
     } catch (const std::runtime_error& err) {
-      for (auto& object_name : object_names) {
-        RemoveObject(bucket_name_, object_name);
-      }
+      RemoveObjects(object_names);
       throw err;
     }
   }
@@ -484,6 +513,28 @@ class Tests {
     std::filesystem::remove(filename);
     RemoveObject(bucket_name_, object_name);
   }
+
+  void RemoveObjects() {
+    std::cout << "RemoveObjects()" << std::endl;
+
+    std::list<std::string> object_names;
+    try {
+      for (int i = 0; i < 3; i++) {
+        std::string object_name = RandObjectName();
+        std::stringstream ss;
+        minio::s3::PutObjectArgs args(ss, 0, 0);
+        args.bucket = bucket_name_;
+        args.object = object_name;
+        minio::s3::PutObjectResponse resp = client_.PutObject(args);
+        if (!resp) std::runtime_error("PutObject(): " + resp.Error().String());
+        object_names.push_back(object_name);
+      }
+      RemoveObjects(object_names);
+    } catch (const std::runtime_error& err) {
+      RemoveObjects(object_names);
+      throw err;
+    }
+  }
 };  // class Tests
 
 int main(int argc, char* argv[]) {
@@ -533,6 +584,7 @@ int main(int argc, char* argv[]) {
   tests.PutObject();
   tests.CopyObject();
   tests.UploadObject();
+  tests.RemoveObjects();
 
   return EXIT_SUCCESS;
 }

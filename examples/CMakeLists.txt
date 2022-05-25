@@ -38,3 +38,6 @@ TARGET_LINK_LIBRARIES(CopyObject miniocpp ${S3_LIBS})
 
 ADD_EXECUTABLE(ComposeObject ComposeObject.cc)
 TARGET_LINK_LIBRARIES(ComposeObject miniocpp ${S3_LIBS})
+
+ADD_EXECUTABLE(RemoveObjects RemoveObjects.cc)
+TARGET_LINK_LIBRARIES(RemoveObjects miniocpp ${S3_LIBS})

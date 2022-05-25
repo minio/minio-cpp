@@ -278,3 +278,59 @@ minio::s3::ListObjectsResponse minio::s3::ListObjectsResponse::ParseXML(
 
   return resp;
 }
+
+minio::s3::RemoveObjectsResponse minio::s3::RemoveObjectsResponse::ParseXML(
+    std::string_view data) {
+  RemoveObjectsResponse resp;
+
+  pugi::xml_document xdoc;
+  pugi::xml_parse_result result = xdoc.load_string(data.data());
+  if (!result) return error::Error("unable to parse XML");
+
+  auto root = xdoc.select_node("/DeleteResult");
+
+  auto deletedList = root.node().select_nodes("Deleted");
+  for (auto deleted : deletedList) {
+    pugi::xpath_node text;
+    std::string value;
+    DeletedObject object;
+
+    text = deleted.node().select_node("Key/text()");
+    object.name = text.node().value();
+
+    text = deleted.node().select_node("VersionId/text()");
+    object.version_id = text.node().value();
+
+    text = deleted.node().select_node("DeleteMarkerVersionId/text()");
+    object.delete_marker_version_id = text.node().value();
+
+    text = deleted.node().select_node("DeleteMarker/text()");
+    value = text.node().value();
+    if (!value.empty()) object.delete_marker = utils::StringToBool(value);
+
+    resp.objects.push_back(object);
+  }
+
+  auto errorList = root.node().select_nodes("Error");
+  for (auto error : errorList) {
+    pugi::xpath_node text;
+    std::string value;
+    DeleteError err;
+
+    text = error.node().select_node("Key/text()");
+    err.object_name = text.node().value();
+
+    text = error.node().select_node("VersionId/text()");
+    err.version_id = text.node().value();
+
+    text = error.node().select_node("Code/text()");
+    err.code = text.node().value();
+
+    text = error.node().select_node("Message/text()");
+    err.message = text.node().value();
+
+    resp.errors.push_back(err);
+  }
+
+  return resp;
+}

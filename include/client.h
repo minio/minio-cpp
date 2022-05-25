@@ -57,6 +57,35 @@ class ListObjectsResult {
   }
 };  // class ListObjectsResult
 
+class RemoveObjectsResult {
+ private:
+  Client* client_ = NULL;
+  RemoveObjectsArgs* args_ = NULL;
+  bool done_ = false;
+  RemoveObjectsResponse resp_;
+  std::list<DeleteError>::iterator itr_;
+
+  void Populate();
+
+ public:
+  RemoveObjectsResult(error::Error err);
+  RemoveObjectsResult(Client* client, RemoveObjectsArgs* args);
+  DeleteError& operator*() const { return *itr_; }
+  operator bool() const { return itr_ != resp_.errors.end(); }
+  RemoveObjectsResult& operator++() {
+    itr_++;
+    if (!done_ && itr_ == resp_.errors.end()) {
+      Populate();
+    }
+    return *this;
+  }
+  RemoveObjectsResult operator++(int) {
+    RemoveObjectsResult curr = *this;
+    ++(*this);
+    return curr;
+  }
+};  // class RemoveObjectsResult
+
 /**
  * Simple Storage Service (aka S3) client to perform bucket and object
  * operations.
@@ -78,6 +107,7 @@ class Client : public BaseClient {
   ListObjectsResult ListObjects(ListObjectsArgs args);
   PutObjectResponse PutObject(PutObjectArgs args);
   UploadObjectResponse UploadObject(UploadObjectArgs args);
+  RemoveObjectsResult RemoveObjects(RemoveObjectsArgs args);
 };  // class Client
 }  // namespace s3
 }  // namespace minio

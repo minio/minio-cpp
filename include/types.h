@@ -119,6 +119,11 @@ struct Retention {
   RetentionMode mode;
   utils::Time retain_until_date;
 };  // struct Retention
+
+struct DeleteObject {
+  std::string name;
+  std::string version_id;
+};  // struct DeleteObject
 }  // namespace s3
 }  // namespace minio
 #endif  // #ifndef __MINIO_S3_TYPES_H
