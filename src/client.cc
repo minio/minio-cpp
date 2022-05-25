@@ -221,17 +221,16 @@ minio::s3::GetRegionResponse minio::s3::Client::GetRegion(
   std::string stored_region = region_map_[bucket_name];
   if (!stored_region.empty()) return stored_region;
 
-  Request req(http::Method::kGet, "us-east-1", base_url_);
-  utils::Multimap query_params;
-  query_params.Add("location", "");
-  req.query_params = query_params;
+  Request req(http::Method::kGet, "us-east-1", base_url_, utils::Multimap(),
+              utils::Multimap());
+  req.query_params.Add("location", "");
   req.bucket_name = bucket_name;
 
-  Response response = Execute(req);
-  if (!response) return response;
+  Response resp = Execute(req);
+  if (!resp) return resp;
 
   pugi::xml_document xdoc;
-  pugi::xml_parse_result result = xdoc.load_string(response.data.data());
+  pugi::xml_parse_result result = xdoc.load_string(resp.data.data());
   if (!result) return error::Error("unable to parse XML");
   auto text = xdoc.select_node("/LocationConstraint/text()");
   std::string value = text.node().value();
@@ -261,12 +260,12 @@ minio::s3::MakeBucketResponse minio::s3::Client::MakeBucket(
   if (region.empty()) region = base_region;
   if (region.empty()) region = "us-east-1";
 
-  Request req(http::Method::kPut, region, base_url_);
+  Request req(http::Method::kPut, region, base_url_, args.extra_headers,
+              args.extra_query_params);
   req.bucket_name = args.bucket;
-
-  utils::Multimap headers;
-  if (args.object_lock) headers.Add("x-amz-bucket-object-lock-enabled", "true");
-  req.headers = headers;
+  if (args.object_lock) {
+    req.headers.Add("x-amz-bucket-object-lock-enabled", "true");
+  }
 
   std::string body;
   if (region != "us-east-1") {
@@ -286,9 +285,8 @@ minio::s3::MakeBucketResponse minio::s3::Client::MakeBucket(
 
 minio::s3::ListBucketsResponse minio::s3::Client::ListBuckets(
     ListBucketsArgs args) {
-  Request req(http::Method::kGet, base_url_.region, base_url_);
-  req.headers = args.extra_headers;
-  req.query_params = args.extra_query_params;
+  Request req(http::Method::kGet, base_url_.region, base_url_,
+              args.extra_headers, args.extra_query_params);
   Response resp = Execute(req);
   if (!resp) return resp;
   return ListBucketsResponse::ParseXML(resp.data);
@@ -309,7 +307,8 @@ minio::s3::BucketExistsResponse minio::s3::Client::BucketExists(
     return (resp.code == "NoSuchBucket") ? false : resp;
   }
 
-  Request req(http::Method::kHead, region, base_url_);
+  Request req(http::Method::kHead, region, base_url_, args.extra_headers,
+              args.extra_query_params);
   req.bucket_name = args.bucket;
   if (Response resp = Execute(req)) {
     return true;
@@ -329,7 +328,8 @@ minio::s3::RemoveBucketResponse minio::s3::Client::RemoveBucket(
     return resp;
   }
 
-  Request req(http::Method::kDelete, region, base_url_);
+  Request req(http::Method::kDelete, region, base_url_, args.extra_headers,
+              args.extra_query_params);
   req.bucket_name = args.bucket;
 
   return Execute(req);
@@ -346,12 +346,11 @@ minio::s3::AbortMultipartUploadResponse minio::s3::Client::AbortMultipartUpload(
     return resp;
   }
 
-  Request req(http::Method::kDelete, region, base_url_);
+  Request req(http::Method::kDelete, region, base_url_, args.extra_headers,
+              args.extra_query_params);
   req.bucket_name = args.bucket;
   req.object_name = args.object;
-  utils::Multimap query_params;
-  query_params.Add("uploadId", args.upload_id);
-  req.query_params = query_params;
+  req.query_params.Add("uploadId", args.upload_id);
 
   return Execute(req);
 }
@@ -367,12 +366,11 @@ minio::s3::Client::CompleteMultipartUpload(CompleteMultipartUploadArgs args) {
     return resp;
   }
 
-  Request req(http::Method::kPost, region, base_url_);
+  Request req(http::Method::kPost, region, base_url_, args.extra_headers,
+              args.extra_query_params);
   req.bucket_name = args.bucket;
   req.object_name = args.object;
-  utils::Multimap query_params;
-  query_params.Add("uploadId", args.upload_id);
-  req.query_params = query_params;
+  req.query_params.Add("uploadId", args.upload_id);
 
   std::stringstream ss;
   ss << "<CompleteMultipartUpload>";
@@ -388,10 +386,8 @@ minio::s3::Client::CompleteMultipartUpload(CompleteMultipartUploadArgs args) {
   std::string body = ss.str();
   req.body = body;
 
-  utils::Multimap headers;
-  headers.Add("Content-Type", "application/xml");
-  headers.Add("Content-MD5", utils::Md5sumHash(body));
-  req.headers = headers;
+  req.headers.Add("Content-Type", "application/xml");
+  req.headers.Add("Content-MD5", utils::Md5sumHash(body));
 
   Response response = Execute(req);
   if (!response) return response;
@@ -414,14 +410,12 @@ minio::s3::Client::CreateMultipartUpload(CreateMultipartUploadArgs args) {
     return resp;
   }
 
-  Request req(http::Method::kPost, region, base_url_);
+  Request req(http::Method::kPost, region, base_url_, args.extra_headers,
+              args.extra_query_params);
   req.bucket_name = args.bucket;
   req.object_name = args.object;
-  utils::Multimap query_params;
-  query_params.Add("uploads", "");
-  req.query_params = query_params;
-
-  req.headers = args.headers;
+  req.query_params.Add("uploads", "");
+  req.headers.AddAll(args.headers);
 
   if (Response resp = Execute(req)) {
     pugi::xml_document xdoc;
@@ -446,11 +440,12 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
     return resp;
   }
 
-  Request req(http::Method::kPut, region, base_url_);
+  Request req(http::Method::kPut, region, base_url_, args.extra_headers,
+              args.extra_query_params);
   req.bucket_name = args.bucket;
   req.object_name = args.object;
-  req.query_params = args.query_params;
-  req.headers = args.headers;
+  req.query_params.AddAll(args.query_params);
+  req.headers.AddAll(args.headers);
   req.body = args.data;
 
   Response response = Execute(req);
@@ -494,17 +489,13 @@ minio::s3::UploadPartCopyResponse minio::s3::Client::UploadPartCopy(
     return resp;
   }
 
-  Request req(http::Method::kPut, region, base_url_);
+  Request req(http::Method::kPut, region, base_url_, args.extra_headers,
+              args.extra_query_params);
   req.bucket_name = args.bucket;
   req.object_name = args.object;
-
-  utils::Multimap query_params;
-  query_params.AddAll(args.extra_query_params);
-  query_params.Add("partNumber", std::to_string(args.part_number));
-  query_params.Add("uploadId", args.upload_id);
-  req.query_params = query_params;
-
-  req.headers = args.headers;
+  req.query_params.Add("partNumber", std::to_string(args.part_number));
+  req.query_params.Add("uploadId", args.upload_id);
+  req.headers.AddAll(args.headers);
 
   Response response = Execute(req);
   if (!response) return response;
@@ -531,15 +522,14 @@ minio::s3::StatObjectResponse minio::s3::Client::StatObject(
     return resp;
   }
 
-  Request req(http::Method::kHead, region, base_url_);
+  Request req(http::Method::kHead, region, base_url_, args.extra_headers,
+              args.extra_query_params);
   req.bucket_name = args.bucket;
   req.object_name = args.object;
-  utils::Multimap query_params;
   if (!args.version_id.empty()) {
-    query_params.Add("versionId", args.version_id);
-    req.query_params = query_params;
+    req.query_params.Add("versionId", args.version_id);
   }
-  req.headers = args.Headers();
+  req.headers.AddAll(args.Headers());
 
   Response response = Execute(req);
   if (!response) return response;
@@ -599,13 +589,12 @@ minio::s3::RemoveObjectResponse minio::s3::Client::RemoveObject(
     return resp;
   }
 
-  Request req(http::Method::kDelete, region, base_url_);
+  Request req(http::Method::kDelete, region, base_url_, args.extra_headers,
+              args.extra_query_params);
   req.bucket_name = args.bucket;
   req.object_name = args.object;
-  utils::Multimap query_params;
   if (!args.version_id.empty()) {
-    query_params.Add("versionId", args.version_id);
-    req.query_params = query_params;
+    req.query_params.Add("versionId", args.version_id);
   }
 
   return Execute(req);
@@ -651,13 +640,12 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
     return resp;
   }
 
-  Request req(http::Method::kGet, region, base_url_);
+  Request req(http::Method::kGet, region, base_url_, args.extra_headers,
+              args.extra_query_params);
   req.bucket_name = args.bucket;
   req.object_name = args.object;
-  utils::Multimap query_params;
   if (!args.version_id.empty()) {
-    query_params.Add("versionId", args.version_id);
-    req.query_params = query_params;
+    req.query_params.Add("versionId", args.version_id);
   }
   req.data_callback = [](http::DataCallbackArgs args) -> size_t {
     std::ofstream* fout = (std::ofstream*)args.user_arg;
@@ -687,19 +675,16 @@ minio::s3::GetObjectResponse minio::s3::Client::GetObject(GetObjectArgs args) {
     return resp;
   }
 
-  Request req(http::Method::kGet, region, base_url_);
+  Request req(http::Method::kGet, region, base_url_, args.extra_headers,
+              args.extra_query_params);
   req.bucket_name = args.bucket;
   req.object_name = args.object;
-  utils::Multimap query_params;
   if (!args.version_id.empty()) {
-    query_params.Add("versionId", args.version_id);
-    req.query_params = query_params;
+    req.query_params.Add("versionId", args.version_id);
   }
   req.data_callback = args.data_callback;
   req.user_arg = args.user_arg;
-  if (args.ssec != NULL) {
-    req.headers = args.ssec->Headers();
-  }
+  if (args.ssec != NULL) req.headers.AddAll(args.ssec->Headers());
 
   return Execute(req);
 }
@@ -715,16 +700,12 @@ minio::s3::ListObjectsResponse minio::s3::Client::ListObjectsV1(
     return resp;
   }
 
-  utils::Multimap query_params;
-  query_params.AddAll(args.extra_query_params);
-  query_params.AddAll(GetCommonListObjectsQueryParams(
-      args.delimiter, args.encoding_type, args.max_keys, args.prefix));
-  if (!args.marker.empty()) query_params.Add("marker", args.marker);
-
-  Request req(http::Method::kGet, region, base_url_);
+  Request req(http::Method::kGet, region, base_url_, args.extra_headers,
+              args.extra_query_params);
   req.bucket_name = args.bucket;
-  req.query_params = query_params;
-  req.headers = args.extra_headers;
+  req.query_params.AddAll(GetCommonListObjectsQueryParams(
+      args.delimiter, args.encoding_type, args.max_keys, args.prefix));
+  if (!args.marker.empty()) req.query_params.Add("marker", args.marker);
 
   Response resp = Execute(req);
   if (!resp) resp;
@@ -743,23 +724,20 @@ minio::s3::ListObjectsResponse minio::s3::Client::ListObjectsV2(
     return resp;
   }
 
-  utils::Multimap query_params;
-  query_params.Add("list-type", "2");
-  query_params.AddAll(args.extra_query_params);
-  query_params.AddAll(GetCommonListObjectsQueryParams(
-      args.delimiter, args.encoding_type, args.max_keys, args.prefix));
-  if (!args.continuation_token.empty())
-    query_params.Add("continuation-token", args.continuation_token);
-  if (args.fetch_owner) query_params.Add("fetch-owner", "true");
-  if (!args.start_after.empty()) {
-    query_params.Add("start-after", args.start_after);
-  }
-  if (args.include_user_metadata) query_params.Add("metadata", "true");
-
-  Request req(http::Method::kGet, region, base_url_);
+  Request req(http::Method::kGet, region, base_url_, args.extra_headers,
+              args.extra_query_params);
   req.bucket_name = args.bucket;
-  req.query_params = query_params;
-  req.headers = args.extra_headers;
+  req.query_params.Add("list-type", "2");
+  req.query_params.AddAll(GetCommonListObjectsQueryParams(
+      args.delimiter, args.encoding_type, args.max_keys, args.prefix));
+  if (!args.continuation_token.empty()) {
+    req.query_params.Add("continuation-token", args.continuation_token);
+  }
+  if (args.fetch_owner) req.query_params.Add("fetch-owner", "true");
+  if (!args.start_after.empty()) {
+    req.query_params.Add("start-after", args.start_after);
+  }
+  if (args.include_user_metadata) req.query_params.Add("metadata", "true");
 
   Response resp = Execute(req);
   if (!resp) resp;
@@ -778,20 +756,18 @@ minio::s3::ListObjectsResponse minio::s3::Client::ListObjectVersions(
     return resp;
   }
 
-  utils::Multimap query_params;
-  query_params.Add("versions", "");
-  query_params.AddAll(args.extra_query_params);
-  query_params.AddAll(GetCommonListObjectsQueryParams(
-      args.delimiter, args.encoding_type, args.max_keys, args.prefix));
-  if (!args.key_marker.empty()) query_params.Add("key-marker", args.key_marker);
-  if (!args.version_id_marker.empty()) {
-    query_params.Add("version-id-marker", args.version_id_marker);
-  }
-
-  Request req(http::Method::kGet, region, base_url_);
+  Request req(http::Method::kGet, region, base_url_, args.extra_headers,
+              args.extra_query_params);
   req.bucket_name = args.bucket;
-  req.query_params = query_params;
-  req.headers = args.extra_headers;
+  req.query_params.Add("versions", "");
+  req.query_params.AddAll(GetCommonListObjectsQueryParams(
+      args.delimiter, args.encoding_type, args.max_keys, args.prefix));
+  if (!args.key_marker.empty()) {
+    req.query_params.Add("key-marker", args.key_marker);
+  }
+  if (!args.version_id_marker.empty()) {
+    req.query_params.Add("version-id-marker", args.version_id_marker);
+  }
 
   Response resp = Execute(req);
   if (!resp) resp;
@@ -1085,19 +1061,6 @@ minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
     return ComposeObject(coargs);
   }
 
-  utils::Multimap headers;
-  headers.AddAll(args.extra_headers);
-  headers.AddAll(args.Headers());
-  if (args.metadata_directive != NULL) {
-    headers.Add("x-amz-metadata-directive",
-                DirectiveToString(*args.metadata_directive));
-  }
-  if (args.tagging_directive != NULL) {
-    headers.Add("x-amz-tagging-directive",
-                DirectiveToString(*args.tagging_directive));
-  }
-  headers.AddAll(args.source.CopyHeaders());
-
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
@@ -1105,11 +1068,20 @@ minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
     return resp;
   }
 
-  Request req(http::Method::kPut, region, base_url_);
+  Request req(http::Method::kPut, region, base_url_, args.extra_headers,
+              args.extra_query_params);
   req.bucket_name = args.bucket;
   req.object_name = args.object;
-  req.query_params = args.extra_query_params;
-  req.headers = headers;
+  req.headers.AddAll(args.Headers());
+  if (args.metadata_directive != NULL) {
+    req.headers.Add("x-amz-metadata-directive",
+                    DirectiveToString(*args.metadata_directive));
+  }
+  if (args.tagging_directive != NULL) {
+    req.headers.Add("x-amz-tagging-directive",
+                    DirectiveToString(*args.tagging_directive));
+  }
+  req.headers.AddAll(args.source.CopyHeaders());
 
   Response response = Execute(req);
   if (!response) return response;

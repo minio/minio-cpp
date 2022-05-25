@@ -16,8 +16,15 @@
 #include "client.h"
 
 minio::s3::Request::Request(http::Method httpmethod, std::string regionvalue,
-                            http::BaseUrl& baseurl)
-    : method(httpmethod), region(regionvalue), base_url(baseurl) {}
+                            http::BaseUrl& baseurl,
+                            utils::Multimap extra_headers,
+                            utils::Multimap extra_query_params)
+    : base_url(baseurl) {
+  method = httpmethod;
+  region = regionvalue;
+  headers = extra_headers;
+  query_params = extra_query_params;
+}
 
 void minio::s3::Request::BuildHeaders(utils::Url& url,
                                       creds::Provider* provider) {

@@ -46,7 +46,8 @@ struct Request {
   bool ignore_cert_check = false;
 
   Request(http::Method httpmethod, std::string regionvalue,
-          http::BaseUrl& baseurl);
+          http::BaseUrl& baseurl, utils::Multimap extra_headers,
+          utils::Multimap extra_query_params);
   http::Request ToHttpRequest(creds::Provider* provider = NULL);
 
  private:
