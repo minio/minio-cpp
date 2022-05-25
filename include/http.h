@@ -71,7 +71,7 @@ struct BaseUrl {
 
 struct DataCallbackArgs;
 
-typedef size_t (*DataCallback)(DataCallbackArgs args);
+using DataCallback = std::function<size_t(DataCallbackArgs)>;
 
 struct Response;
 
