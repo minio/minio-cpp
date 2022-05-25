@@ -1037,15 +1037,7 @@ minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
   std::string etag;
   size_t size;
   {
-    StatObjectArgs soargs;
-    soargs.extra_headers = args.source.extra_headers;
-    soargs.extra_query_params = args.source.extra_query_params;
-    soargs.bucket = args.source.bucket;
-    soargs.region = args.source.region;
-    soargs.object = args.source.object;
-    soargs.version_id = args.source.version_id;
-    soargs.ssec = args.source.ssec;
-    StatObjectResponse resp = StatObject(soargs);
+    StatObjectResponse resp = StatObject(args.source);
     if (!resp) return resp;
     etag = resp.etag;
     size = resp.size;
@@ -1146,15 +1138,7 @@ minio::s3::StatObjectResponse minio::s3::Client::CalculatePartCount(
     std::string etag;
     size_t size;
 
-    StatObjectArgs soargs;
-    soargs.extra_headers = source.extra_headers;
-    soargs.extra_query_params = source.extra_query_params;
-    soargs.bucket = source.bucket;
-    soargs.region = source.region;
-    soargs.object = source.object;
-    soargs.version_id = source.version_id;
-    soargs.ssec = source.ssec;
-    StatObjectResponse resp = StatObject(soargs);
+    StatObjectResponse resp = StatObject(source);
     if (!resp) return resp;
     etag = resp.etag;
     size = resp.size;
@@ -1228,20 +1212,6 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
 
   ComposeSource& source = args.sources.front();
   if (part_count == 1 && source.offset == NULL && source.length == NULL) {
-    CopySource src;
-    src.extra_headers = source.extra_headers;
-    src.extra_query_params = source.extra_query_params;
-    src.bucket = source.bucket;
-    src.region = source.region;
-    src.object = source.object;
-    src.ssec = source.ssec;
-    src.offset = source.offset;
-    src.length = source.length;
-    src.match_etag = source.match_etag;
-    src.not_match_etag = source.not_match_etag;
-    src.modified_since = source.modified_since;
-    src.unmodified_since = source.unmodified_since;
-
     CopyObjectArgs coargs;
     coargs.extra_headers = args.extra_headers;
     coargs.extra_query_params = args.extra_query_params;
@@ -1249,7 +1219,7 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
     coargs.region = args.region;
     coargs.object = args.object;
     coargs.sse = args.sse;
-    coargs.source = src;
+    coargs.source = source;
 
     return CopyObject(coargs);
   }
