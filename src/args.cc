@@ -364,3 +364,25 @@ minio::error::Error minio::s3::RemoveObjectsArgs::Validate() {
 
   return error::SUCCESS;
 }
+
+minio::error::Error minio::s3::SelectObjectContentArgs::Validate() {
+  if (error::Error err = ObjectReadArgs::Validate()) return err;
+
+  if (!utils::CheckNonEmptyString(request.expr)) {
+    return error::Error("SQL expression must not be empty");
+  }
+
+  if (!((request.csv_input != NULL) ^ (request.json_input != NULL) ^
+        (request.parquet_input != NULL))) {
+    return error::Error(
+        "One of CSV, JSON or Parquet input serialization must be set");
+  }
+
+  if (!((request.csv_output != NULL) ^ (request.json_output != NULL))) {
+    return error::Error("One of CSV or JSON output serialization must be set");
+  }
+
+  if (resultfunc == NULL) return error::Error("result function must be set");
+
+  return error::SUCCESS;
+}

@@ -20,6 +20,7 @@
 #include "config.h"
 #include "request.h"
 #include "response.h"
+#include "select.h"
 
 namespace minio {
 namespace s3 {
@@ -79,6 +80,7 @@ class BaseClient {
   RemoveBucketResponse RemoveBucket(RemoveBucketArgs args);
   RemoveObjectResponse RemoveObject(RemoveObjectArgs args);
   RemoveObjectsResponse RemoveObjects(RemoveObjectsApiArgs args);
+  SelectObjectContentResponse SelectObjectContent(SelectObjectContentArgs args);
   StatObjectResponse StatObject(StatObjectArgs args);
   UploadPartResponse UploadPart(UploadPartArgs args);
   UploadPartCopyResponse UploadPartCopy(UploadPartCopyArgs args);

@@ -22,10 +22,13 @@
 #include <pwd.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <zlib.h>
 
 #include <cmath>
 #include <cstring>
 #include <curlpp/cURLpp.hpp>
+#include <iomanip>
+#include <iostream>
 #include <list>
 #include <regex>
 #include <set>
@@ -43,6 +46,12 @@ inline constexpr unsigned int kMinPartSize = 5 * 1024 * 1024;           // 5MiB
 bool GetEnv(std::string& var, const char* name);
 
 std::string GetHomeDir();
+
+std::string Printable(std::string s);
+
+unsigned long CRC32(std::string_view str);
+
+unsigned int Int(std::string_view str);
 
 // FormatTime formats time as per format.
 std::string FormatTime(const std::tm* time, const char* format);

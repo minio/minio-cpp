@@ -272,6 +272,8 @@ struct RemoveObjectsResponse : public Response {
 
   static RemoveObjectsResponse ParseXML(std::string_view data);
 };  // struct RemoveObjectsResponse
+
+using SelectObjectContentResponse = Response;
 }  // namespace s3
 }  // namespace minio
 
