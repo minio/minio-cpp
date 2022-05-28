@@ -34,15 +34,20 @@ std::string minio::http::ExtractRegion(std::string &host) {
 }
 
 minio::error::Error minio::http::BaseUrl::SetHost(std::string hostvalue) {
-  std::stringstream str_stream(hostvalue);
-  std::string portstr;
-  while (std::getline(str_stream, portstr, ':'))
-    ;
-  try {
-    port = std::stoi(portstr);
-    hostvalue = hostvalue.substr(0, hostvalue.rfind(":" + portstr));
-  } catch (std::invalid_argument) {
-    port = 0;
+  struct sockaddr_in dst;
+  if (inet_pton(AF_INET6, hostvalue.c_str(), &(dst.sin_addr)) != 0) {
+    hostvalue = "[" + hostvalue + "]";
+  } else if (hostvalue.front() != '[' || hostvalue.back() != ']') {
+    std::stringstream str_stream(hostvalue);
+    std::string portstr;
+    while (std::getline(str_stream, portstr, ':')) {
+    }
+    try {
+      port = std::stoi(portstr);
+      hostvalue = hostvalue.substr(0, hostvalue.rfind(":" + portstr));
+    } catch (std::invalid_argument) {
+      port = 0;
+    }
   }
 
   accelerate_host = utils::StartsWith(hostvalue, "s3-accelerate.");
