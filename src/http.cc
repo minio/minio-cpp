@@ -15,7 +15,7 @@
 
 #include "http.h"
 
-std::string minio::http::ExtractRegion(std::string host) {
+std::string minio::http::ExtractRegion(std::string &host) {
   std::stringstream str_stream(host);
   std::string token;
   std::vector<std::string> tokens;

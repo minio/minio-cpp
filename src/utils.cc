@@ -25,8 +25,8 @@ const std::regex VALID_BUCKET_NAME_STRICT_REGEX(
     "^[a-z0-9][a-z0-9\\.\\-]{1,61}[a-z0-9]$");
 const std::regex VALID_IP_ADDR_REGEX("^(\\d+\\.){3}\\d+$");
 
-bool minio::utils::StringToBool(std::string_view str) {
-  std::string s = ToLower(std::string(str));
+bool minio::utils::StringToBool(std::string str) {
+  std::string s = ToLower(str);
   if (s == "false") return false;
   if (s == "true") return true;
 
@@ -94,8 +94,8 @@ std::string minio::utils::Join(std::vector<std::string> values,
   return result;
 }
 
-std::string minio::utils::EncodePath(std::string_view path) {
-  std::stringstream str_stream{std::string(path)};
+std::string minio::utils::EncodePath(std::string& path) {
+  std::stringstream str_stream(path);
   std::string token;
   std::string out;
   while (std::getline(str_stream, token, '/')) {

@@ -25,10 +25,10 @@
 
 namespace minio {
 namespace s3 {
-utils::Multimap GetCommonListObjectsQueryParams(std::string delimiter,
-                                                std::string encoding_type,
+utils::Multimap GetCommonListObjectsQueryParams(std::string& delimiter,
+                                                std::string& encoding_type,
                                                 unsigned int max_keys,
-                                                std::string prefix);
+                                                std::string& prefix);
 
 class ListObjectsResult;
 
@@ -57,11 +57,11 @@ class Client {
 
   void HandleRedirectResponse(std::string& code, std::string& message,
                               int status_code, http::Method method,
-                              utils::Multimap headers,
-                              std::string_view bucket_name, bool retry = false);
+                              utils::Multimap headers, std::string& bucket_name,
+                              bool retry = false);
   Response GetErrorResponse(http::Response resp, std::string_view resource,
-                            http::Method method, std::string_view bucket_name,
-                            std::string_view object_name);
+                            http::Method method, std::string& bucket_name,
+                            std::string& object_name);
   Response execute(Request& req);
   Response Execute(Request& req);
 
@@ -71,8 +71,7 @@ class Client {
   ListObjectsResponse ListObjectVersions(ListObjectVersionsArgs args);
 
   // Bucket operations
-  GetRegionResponse GetRegion(std::string_view bucket_name,
-                              std::string_view region = "");
+  GetRegionResponse GetRegion(std::string& bucket_name, std::string& region);
   MakeBucketResponse MakeBucket(MakeBucketArgs args);
   ListBucketsResponse ListBuckets(ListBucketsArgs args);
   ListBucketsResponse ListBuckets();

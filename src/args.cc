@@ -67,7 +67,7 @@ minio::utils::Multimap minio::s3::ObjectConditionalReadArgs::Headers() {
 
   std::string range;
   if (off != NULL) {
-    range = std::string("bytes=") + std::to_string(*off) + "-";
+    range = "bytes=" + std::to_string(*off) + "-";
     if (len != NULL) {
       range += std::to_string(*off + *len - 1);
     }
@@ -272,7 +272,7 @@ minio::error::Error minio::s3::CopyObjectArgs::Validate() {
 }
 
 minio::error::Error minio::s3::ComposeSource::BuildHeaders(size_t object_size,
-                                                           std::string etag) {
+                                                           std::string& etag) {
   std::string msg = "source " + bucket + "/" + object;
   if (!version_id.empty()) msg += "?versionId=" + version_id;
   msg += ": ";
