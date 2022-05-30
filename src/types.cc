@@ -167,3 +167,69 @@ std::string minio::s3::SelectRequest::ToXML() {
 
   return ss.str();
 }
+
+minio::s3::NotificationRecord minio::s3::NotificationRecord::ParseJSON(
+    nlohmann::json j_record) {
+  minio::s3::NotificationRecord record;
+
+  record.event_version = j_record.value("eventVersion", "");
+  record.event_source = j_record.value("eventSource", "");
+  record.aws_region = j_record.value("awsRegion", "");
+  record.event_time = j_record.value("eventTime", "");
+  record.event_name = j_record.value("eventName", "");
+  if (j_record.contains("userIdentity")) {
+    record.user_identity.principal_id =
+        j_record["userIdentity"].value("principalId", "");
+  }
+  if (j_record.contains("requestParameters")) {
+    auto& j = j_record["requestParameters"];
+    record.request_parameters.principal_id = j.value("principalId", "");
+    record.request_parameters.region = j.value("region", "");
+    record.request_parameters.source_ip_address =
+        j.value("sourceIPAddress", "");
+  }
+  if (j_record.contains("responseElements")) {
+    auto& j = j_record["responseElements"];
+    record.response_elements.content_length = j.value("content-length", "");
+    record.response_elements.x_amz_request_id = j.value("x-amz-request-id", "");
+    record.response_elements.x_minio_deployment_id =
+        j.value("x-minio-deployment-id", "");
+    record.response_elements.x_minio_origin_endpoint =
+        j.value("x-minio-origin-endpoint", "");
+  }
+  if (j_record.contains("s3")) {
+    auto& j_s3 = j_record["s3"];
+    record.s3.s3_schema_version = j_s3.value("s3SchemaVersion", "");
+    record.s3.configuration_id = j_s3.value("configurationId", "");
+    if (j_s3.contains("bucket")) {
+      auto& j_bucket = j_s3["bucket"];
+      record.s3.bucket.name = j_bucket.value("name", "");
+      record.s3.bucket.arn = j_bucket.value("arn", "");
+      if (j_bucket.contains("ownerIdentity")) {
+        record.s3.bucket.owner_identity.principal_id =
+            j_bucket["ownerIdentity"].value("principalId", "");
+      }
+    }
+    if (j_s3.contains("object")) {
+      auto& j_object = j_s3["object"];
+      record.s3.object.key = j_object.value("key", "");
+      record.s3.object.size = j_object.value("size", 0);
+      record.s3.object.etag = j_object.value("eTag", "");
+      record.s3.object.content_type = j_object.value("contentType", "");
+      record.s3.object.sequencer = j_object.value("sequencer", "");
+      if (j_object.contains("userMetadata")) {
+        for (auto& j : j_object["userMetadata"].items()) {
+          record.s3.object.user_metadata[j.key()] = j.value();
+        }
+      }
+    }
+  }
+  if (j_record.contains("source")) {
+    auto& j_source = j_record["source"];
+    record.source.host = j_source.value("host", "");
+    record.source.port = j_source.value("port", "");
+    record.source.user_agent = j_source.value("userAgent", "");
+  }
+
+  return record;
+}

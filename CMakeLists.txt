@@ -60,6 +60,9 @@ ENDIF(CURL_FOUND)
 find_package(unofficial-curlpp CONFIG REQUIRED)
 SET(requiredlibs ${requiredlibs} unofficial::curlpp::curlpp)
 
+find_package(nlohmann_json CONFIG REQUIRED)
+SET(requiredlibs ${requiredlibs} nlohmann_json::nlohmann_json)
+
 find_package(OpenSSL REQUIRED)
 IF(OPENSSL_FOUND)
   INCLUDE_DIRECTORIES(${OPENSSL_INCLUDE_DIR})

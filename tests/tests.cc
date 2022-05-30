@@ -13,7 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <unistd.h>
+
 #include <random>
+#include <thread>
 
 #include "client.h"
 
@@ -594,6 +597,75 @@ class Tests {
       throw err;
     }
   }
+
+  void ListenBucketNotification() {
+    std::cout << "ListenBucketNotification()" << std::endl;
+
+    std::list<minio::s3::NotificationRecord> records;
+    std::thread task{[&client_ = client_, &bucket_name_ = bucket_name_,
+                      &records = records]() {
+      minio::s3::ListenBucketNotificationArgs args;
+      args.bucket = bucket_name_;
+      args.func = [&records = records](
+                      std::list<minio::s3::NotificationRecord> values) -> bool {
+        records.insert(records.end(), values.begin(), values.end());
+        return false;
+      };
+      minio::s3::ListenBucketNotificationResponse resp =
+          client_.ListenBucketNotification(args);
+      if (!resp) {
+        throw std::runtime_error("ListenBucketNotification(): " +
+                                 resp.Error().String());
+      }
+    }};
+
+    usleep(10 * 1000);  // sleep for 10ms.
+
+    std::string object_name = RandObjectName();
+    try {
+      std::string data = "ListenBucketNotification()";
+      std::stringstream ss(data);
+      minio::s3::PutObjectArgs args(ss, data.length(), 0);
+      args.bucket = bucket_name_;
+      args.object = object_name;
+      minio::s3::PutObjectResponse resp = client_.PutObject(args);
+      if (!resp) {
+        throw std::runtime_error("PutObject(): " + resp.Error().String());
+      }
+
+      task.join();
+
+      if (records.empty()) {
+        throw std::runtime_error(
+            "ListenBucketNotification(): records length: expected: 1, got: 0");
+      }
+
+      minio::s3::NotificationRecord record = records.front();
+      if (record.event_name != "s3:ObjectCreated:Put") {
+        throw std::runtime_error(
+            "ListenBucketNotification(): record.event_name: expected: "
+            "s3:ObjectCreated:Put, got: " +
+            record.event_name);
+      }
+
+      if (record.s3.bucket.name != bucket_name_) {
+        throw std::runtime_error(
+            "ListenBucketNotification(): record.s3.bucket.name: expected: " +
+            bucket_name_ + ", got: " + record.s3.bucket.name);
+      }
+
+      if (record.s3.object.key != object_name) {
+        throw std::runtime_error(
+            "ListenBucketNotification(): record.s3.object.name: expected: " +
+            object_name + ", got: " + record.s3.object.key);
+      }
+
+      RemoveObject(bucket_name_, object_name);
+    } catch (const std::runtime_error& err) {
+      RemoveObject(bucket_name_, object_name);
+      throw err;
+    }
+  }
 };  // class Tests
 
 int main(int argc, char* argv[]) {
@@ -645,6 +717,7 @@ int main(int argc, char* argv[]) {
   tests.UploadObject();
   tests.RemoveObjects();
   tests.SelectObjectContent();
+  tests.ListenBucketNotification();
 
   return EXIT_SUCCESS;
 }

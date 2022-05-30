@@ -386,3 +386,10 @@ minio::error::Error minio::s3::SelectObjectContentArgs::Validate() {
 
   return error::SUCCESS;
 }
+
+minio::error::Error minio::s3::ListenBucketNotificationArgs::Validate() {
+  if (error::Error err = BucketArgs::Validate()) return err;
+  if (func == NULL) error::Error("notification records function must be set");
+
+  return error::SUCCESS;
+}

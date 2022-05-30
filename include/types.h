@@ -17,6 +17,7 @@
 #define _MINIO_S3_TYPES_H
 
 #include <iostream>
+#include <nlohmann/json.hpp>
 
 #include "utils.h"
 
@@ -315,6 +316,57 @@ struct DeleteObject {
   std::string name;
   std::string version_id;
 };  // struct DeleteObject
+
+struct NotificationRecord {
+  std::string event_version;
+  std::string event_source;
+  std::string aws_region;
+  std::string event_time;
+  std::string event_name;
+  struct {
+    std::string principal_id;
+  } user_identity;
+  struct {
+    std::string principal_id;
+    std::string region;
+    std::string source_ip_address;
+  } request_parameters;
+  struct {
+    std::string content_length;
+    std::string x_amz_request_id;
+    std::string x_minio_deployment_id;
+    std::string x_minio_origin_endpoint;
+  } response_elements;
+  struct {
+    std::string s3_schema_version;
+    std::string configuration_id;
+    struct {
+      std::string name;
+      std::string arn;
+      struct {
+        std::string principal_id;
+      } owner_identity;
+    } bucket;
+    struct {
+      std::string key;
+      size_t size;
+      std::string etag;
+      std::string content_type;
+      std::map<std::string, std::string> user_metadata;
+      std::string sequencer;
+    } object;
+  } s3;
+  struct {
+    std::string host;
+    std::string port;
+    std::string user_agent;
+  } source;
+
+  static NotificationRecord ParseJSON(nlohmann::json j_record);
+};  // struct NotificationRecord
+
+using NotificationRecordsFunction =
+    std::function<bool(std::list<NotificationRecord>)>;
 }  // namespace s3
 }  // namespace minio
 #endif  // #ifndef __MINIO_S3_TYPES_H
