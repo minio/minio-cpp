@@ -16,8 +16,12 @@
 #ifndef _MINIO_UTILS_H
 #define _MINIO_UTILS_H
 
+#include <arpa/inet.h>
 #include <openssl/buffer.h>
 #include <openssl/evp.h>
+#include <pwd.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include <cmath>
 #include <cstring>
@@ -35,6 +39,10 @@ inline constexpr unsigned long kMaxObjectSize =
     5L * 1024 * 1024 * 1024 * 1024;                                     // 5TiB
 inline constexpr unsigned long kMaxPartSize = 5L * 1024 * 1024 * 1024;  // 5GiB
 inline constexpr unsigned int kMinPartSize = 5 * 1024 * 1024;           // 5MiB
+
+bool GetEnv(std::string& var, const char* name);
+
+std::string GetHomeDir();
 
 // FormatTime formats time as per format.
 std::string FormatTime(const std::tm* time, const char* format);
@@ -96,20 +104,40 @@ error::Error CalcPartInfo(long object_size, size_t& part_size,
  */
 class Time {
  private:
-  struct timeval tv_;
-  bool utc_;
+  struct timeval tv_ = {0, 0};
+  bool utc_ = false;
 
  public:
-  Time();
-  Time(std::time_t tv_sec, suseconds_t tv_usec, bool utc);
+  Time() {}
+
+  Time(std::time_t tv_sec, suseconds_t tv_usec, bool utc) {
+    this->tv_.tv_sec = tv_sec;
+    this->tv_.tv_usec = tv_usec;
+    this->utc_ = utc;
+  }
+
+  void Add(time_t seconds) { tv_.tv_sec += seconds; }
+
   std::tm* ToUTC();
+
   std::string ToSignerDate();
+
   std::string ToAmzDate();
+
   std::string ToHttpHeaderValue();
+
   static Time FromHttpHeaderValue(const char* value);
+
   std::string ToISO8601UTC();
+
   static Time FromISO8601UTC(const char* value);
-  static Time Now();
+
+  static Time Now() {
+    Time t;
+    gettimeofday(&t.tv_, NULL);
+    return t;
+  }
+
   operator bool() const { return tv_.tv_sec != 0 && tv_.tv_usec != 0; }
 };  // class Time
 
@@ -122,34 +150,33 @@ class Multimap {
   std::map<std::string, std::set<std::string>> keys_;
 
  public:
-  Multimap();
-  Multimap(const Multimap& headers);
+  Multimap() {}
+
+  Multimap(const Multimap& headers) { this->AddAll(headers); }
+
   void Add(std::string key, std::string value);
+
   void AddAll(const Multimap& headers);
+
   std::list<std::string> ToHttpHeaders();
+
   std::string ToQueryString();
+
   operator bool() const { return !map_.empty(); }
+
   bool Contains(std::string_view key);
+
   std::list<std::string> Get(std::string_view key);
+
   std::string GetFront(std::string_view key);
+
   std::list<std::string> Keys();
+
   void GetCanonicalHeaders(std::string& signed_headers,
                            std::string& canonical_headers);
+
   std::string GetCanonicalQueryString();
 };  // class Multimap
-
-/**
- * Url represents HTTP URL and it's components.
- */
-struct Url {
-  bool is_https;
-  std::string host;
-  std::string path;
-  std::string query_string;
-
-  operator bool() const { return !host.empty(); }
-  std::string String();
-};  // struct Url
 
 /**
  * CharBuffer represents stream buffer wrapping character array and its size.

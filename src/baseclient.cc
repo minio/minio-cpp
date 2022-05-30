@@ -26,15 +26,15 @@ minio::utils::Multimap minio::s3::GetCommonListObjectsQueryParams(
   return query_params;
 }
 
-minio::s3::BaseClient::BaseClient(http::BaseUrl& base_url,
-                                  creds::Provider* provider)
+minio::s3::BaseClient::BaseClient(BaseUrl& base_url, creds::Provider* provider)
     : base_url_(base_url) {
   if (!base_url_) {
-    std::cerr << "base URL must not be empty" << std::endl;
+    std::cerr << "valid base url must be provided; "
+              << base_url_.Error().String() << std::endl;
     std::terminate();
   }
 
-  provider_ = provider;
+  this->provider_ = provider;
 }
 
 minio::error::Error minio::s3::BaseClient::SetAppInfo(
@@ -89,11 +89,7 @@ minio::s3::Response minio::s3::BaseClient::GetErrorResponse(
     std::string& bucket_name, std::string& object_name) {
   if (!resp.error.empty()) return error::Error(resp.error);
 
-  Response response;
-  response.status_code = resp.status_code;
-  response.headers = resp.headers;
-  std::string data = resp.body;
-  if (!data.empty()) {
+  if (!resp.body.empty()) {
     std::list<std::string> values = resp.headers.Get("Content-Type");
     for (auto& value : values) {
       if (utils::Contains(utils::ToLower(value), "application/xml")) {
@@ -101,11 +97,18 @@ minio::s3::Response minio::s3::BaseClient::GetErrorResponse(
       }
     }
 
-    response.error = "invalid response received; status code: " +
+    Response response(
+        error::Error("invalid response received; status code: " +
                      std::to_string(resp.status_code) +
-                     "; content-type: " + utils::Join(values, ",");
+                     "; content-type: " + utils::Join(values, ",")));
+    response.status_code = resp.status_code;
+    response.headers = resp.headers;
     return response;
   }
+
+  Response response;
+  response.status_code = resp.status_code;
+  response.headers = resp.headers;
 
   switch (resp.status_code) {
     case 301:
@@ -150,8 +153,10 @@ minio::s3::Response minio::s3::BaseClient::GetErrorResponse(
           "The specified method is not allowed against this resource";
       break;
     default:
-      response.error = "server failed with HTTP status code " +
-                       std::to_string(resp.status_code);
+      Response response(error::Error("server failed with HTTP status code " +
+                                     std::to_string(resp.status_code)));
+      response.status_code = resp.status_code;
+      response.headers = resp.headers;
       return response;
   }
 
@@ -369,7 +374,7 @@ minio::s3::GetObjectResponse minio::s3::BaseClient::GetObject(
     GetObjectArgs args) {
   if (error::Error err = args.Validate()) return err;
 
-  if (args.ssec != NULL && !base_url_.is_https) {
+  if (args.ssec != NULL && !base_url_.https) {
     return error::Error(
         "SSE-C operation must be performed over a secure connection");
   }
@@ -388,8 +393,8 @@ minio::s3::GetObjectResponse minio::s3::BaseClient::GetObject(
   if (!args.version_id.empty()) {
     req.query_params.Add("versionId", args.version_id);
   }
-  req.data_callback = args.data_callback;
-  req.user_arg = args.user_arg;
+  req.datafunc = args.datafunc;
+  req.userdata = args.userdata;
   if (args.ssec != NULL) req.headers.AddAll(args.ssec->Headers());
 
   return Execute(req);
@@ -604,7 +609,7 @@ minio::s3::StatObjectResponse minio::s3::BaseClient::StatObject(
     StatObjectArgs args) {
   if (error::Error err = args.Validate()) return err;
 
-  if (args.ssec != NULL && !base_url_.is_https) {
+  if (args.ssec != NULL && !base_url_.https) {
     return error::Error(
         "SSE-C operation must be performed over a secure connection");
   }

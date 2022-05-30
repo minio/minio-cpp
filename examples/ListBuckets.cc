@@ -17,8 +17,7 @@
 
 int main(int argc, char* argv[]) {
   // Create S3 base URL.
-  minio::http::BaseUrl base_url;
-  base_url.SetHost("play.min.io");
+  minio::s3::BaseUrl base_url("play.min.io");
 
   // Create credential provider.
   minio::creds::StaticProvider provider(
@@ -37,7 +36,8 @@ int main(int argc, char* argv[]) {
                 << bucket.creation_date.ToHttpHeaderValue() << std::endl;
     }
   } else {
-    std::cout << "unable to list buckets; " << resp.GetError() << std::endl;
+    std::cout << "unable to list buckets; " << resp.Error().String()
+              << std::endl;
   }
 
   return 0;

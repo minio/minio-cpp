@@ -142,8 +142,8 @@ struct DownloadObjectArgs : public ObjectReadArgs {
 };  // struct DownloadObjectArgs
 
 struct GetObjectArgs : public ObjectConditionalReadArgs {
-  http::DataCallback data_callback;
-  void *user_arg = NULL;
+  http::DataFunction datafunc;
+  void *userdata = NULL;
 
   error::Error Validate();
 };  // struct GetObjectArgs

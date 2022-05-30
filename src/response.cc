@@ -15,44 +15,17 @@
 
 #include "response.h"
 
-minio::s3::Response::Response() {}
-
-minio::s3::Response::Response(error::Error err) { error = err.String(); }
-
-minio::s3::Response::Response(const Response& response) {
-  status_code = response.status_code;
-  headers = response.headers;
-  data = response.data;
-  error = response.error;
-  code = response.code;
-  message = response.message;
-  resource = response.resource;
-  request_id = response.request_id;
-  host_id = response.host_id;
-  bucket_name = response.bucket_name;
-  object_name = response.object_name;
-}
-
-std::string minio::s3::Response::GetError() {
-  if (!error.empty()) return error;
-  if (!code.empty()) return code + ": " + message;
-  if (status_code && (status_code < 200 || status_code > 299)) {
-    return "failed with HTTP status code " + std::to_string(status_code);
-  }
-  return "";
-}
-
 minio::s3::Response minio::s3::Response::ParseXML(std::string_view data,
                                                   int status_code,
                                                   utils::Multimap headers) {
-  minio::s3::Response resp;
+  Response resp;
   resp.status_code = status_code;
   resp.headers = headers;
 
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(data.data());
   if (!result) {
-    resp.error = "unable to parse XML; " + std::string(data);
+    resp.err_ = error::Error("unable to parse XML; " + std::string(data));
     return resp;
   }
 
@@ -83,27 +56,6 @@ minio::s3::Response minio::s3::Response::ParseXML(std::string_view data,
   return resp;
 }
 
-minio::s3::GetRegionResponse::GetRegionResponse(std::string regionvalue) {
-  region = regionvalue;
-}
-
-minio::s3::GetRegionResponse::GetRegionResponse(error::Error err)
-    : Response(err) {}
-
-minio::s3::GetRegionResponse::GetRegionResponse(const Response& response)
-    : Response(response) {}
-
-minio::s3::ListBucketsResponse::ListBucketsResponse(
-    std::list<Bucket> bucketlist) {
-  buckets = bucketlist;
-}
-
-minio::s3::ListBucketsResponse::ListBucketsResponse(error::Error err)
-    : Response(err) {}
-
-minio::s3::ListBucketsResponse::ListBucketsResponse(const Response& response)
-    : Response(response) {}
-
 minio::s3::ListBucketsResponse minio::s3::ListBucketsResponse::ParseXML(
     std::string_view data) {
   std::list<Bucket> buckets;
@@ -129,26 +81,6 @@ minio::s3::ListBucketsResponse minio::s3::ListBucketsResponse::ParseXML(
 
   return buckets;
 }
-
-minio::s3::BucketExistsResponse::BucketExistsResponse(bool existflag) {
-  exist = existflag;
-}
-
-minio::s3::BucketExistsResponse::BucketExistsResponse(error::Error err)
-    : Response(err) {}
-
-minio::s3::BucketExistsResponse::BucketExistsResponse(const Response& response)
-    : Response(response) {}
-
-minio::s3::CompleteMultipartUploadResponse::CompleteMultipartUploadResponse() {}
-
-minio::s3::CompleteMultipartUploadResponse::CompleteMultipartUploadResponse(
-    error::Error err)
-    : Response(err) {}
-
-minio::s3::CompleteMultipartUploadResponse::CompleteMultipartUploadResponse(
-    const Response& response)
-    : Response(response) {}
 
 minio::s3::CompleteMultipartUploadResponse
 minio::s3::CompleteMultipartUploadResponse::ParseXML(std::string_view data,
@@ -179,49 +111,6 @@ minio::s3::CompleteMultipartUploadResponse::ParseXML(std::string_view data,
 
   return resp;
 }
-
-minio::s3::CreateMultipartUploadResponse::CreateMultipartUploadResponse(
-    std::string uploadid) {
-  upload_id = uploadid;
-}
-
-minio::s3::CreateMultipartUploadResponse::CreateMultipartUploadResponse(
-    error::Error err)
-    : Response(err) {}
-
-minio::s3::CreateMultipartUploadResponse::CreateMultipartUploadResponse(
-    const Response& response)
-    : Response(response) {}
-
-minio::s3::PutObjectResponse::PutObjectResponse() {}
-
-minio::s3::PutObjectResponse::PutObjectResponse(const Response& response)
-    : Response(response) {}
-
-minio::s3::PutObjectResponse::PutObjectResponse(error::Error err)
-    : Response(err) {}
-
-minio::s3::StatObjectResponse::StatObjectResponse() {}
-
-minio::s3::StatObjectResponse::StatObjectResponse(error::Error err)
-    : Response(err) {}
-
-minio::s3::StatObjectResponse::StatObjectResponse(const Response& response)
-    : Response(response) {}
-
-minio::s3::Item::Item() {}
-
-minio::s3::Item::Item(error::Error err) : Response(err) {}
-
-minio::s3::Item::Item(const Response& response) : Response(response) {}
-
-minio::s3::ListObjectsResponse::ListObjectsResponse() {}
-
-minio::s3::ListObjectsResponse::ListObjectsResponse(error::Error err)
-    : Response(err) {}
-
-minio::s3::ListObjectsResponse::ListObjectsResponse(const Response& response)
-    : Response(response) {}
 
 minio::s3::ListObjectsResponse minio::s3::ListObjectsResponse::ParseXML(
     std::string_view data, bool version) {

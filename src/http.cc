@@ -15,188 +15,55 @@
 
 #include "http.h"
 
-std::string minio::http::ExtractRegion(std::string &host) {
-  std::stringstream str_stream(host);
-  std::string token;
-  std::vector<std::string> tokens;
-  while (std::getline(str_stream, token, '.')) tokens.push_back(token);
-
-  token = tokens[1];
-
-  // If token is "dualstack", then region might be in next token.
-  if (token == "dualstack") token = tokens[2];
-
-  // If token is equal to "amazonaws", region is not passed in the host.
-  if (token == "amazonaws") return "";
-
-  // Return token as region.
-  return token;
-}
-
-minio::error::Error minio::http::BaseUrl::SetHost(std::string hostvalue) {
-  struct sockaddr_in dst;
-  if (inet_pton(AF_INET6, hostvalue.c_str(), &(dst.sin_addr)) != 0) {
-    hostvalue = "[" + hostvalue + "]";
-  } else if (hostvalue.front() != '[' || hostvalue.back() != ']') {
-    std::stringstream str_stream(hostvalue);
-    std::string portstr;
-    while (std::getline(str_stream, portstr, ':')) {
-    }
-    try {
-      port = std::stoi(portstr);
-      hostvalue = hostvalue.substr(0, hostvalue.rfind(":" + portstr));
-    } catch (std::invalid_argument) {
-      port = 0;
-    }
-  }
-
-  accelerate_host = utils::StartsWith(hostvalue, "s3-accelerate.");
-  aws_host = ((utils::StartsWith(hostvalue, "s3.") || accelerate_host) &&
-              (utils::EndsWith(hostvalue, ".amazonaws.com") ||
-               utils::EndsWith(hostvalue, ".amazonaws.com.cn")));
-  virtual_style = aws_host || utils::EndsWith(hostvalue, "aliyuncs.com");
-
-  if (aws_host) {
-    std::string awshost;
-    bool is_aws_china_host = utils::EndsWith(hostvalue, ".cn");
-    awshost = "amazonaws.com";
-    if (is_aws_china_host) awshost = "amazonaws.com.cn";
-    region = ExtractRegion(hostvalue);
-
-    if (is_aws_china_host && region.empty()) {
-      return error::Error("region missing in Amazon S3 China endpoint " +
-                          hostvalue);
-    }
-
-    dualstack_host = utils::Contains(hostvalue, ".dualstack.");
-    hostvalue = awshost;
-  } else {
-    accelerate_host = false;
-  }
-
-  host = hostvalue;
-
-  return error::SUCCESS;
-}
-
-std::string minio::http::BaseUrl::GetHostHeaderValue() {
-  // ignore port when port and service match i.e HTTP -> 80, HTTPS -> 443
-  if (port == 0 || (!is_https && port == 80) || (is_https && port == 443)) {
-    return host;
-  }
-  return host + ":" + std::to_string(port);
-}
-
-minio::error::Error minio::http::BaseUrl::BuildUrl(utils::Url &url,
-                                                   Method method,
-                                                   std::string region,
-                                                   utils::Multimap query_params,
-                                                   std::string bucket_name,
-                                                   std::string object_name) {
-  if (bucket_name.empty() && !object_name.empty()) {
-    return error::Error("empty bucket name for object name " + object_name);
-  }
-
-  std::string host = GetHostHeaderValue();
-
-  if (bucket_name.empty()) {
-    if (aws_host) host = "s3." + region + "." + host;
-    url = utils::Url{is_https, host, "/"};
+minio::error::Error minio::http::Response::ReadStatusCode() {
+  size_t pos = response_.find("\r\n");
+  if (pos == std::string::npos) {
+    // Not yet received the first line.
     return error::SUCCESS;
   }
 
-  bool enforce_path_style = (
-      // CreateBucket API requires path style in Amazon AWS S3.
-      (method == Method::kPut && object_name.empty() && !query_params) ||
-
-      // GetBucketLocation API requires path style in Amazon AWS S3.
-      query_params.Contains("location") ||
-
-      // Use path style for bucket name containing '.' which causes
-      // SSL certificate validation error.
-      (utils::Contains(bucket_name, '.') && is_https));
-
-  if (aws_host) {
-    std::string s3_domain = "s3.";
-    if (accelerate_host) {
-      if (utils::Contains(bucket_name, '.')) {
-        return error::Error(
-            "bucket name '" + bucket_name +
-            "' with '.' is not allowed for accelerate endpoint");
-      }
-
-      if (!enforce_path_style) s3_domain = "s3-accelerate.";
-    }
-
-    if (dualstack_host) s3_domain += "dualstack.";
-    if (enforce_path_style || !accelerate_host) {
-      s3_domain += region + ".";
-    }
-    host = s3_domain + host;
-  }
-
-  std::string path;
-  if (enforce_path_style || !virtual_style) {
-    path = "/" + bucket_name;
-  } else {
-    host = bucket_name + "." + host;
-  }
-
-  if (!object_name.empty()) {
-    if (*(object_name.begin()) != '/') path += "/";
-    path += utils::EncodePath(object_name);
-  }
-
-  url = utils::Url{is_https, host, path, query_params.ToQueryString()};
-
-  return error::SUCCESS;
-}
-
-size_t minio::http::Response::ReadStatusCode(char *buffer, size_t size,
-                                             size_t length) {
-  size_t real_size = size * length;
-
-  response_ += std::string(buffer, length);
-
-  size_t pos = response_.find("\r\n");
-  if (pos == std::string::npos) return real_size;
-
   std::string line = response_.substr(0, pos);
-  response_ = response_.substr(pos + 2);
+  response_.erase(0, pos + 2);
 
   if (continue100_) {
     if (!line.empty()) {
-      error = "invalid HTTP response";
-      return real_size;
+      // After '100 Continue', next line must be empty new line.
+      return error::Error("invalid HTTP response");
     }
 
     continue100_ = false;
 
     pos = response_.find("\r\n");
-    if (pos == std::string::npos) return real_size;
+    if (pos == std::string::npos) {
+      // Not yet received the first line after '100 Continue'.
+      return error::SUCCESS;
+    }
 
     line = response_.substr(0, pos);
-    response_ = response_.substr(pos + 2);
+    response_.erase(0, pos + 2);
   }
 
   // Skip HTTP/1.x.
   pos = line.find(" ");
   if (pos == std::string::npos) {
-    error = "invalid HTTP response";
-    return real_size;
+    // First token must be HTTP/1.x
+    return error::Error("invalid HTTP response");
   }
   line = line.substr(pos + 1);
 
   // Read status code.
   pos = line.find(" ");
   if (pos == std::string::npos) {
-    error = "invalid HTTP response";
-    return real_size;
+    // The line must contain second token.
+    return error::Error("invalid HTTP response");
   }
   std::string code = line.substr(0, pos);
   std::string::size_type st;
   status_code = std::stoi(code, &st);
-  if (st == std::string::npos) error = "invalid HTTP response code";
+  if (st == std::string::npos) {
+    // Code must be a number.
+    return error::Error("invalid HTTP response code " + code);
+  }
 
   if (status_code == 100) {
     continue100_ = true;
@@ -204,84 +71,110 @@ size_t minio::http::Response::ReadStatusCode(char *buffer, size_t size,
     status_code_read_ = true;
   }
 
-  return real_size;
+  return error::SUCCESS;
 }
 
-size_t minio::http::Response::ReadHeaders(curlpp::Easy *handle, char *buffer,
-                                          size_t size, size_t length) {
-  size_t real_size = size * length;
-
-  response_ += std::string(buffer, length);
+minio::error::Error minio::http::Response::ReadHeaders() {
   size_t pos = response_.find("\r\n\r\n");
-  if (pos == std::string::npos) return real_size;
+  if (pos == std::string::npos) {
+    // Not yet received the headers.
+    return error::SUCCESS;
+  }
 
   headers_read_ = true;
 
   std::string lines = response_.substr(0, pos);
-  body = response_.substr(pos + 4);
+  response_.erase(0, pos + 4);
+
+  auto add_header = [&headers = headers](std::string line) -> error::Error {
+    size_t pos = line.find(": ");
+    if (pos != std::string::npos) {
+      headers.Add(line.substr(0, pos), line.substr(pos + 2));
+      return error::SUCCESS;
+    }
+
+    return error::Error("invalid HTTP header: " + line);
+  };
 
   while ((pos = lines.find("\r\n")) != std::string::npos) {
     std::string line = lines.substr(0, pos);
     lines.erase(0, pos + 2);
-
-    if ((pos = line.find(": ")) == std::string::npos) {
-      error = "invalid HTTP header: " + line;
-      return real_size;
-    }
-
-    headers.Add(line.substr(0, pos), line.substr(pos + 2));
+    if (error::Error err = add_header(line)) return err;
   }
 
   if (!lines.empty()) {
-    if ((pos = lines.find(": ")) == std::string::npos) {
-      error = "invalid HTTP header: " + lines;
-      return real_size;
-    }
-
-    headers.Add(lines.substr(0, pos), lines.substr(pos + 2));
+    if (error::Error err = add_header(lines)) return err;
   }
 
-  if (body.size() == 0 || data_callback == NULL || status_code < 200 ||
-      status_code > 299)
-    return real_size;
-
-  DataCallbackArgs args = {handle, this, body.data(), 1, body.size(), user_arg};
-  size_t written = data_callback(args);
-  if (written == body.size()) written = real_size;
-  body = "";
-  return written;
+  return error::SUCCESS;
 }
 
-size_t minio::http::Response::ResponseCallback(curlpp::Easy *handle,
+size_t minio::http::Response::ResponseCallback(curlpp::Multi *requests,
+                                               curlpp::Easy *request,
                                                char *buffer, size_t size,
                                                size_t length) {
-  size_t real_size = size * length;
+  size_t realsize = size * length;
 
-  // As error occurred previously, just drain the connection.
-  if (!error.empty()) return real_size;
-
-  if (!status_code_read_) return ReadStatusCode(buffer, size, length);
-
-  if (!headers_read_) return ReadHeaders(handle, buffer, size, length);
-
-  // Received unsuccessful HTTP response code.
-  if (data_callback == NULL || status_code < 200 || status_code > 299) {
-    body += std::string(buffer, length);
-    return real_size;
+  // If error occurred previously, just cancel the request.
+  if (!error.empty()) {
+    requests->remove(request);
+    return realsize;
   }
 
-  return data_callback(
-      DataCallbackArgs{handle, this, buffer, size, length, user_arg});
+  if (!status_code_read_ || !headers_read_) {
+    response_ += std::string(buffer, length);
+  }
+
+  if (!status_code_read_) {
+    if (error::Error err = ReadStatusCode()) {
+      error = err.String();
+      requests->remove(request);
+      return realsize;
+    }
+
+    if (!status_code_read_) return realsize;
+  }
+
+  if (!headers_read_) {
+    if (error::Error err = ReadHeaders()) {
+      error = err.String();
+      requests->remove(request);
+      return realsize;
+    }
+
+    if (!headers_read_ || response_.empty()) return realsize;
+
+    // If data function is set and the request is successful, send data.
+    if (datafunc != NULL && status_code >= 200 && status_code <= 299) {
+      DataFunctionArgs args{request, this, response_, userdata};
+      if (!datafunc(args)) requests->remove(request);
+    } else {
+      body = response_;
+    }
+
+    return realsize;
+  }
+
+  // If data function is set and the request is successful, send data.
+  if (datafunc != NULL && status_code >= 200 && status_code <= 299) {
+    DataFunctionArgs args{request, this, std::string(buffer, length), userdata};
+    if (!datafunc(args)) requests->remove(request);
+  } else {
+    body += std::string(buffer, length);
+  }
+
+  return realsize;
 }
 
-minio::http::Request::Request(Method httpmethod, utils::Url httpurl) {
-  method = httpmethod;
-  url = httpurl;
+minio::http::Request::Request(Method method, Url url) {
+  this->method = method;
+  this->url = url;
 }
 
 minio::http::Response minio::http::Request::execute() {
   curlpp::Cleanup cleaner;
   curlpp::Easy request;
+  curlpp::Multi requests;
 
   // Request settings.
   request.setOpt(
@@ -319,15 +212,39 @@ minio::http::Response minio::http::Request::execute() {
   request.setOpt(new curlpp::options::Header(true));
 
   Response response;
-  response.data_callback = data_callback;
-  response.user_arg = user_arg;
+  response.datafunc = datafunc;
+  response.userdata = userdata;
 
   using namespace std::placeholders;
   request.setOpt(new curlpp::options::WriteFunction(
-      std::bind(&Response::ResponseCallback, &response, &request, _1, _2, _3)));
+      std::bind(&Response::ResponseCallback, &response, &requests, &request, _1,
+                _2, _3)));
+
+  int left = 0;
+  requests.add(&request);
 
   // Execute.
-  request.perform();
+  while (!requests.perform(&left)) {
+  }
+  while (left) {
+    fd_set fdread;
+    fd_set fdwrite;
+    fd_set fdexcep;
+    int maxfd = 0;
+
+    FD_ZERO(&fdread);
+    FD_ZERO(&fdwrite);
+    FD_ZERO(&fdexcep);
+
+    requests.fdset(&fdread, &fdwrite, &fdexcep, &maxfd);
+
+    if (select(maxfd + 1, &fdread, &fdwrite, &fdexcep, NULL) < 0) {
+      std::cerr << "select() failed; this should not happen" << std::endl;
+      std::terminate();
+    }
+    while (!requests.perform(&left)) {
+    }
+  }
 
   return response;
 }

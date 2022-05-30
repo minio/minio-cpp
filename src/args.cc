@@ -178,7 +178,7 @@ minio::error::Error minio::s3::DownloadObjectArgs::Validate() {
 
 minio::error::Error minio::s3::GetObjectArgs::Validate() {
   if (error::Error err = ObjectConditionalReadArgs::Validate()) return err;
-  if (data_callback == NULL) {
+  if (datafunc == NULL) {
     return error::Error("data callback must be set");
   }
 
@@ -188,61 +188,55 @@ minio::error::Error minio::s3::GetObjectArgs::Validate() {
 minio::s3::ListObjectsV1Args::ListObjectsV1Args() {}
 
 minio::s3::ListObjectsV1Args::ListObjectsV1Args(ListObjectsArgs args) {
-  extra_headers = args.extra_headers;
-  extra_query_params = args.extra_query_params;
-  bucket = args.bucket;
-  region = args.region;
-
-  delimiter = args.delimiter;
-  encoding_type = args.use_url_encoding_type ? "url" : "";
-  max_keys = args.max_keys;
-  prefix = args.prefix;
-
-  marker = args.marker;
+  this->extra_headers = args.extra_headers;
+  this->extra_query_params = args.extra_query_params;
+  this->bucket = args.bucket;
+  this->region = args.region;
+  this->delimiter = args.delimiter;
+  this->encoding_type = args.use_url_encoding_type ? "url" : "";
+  this->max_keys = args.max_keys;
+  this->prefix = args.prefix;
+  this->marker = args.marker;
 }
 
 minio::s3::ListObjectsV2Args::ListObjectsV2Args() {}
 
 minio::s3::ListObjectsV2Args::ListObjectsV2Args(ListObjectsArgs args) {
-  extra_headers = args.extra_headers;
-  extra_query_params = args.extra_query_params;
-  bucket = args.bucket;
-  region = args.region;
-
-  delimiter = args.delimiter;
-  encoding_type = args.use_url_encoding_type ? "url" : "";
-  max_keys = args.max_keys;
-  prefix = args.prefix;
-
-  start_after = args.start_after;
-  continuation_token = args.continuation_token;
-  fetch_owner = args.fetch_owner;
-  include_user_metadata = args.include_user_metadata;
+  this->extra_headers = args.extra_headers;
+  this->extra_query_params = args.extra_query_params;
+  this->bucket = args.bucket;
+  this->region = args.region;
+  this->delimiter = args.delimiter;
+  this->encoding_type = args.use_url_encoding_type ? "url" : "";
+  this->max_keys = args.max_keys;
+  this->prefix = args.prefix;
+  this->start_after = args.start_after;
+  this->continuation_token = args.continuation_token;
+  this->fetch_owner = args.fetch_owner;
+  this->include_user_metadata = args.include_user_metadata;
 }
 
 minio::s3::ListObjectVersionsArgs::ListObjectVersionsArgs() {}
 
 minio::s3::ListObjectVersionsArgs::ListObjectVersionsArgs(
     ListObjectsArgs args) {
-  extra_headers = args.extra_headers;
-  extra_query_params = args.extra_query_params;
-  bucket = args.bucket;
-  region = args.region;
-
-  delimiter = args.delimiter;
-  encoding_type = args.use_url_encoding_type ? "url" : "";
-  max_keys = args.max_keys;
-  prefix = args.prefix;
-
-  key_marker = args.key_marker;
-  version_id_marker = args.version_id_marker;
+  this->extra_headers = args.extra_headers;
+  this->extra_query_params = args.extra_query_params;
+  this->bucket = args.bucket;
+  this->region = args.region;
+  this->delimiter = args.delimiter;
+  this->encoding_type = args.use_url_encoding_type ? "url" : "";
+  this->max_keys = args.max_keys;
+  this->prefix = args.prefix;
+  this->key_marker = args.key_marker;
+  this->version_id_marker = args.version_id_marker;
 }
 
-minio::s3::PutObjectArgs::PutObjectArgs(std::istream& istream, long objectsize,
-                                        long partsize)
+minio::s3::PutObjectArgs::PutObjectArgs(std::istream& istream, long object_size,
+                                        long part_size)
     : stream(istream) {
-  object_size = objectsize;
-  part_size = partsize;
+  this->object_size = object_size;
+  this->part_size = part_size;
 }
 
 minio::error::Error minio::s3::PutObjectArgs::Validate() {

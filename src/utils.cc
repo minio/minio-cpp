@@ -25,6 +25,20 @@ const std::regex VALID_BUCKET_NAME_STRICT_REGEX(
     "^[a-z0-9][a-z0-9\\.\\-]{1,61}[a-z0-9]$");
 const std::regex VALID_IP_ADDR_REGEX("^(\\d+\\.){3}\\d+$");
 
+bool minio::utils::GetEnv(std::string& var, const char* name) {
+  if (const char* value = std::getenv(name)) {
+    var = value;
+    return true;
+  }
+  return false;
+}
+
+std::string minio::utils::GetHomeDir() {
+  std::string home;
+  if (GetEnv(home, "HOME")) return home;
+  return getpwuid(getuid())->pw_dir;
+}
+
 bool minio::utils::StringToBool(std::string str) {
   std::string s = ToLower(str);
   if (s == "false") return false;
@@ -216,17 +230,6 @@ std::string minio::utils::FormatTime(const std::tm* time, const char* format) {
   return std::string(buf);
 }
 
-minio::utils::Time::Time() {
-  tv_.tv_sec = 0;
-  tv_.tv_usec = 0;
-}
-
-minio::utils::Time::Time(std::time_t tv_sec, suseconds_t tv_usec, bool utc) {
-  tv_.tv_sec = tv_sec;
-  tv_.tv_usec = tv_usec;
-  utc_ = utc;
-}
-
 std::tm* minio::utils::Time::ToUTC() {
   std::tm* t = new std::tm;
   *t = utc_ ? *std::localtime(&tv_.tv_sec) : *std::gmtime(&tv_.tv_sec);
@@ -283,19 +286,6 @@ minio::utils::Time minio::utils::Time::FromISO8601UTC(const char* value) {
   sscanf(rv, ".%lu", &tv_usec);
   std::time_t time = std::mktime(&t);
   return Time(time, tv_usec, true);
-}
-
-minio::utils::Time minio::utils::Time::Now() {
-  Time t;
-  gettimeofday(&t.tv_, NULL);
-  t.utc_ = false;
-  return t;
-}
-
-minio::utils::Multimap::Multimap() {}
-
-minio::utils::Multimap::Multimap(const Multimap& headers) {
-  this->AddAll(headers);
 }
 
 void minio::utils::Multimap::Add(std::string key, std::string value) {
@@ -403,21 +393,6 @@ std::string minio::utils::Multimap::GetCanonicalQueryString() {
 
   std::sort(values.begin(), values.end());
   return utils::Join(values, "&");
-}
-
-std::string minio::utils::Url::String() {
-  if (host.empty()) return "";
-
-  std::string url = (is_https ? "https://" : "http://") + host;
-
-  if (!path.empty()) {
-    if (*(path.begin()) != '/') url += "/";
-    url += path;
-  }
-
-  if (!query_string.empty()) url += "?" + query_string;
-
-  return url;
 }
 
 minio::error::Error minio::utils::CheckBucketName(std::string_view bucket_name,

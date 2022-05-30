@@ -19,6 +19,7 @@
 #include <arpa/inet.h>
 
 #include <curlpp/Easy.hpp>
+#include <curlpp/Multi.hpp>
 #include <curlpp/Options.hpp>
 
 #include "utils.h"
@@ -49,54 +50,132 @@ constexpr const char* MethodToString(Method& method) throw() {
   return NULL;
 }
 
-// ExtractRegion extracts region value from AWS S3 host string.
-std::string ExtractRegion(std::string& host);
-
-struct BaseUrl {
+/**
+ * Url represents HTTP URL and it's components.
+ */
+struct Url {
+  bool https;
   std::string host;
-  bool is_https = true;
   unsigned int port = 0;
-  std::string region;
-  bool aws_host = false;
-  bool accelerate_host = false;
-  bool dualstack_host = false;
-  bool virtual_style = false;
+  std::string path;
+  std::string query_string;
 
-  error::Error SetHost(std::string hostvalue);
-  std::string GetHostHeaderValue();
-  error::Error BuildUrl(utils::Url& url, Method method, std::string region,
-                        utils::Multimap query_params,
-                        std::string bucket_name = "",
-                        std::string object_name = "");
   operator bool() const { return !host.empty(); }
-};  // struct BaseUrl
 
-struct DataCallbackArgs;
+  std::string String() {
+    if (host.empty()) return "";
 
-using DataCallback = std::function<size_t(DataCallbackArgs)>;
+    std::string url = (https ? "https://" : "http://") + host;
+    if (port) url += ":" + std::to_string(port);
+    if (!path.empty()) {
+      if (path.front() != '/') url += '/';
+      url += path;
+    }
+    if (!query_string.empty()) url += "?" + query_string;
+
+    return url;
+  }
+
+  std::string HostHeaderValue() {
+    if (!port) return host;
+    return host + ":" + std::to_string(port);
+  }
+
+  static Url Parse(std::string value) {
+    std::string scheme;
+    size_t pos = value.find("://");
+    if (pos != std::string::npos) {
+      scheme = value.substr(0, pos);
+      value.erase(0, pos + 3);
+    }
+    scheme = utils::ToLower(scheme);
+
+    if (!scheme.empty() && scheme != "http" && scheme != "https") return Url{};
+
+    bool https = (scheme.empty() || scheme == "https");
+
+    std::string host;
+    std::string path;
+    std::string query_string;
+    pos = value.find("/");
+    if (pos != std::string::npos) {
+      host = value.substr(0, pos);
+      value.erase(0, pos + 1);
+
+      pos = value.find("?");
+      if (pos != std::string::npos) {
+        path = value.substr(0, pos);
+        value.erase(0, pos + 1);
+        query_string = value;
+      } else {
+        path = value;
+      }
+    } else {
+      pos = value.find("?");
+      if (pos != std::string::npos) {
+        host = value.substr(0, pos);
+        value.erase(0, pos + 1);
+        query_string = value;
+      } else {
+        host = value;
+      }
+    }
+
+    if (host.empty()) return Url{};
+
+    unsigned int port = 0;
+    struct sockaddr_in dst;
+    if (inet_pton(AF_INET6, host.c_str(), &(dst.sin_addr)) <= 0) {
+      if (host.front() != '[' || host.back() != ']') {
+        std::stringstream ss(host);
+        std::string portstr;
+        while (std::getline(ss, portstr, ':')) {
+        }
+
+        if (!portstr.empty()) {
+          try {
+            port = std::stoi(portstr);
+            host = host.substr(0, host.rfind(":" + portstr));
+          } catch (std::invalid_argument) {
+            port = 0;
+          }
+        }
+      }
+    } else {
+      host = "[" + host + "]";
+    }
+
+    if (!https && port == 80) port = 0;
+    if (https && port == 443) port = 0;
+
+    return Url{https, host, port, path, query_string};
+  }
+};  // struct Url
+
+struct DataFunctionArgs;
+
+using DataFunction = std::function<bool(DataFunctionArgs)>;
 
 struct Response;
 
-struct DataCallbackArgs {
+struct DataFunctionArgs {
   curlpp::Easy* handle = NULL;
   Response* response = NULL;
-  char* buffer = NULL;
-  size_t size = 0;
-  size_t length = 0;
-  void* user_arg = NULL;
-};  // struct DataCallbackArgs
+  std::string datachunk;
+  void* userdata = NULL;
+};  // struct DataFunctionArgs
 
 struct Request {
   Method method;
-  utils::Url url;
+  http::Url url;
   utils::Multimap headers;
   std::string_view body = "";
-  DataCallback data_callback = NULL;
-  void* user_arg = NULL;
+  DataFunction datafunc = NULL;
+  void* userdata = NULL;
   bool debug = false;
   bool ignore_cert_check = false;
 
-  Request(Method httpmethod, utils::Url httpurl);
+  Request(Method method, Url url);
   Response Execute();
   operator bool() const {
     if (method < Method::kGet || method > Method::kDelete) return false;
@@ -109,16 +188,24 @@ struct Request {
 
 struct Response {
   std::string error;
-  DataCallback data_callback = NULL;
-  void* user_arg = NULL;
+  DataFunction datafunc = NULL;
+  void* userdata = NULL;
   int status_code = 0;
   utils::Multimap headers;
   std::string body;
 
-  size_t ResponseCallback(curlpp::Easy* handle, char* buffer, size_t size,
-                          size_t length);
+  size_t ResponseCallback(curlpp::Multi* requests, curlpp::Easy* request,
+                          char* buffer, size_t size, size_t length);
   operator bool() const {
     return error.empty() && status_code >= 200 && status_code <= 299;
+  }
+  error::Error GetError() {
+    if (!error.empty()) return error::Error(error);
+    if (status_code && (status_code < 200 || status_code > 299)) {
+      return error::Error("failed with HTTP status code " +
+                          std::to_string(status_code));
+    }
+    return error::SUCCESS;
   }
 
  private:
@@ -127,9 +214,8 @@ struct Response {
   bool status_code_read_ = false;
   bool headers_read_ = false;
 
-  size_t ReadStatusCode(char* buffer, size_t size, size_t length);
-  size_t ReadHeaders(curlpp::Easy* handle, char* buffer, size_t size,
-                     size_t length);
+  error::Error ReadStatusCode();
+  error::Error ReadHeaders();
 };  // struct Response
 }  // namespace http
 }  // namespace minio

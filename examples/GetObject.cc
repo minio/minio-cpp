@@ -17,8 +17,7 @@
 
 int main(int argc, char* argv[]) {
   // Create S3 base URL.
-  minio::http::BaseUrl base_url;
-  base_url.SetHost("play.min.io");
+  minio::s3::BaseUrl base_url("play.min.io");
 
   // Create credential provider.
   minio::creds::StaticProvider provider(
@@ -31,9 +30,9 @@ int main(int argc, char* argv[]) {
   minio::s3::GetObjectArgs args;
   args.bucket = "my-bucket";
   args.object = "my-object";
-  args.data_callback = [](minio::http::DataCallbackArgs args) -> size_t {
-    std::cout << std::string(args.buffer, args.length);
-    return args.size * args.length;
+  args.datafunc = [](minio::http::DataFunctionArgs args) -> bool {
+    std::cout << args.datachunk;
+    return true;
   };
 
   // Call get object.
@@ -44,7 +43,7 @@ int main(int argc, char* argv[]) {
     std::cout << std::endl
               << "data of my-object is received successfully" << std::endl;
   } else {
-    std::cout << "unable to get object; " << resp.GetError() << std::endl;
+    std::cout << "unable to get object; " << resp.Error().String() << std::endl;
   }
 
   return 0;

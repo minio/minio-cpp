@@ -16,15 +16,15 @@
 #include "client.h"
 
 minio::s3::ListObjectsResult::ListObjectsResult(error::Error err) {
-  failed_ = true;
-  resp_.contents.push_back(Item(err));
-  itr_ = resp_.contents.begin();
+  this->failed_ = true;
+  this->resp_.contents.push_back(Item(err));
+  this->itr_ = resp_.contents.begin();
 }
 
 minio::s3::ListObjectsResult::ListObjectsResult(Client* client,
                                                 ListObjectsArgs* args) {
-  client_ = client;
-  args_ = args;
+  this->client_ = client;
+  this->args_ = args;
   Populate();
 }
 
@@ -69,7 +69,7 @@ void minio::s3::ListObjectsResult::Populate() {
   itr_ = resp_.contents.begin();
 }
 
-minio::s3::Client::Client(http::BaseUrl& base_url, creds::Provider* provider)
+minio::s3::Client::Client(BaseUrl& base_url, creds::Provider* provider)
     : BaseClient(base_url, provider) {}
 
 minio::s3::StatObjectResponse minio::s3::Client::CalculatePartCount(
@@ -77,7 +77,7 @@ minio::s3::StatObjectResponse minio::s3::Client::CalculatePartCount(
   size_t object_size = 0;
   int i = 0;
   for (auto& source : sources) {
-    if (source.ssec != NULL && !base_url_.is_https) {
+    if (source.ssec != NULL && !base_url_.https) {
       std::string msg = "source " + source.bucket + "/" + source.object;
       if (!source.version_id.empty()) msg += "?versionId=" + source.version_id;
       msg += ": SSE-C operation must be performed over a secure connection";
@@ -413,7 +413,7 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
     ComposeObjectArgs args) {
   if (error::Error err = args.Validate()) return err;
 
-  if (args.sse != NULL && args.sse->TlsRequired() && !base_url_.is_https) {
+  if (args.sse != NULL && args.sse->TlsRequired() && !base_url_.https) {
     return error::Error(
         "SSE operation must be performed over a secure connection");
   }
@@ -436,12 +436,12 @@ minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
     CopyObjectArgs args) {
   if (error::Error err = args.Validate()) return err;
 
-  if (args.sse != NULL && args.sse->TlsRequired() && !base_url_.is_https) {
+  if (args.sse != NULL && args.sse->TlsRequired() && !base_url_.https) {
     return error::Error(
         "SSE operation must be performed over a secure connection");
   }
 
-  if (args.source.ssec != NULL && !base_url_.is_https) {
+  if (args.source.ssec != NULL && !base_url_.https) {
     return error::Error(
         "SSE-C operation must be performed over a secure connection");
   }
@@ -537,7 +537,7 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
     DownloadObjectArgs args) {
   if (error::Error err = args.Validate()) return err;
 
-  if (args.ssec != NULL && !base_url_.is_https) {
+  if (args.ssec != NULL && !base_url_.https) {
     return error::Error(
         "SSE-C operation must be performed over a secure connection");
   }
@@ -561,9 +561,7 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
       args.filename + "." + curlpp::escape(etag) + ".part.minio";
   std::ofstream fout(temp_filename, fout.trunc | fout.out);
   if (!fout.is_open()) {
-    DownloadObjectResponse resp;
-    resp.error = "unable to open file " + temp_filename;
-    return resp;
+    return error::Error("unable to open file " + temp_filename);
   }
 
   std::string region;
@@ -580,12 +578,10 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
   if (!args.version_id.empty()) {
     req.query_params.Add("versionId", args.version_id);
   }
-  req.data_callback = [](http::DataCallbackArgs args) -> size_t {
-    std::ofstream* fout = (std::ofstream*)args.user_arg;
-    *fout << std::string(args.buffer, args.length);
-    return args.size * args.length;
+  req.datafunc = [&fout = fout](http::DataFunctionArgs args) -> bool {
+    fout << args.datachunk;
+    return true;
   };
-  req.user_arg = &fout;
 
   Response response = Execute(req);
   fout.close();
@@ -602,7 +598,7 @@ minio::s3::ListObjectsResult minio::s3::Client::ListObjects(
 minio::s3::PutObjectResponse minio::s3::Client::PutObject(PutObjectArgs args) {
   if (error::Error err = args.Validate()) return err;
 
-  if (args.sse != NULL && args.sse->TlsRequired() && !base_url_.is_https) {
+  if (args.sse != NULL && args.sse->TlsRequired() && !base_url_.https) {
     return error::Error(
         "SSE operation must be performed over a secure connection");
   }
