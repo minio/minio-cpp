@@ -212,7 +212,7 @@ class Tests {
     args.bucket = bucket_name_;
     args.object = object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
-    if (!resp) std::runtime_error("PutObject(): " + resp.GetError());
+    if (!resp) throw std::runtime_error("PutObject(): " + resp.GetError());
     try {
       minio::s3::StatObjectArgs args;
       args.bucket = bucket_name_;
@@ -241,7 +241,7 @@ class Tests {
     args.bucket = bucket_name_;
     args.object = object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
-    if (!resp) std::runtime_error("PutObject(): " + resp.GetError());
+    if (!resp) throw std::runtime_error("PutObject(): " + resp.GetError());
     RemoveObject(bucket_name_, object_name);
   }
 
@@ -256,7 +256,7 @@ class Tests {
     args.bucket = bucket_name_;
     args.object = object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
-    if (!resp) std::runtime_error("PutObject(): " + resp.GetError());
+    if (!resp) throw std::runtime_error("PutObject(): " + resp.GetError());
 
     try {
       std::string filename = RandObjectName();
@@ -277,7 +277,7 @@ class Tests {
       file.read(buf, length);
       file.close();
 
-      if (data != buf) {
+      if (data != std::string(buf, length)) {
         throw std::runtime_error("DownloadObject(): expected: " + data +
                                  "; got: " + buf);
       }
@@ -300,7 +300,7 @@ class Tests {
     args.bucket = bucket_name_;
     args.object = object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
-    if (!resp) std::runtime_error("PutObject(): " + resp.GetError());
+    if (!resp) throw std::runtime_error("PutObject(): " + resp.GetError());
 
     try {
       minio::s3::GetObjectArgs args;
@@ -338,7 +338,7 @@ class Tests {
         args.bucket = bucket_name_;
         args.object = object_name;
         minio::s3::PutObjectResponse resp = client_.PutObject(args);
-        if (!resp) std::runtime_error("PutObject(): " + resp.GetError());
+        if (!resp) throw std::runtime_error("PutObject(): " + resp.GetError());
         object_names.push_back(object_name);
       }
 
@@ -384,7 +384,7 @@ class Tests {
       args.bucket = bucket_name_;
       args.object = object_name;
       minio::s3::PutObjectResponse resp = client_.PutObject(args);
-      if (!resp) std::runtime_error("PutObject(): " + resp.GetError());
+      if (!resp) throw std::runtime_error("PutObject(): " + resp.GetError());
       RemoveObject(bucket_name_, object_name);
     }
 
@@ -397,7 +397,7 @@ class Tests {
       args.object = object_name;
       minio::s3::PutObjectResponse resp = client_.PutObject(args);
       if (!resp)
-        std::runtime_error("<Multipart> PutObject(): " + resp.GetError());
+        throw std::runtime_error("<Multipart> PutObject(): " + resp.GetError());
       RemoveObject(bucket_name_, object_name);
     }
   }
@@ -413,7 +413,7 @@ class Tests {
     args.bucket = bucket_name_;
     args.object = src_object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
-    if (!resp) std::runtime_error("PutObject(): " + resp.GetError());
+    if (!resp) throw std::runtime_error("PutObject(): " + resp.GetError());
 
     try {
       minio::s3::CopySource source;
@@ -424,7 +424,7 @@ class Tests {
       args.object = object_name;
       args.source = source;
       minio::s3::CopyObjectResponse resp = client_.CopyObject(args);
-      if (!resp) std::runtime_error("CopyObject(): " + resp.GetError());
+      if (!resp) throw std::runtime_error("CopyObject(): " + resp.GetError());
       RemoveObject(bucket_name_, src_object_name);
       RemoveObject(bucket_name_, object_name);
     } catch (const std::runtime_error& err) {
@@ -449,7 +449,7 @@ class Tests {
     args.object = object_name;
     args.filename = filename;
     minio::s3::UploadObjectResponse resp = client_.UploadObject(args);
-    if (!resp) std::runtime_error("UploadObject(): " + resp.GetError());
+    if (!resp) throw std::runtime_error("UploadObject(): " + resp.GetError());
     std::filesystem::remove(filename);
     RemoveObject(bucket_name_, object_name);
   }

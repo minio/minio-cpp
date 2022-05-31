@@ -1362,7 +1362,7 @@ minio::s3::UploadObjectResponse minio::s3::Client::UploadObject(
                         err.code().message());
   }
 
-  PutObjectArgs po_args(file, args.object_size, args.part_size);
+  PutObjectArgs po_args(file, args.object_size, 0);
   po_args.extra_headers = args.extra_headers;
   po_args.extra_query_params = args.extra_query_params;
   po_args.bucket = args.bucket;
@@ -1374,7 +1374,6 @@ minio::s3::UploadObjectResponse minio::s3::Client::UploadObject(
   po_args.tags = args.tags;
   po_args.retention = args.retention;
   po_args.legal_hold = args.legal_hold;
-  po_args.part_count = args.part_count;
   po_args.content_type = args.content_type;
 
   PutObjectResponse resp = PutObject(po_args);
