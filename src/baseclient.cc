@@ -371,6 +371,392 @@ minio::s3::BaseClient::CreateMultipartUpload(CreateMultipartUploadArgs args) {
   }
 }
 
+minio::s3::DeleteBucketEncryptionResponse
+minio::s3::BaseClient::DeleteBucketEncryption(DeleteBucketEncryptionArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kDelete, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("encryption", "");
+
+  Response resp = Execute(req);
+  if (resp) return resp;
+  if (resp.code != "ServerSideEncryptionConfigurationNotFoundError")
+    return resp;
+  return Response();
+}
+
+minio::s3::DisableObjectLegalHoldResponse
+minio::s3::BaseClient::DisableObjectLegalHold(DisableObjectLegalHoldArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  std::string body = "<LegalHold><Status>OFF</Status></LegalHold>";
+
+  Request req(http::Method::kPut, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.object_name = args.object;
+  if (!args.version_id.empty()) {
+    req.query_params.Add("versionId", args.version_id);
+  }
+  req.query_params.Add("legal-hold", "");
+  req.body = body;
+  req.headers.Add("Content-MD5", utils::Md5sumHash(body));
+
+  return Execute(req);
+}
+
+minio::s3::DeleteBucketLifecycleResponse
+minio::s3::BaseClient::DeleteBucketLifecycle(DeleteBucketLifecycleArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kDelete, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("lifecycle", "");
+
+  return Execute(req);
+}
+
+minio::s3::DeleteBucketNotificationResponse
+minio::s3::BaseClient::DeleteBucketNotification(
+    DeleteBucketNotificationArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  NotificationConfig config;
+  SetBucketNotificationArgs sbnargs(config);
+  sbnargs.extra_headers = args.extra_headers;
+  sbnargs.extra_query_params = args.extra_query_params;
+  sbnargs.bucket = args.bucket;
+  sbnargs.region = args.region;
+
+  return SetBucketNotification(sbnargs);
+}
+
+minio::s3::DeleteBucketPolicyResponse minio::s3::BaseClient::DeleteBucketPolicy(
+    DeleteBucketPolicyArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kDelete, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("policy", "");
+
+  return Execute(req);
+}
+
+minio::s3::DeleteBucketReplicationResponse
+minio::s3::BaseClient::DeleteBucketReplication(
+    DeleteBucketReplicationArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kDelete, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("replication", "");
+
+  Response resp = Execute(req);
+  if (resp) return resp;
+  if (resp.code != "ReplicationConfigurationNotFoundError") return resp;
+  return Response();
+}
+
+minio::s3::DeleteBucketTagsResponse minio::s3::BaseClient::DeleteBucketTags(
+    DeleteBucketTagsArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kDelete, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("tagging", "");
+
+  return Execute(req);
+}
+
+minio::s3::DeleteObjectLockConfigResponse
+minio::s3::BaseClient::DeleteObjectLockConfig(DeleteObjectLockConfigArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kDelete, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("object-lock", "");
+
+  return Execute(req);
+}
+
+minio::s3::DeleteObjectTagsResponse minio::s3::BaseClient::DeleteObjectTags(
+    DeleteObjectTagsArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kDelete, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.object_name = args.object;
+  if (!args.version_id.empty()) {
+    req.query_params.Add("versionId", args.version_id);
+  }
+  req.query_params.Add("tagging", "");
+
+  return Execute(req);
+}
+
+minio::s3::EnableObjectLegalHoldResponse
+minio::s3::BaseClient::EnableObjectLegalHold(EnableObjectLegalHoldArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  std::string body = "<LegalHold><Status>ON</Status></LegalHold>";
+
+  Request req(http::Method::kPut, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.object_name = args.object;
+  if (!args.version_id.empty()) {
+    req.query_params.Add("versionId", args.version_id);
+  }
+  req.query_params.Add("legal-hold", "");
+  req.body = body;
+  req.headers.Add("Content-MD5", utils::Md5sumHash(body));
+
+  return Execute(req);
+}
+
+minio::s3::GetBucketEncryptionResponse
+minio::s3::BaseClient::GetBucketEncryption(GetBucketEncryptionArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kGet, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("encryption", "");
+
+  Response resp = Execute(req);
+  if (resp) return GetBucketEncryptionResponse::ParseXML(resp.data);
+  return resp;
+}
+
+minio::s3::GetBucketLifecycleResponse minio::s3::BaseClient::GetBucketLifecycle(
+    GetBucketLifecycleArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kGet, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("lifecycle", "");
+
+  Response resp = Execute(req);
+
+  if (!resp) {
+    if (resp.code == "NoSuchLifecycleConfiguration") return LifecycleConfig();
+    return resp;
+  }
+
+  return GetBucketLifecycleResponse::ParseXML(resp.data);
+}
+
+minio::s3::GetBucketNotificationResponse
+minio::s3::BaseClient::GetBucketNotification(GetBucketNotificationArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kGet, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("notification", "");
+
+  Response resp = Execute(req);
+  if (resp) return GetBucketNotificationResponse::ParseXML(resp.data);
+  return resp;
+}
+
+minio::s3::GetBucketPolicyResponse minio::s3::BaseClient::GetBucketPolicy(
+    GetBucketPolicyArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kGet, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("policy", "");
+
+  Response resp = Execute(req);
+  if (resp) return resp.data;
+  return resp;
+}
+
+minio::s3::GetBucketReplicationResponse
+minio::s3::BaseClient::GetBucketReplication(GetBucketReplicationArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kGet, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("replication", "");
+
+  Response resp = Execute(req);
+  if (resp) return GetBucketReplicationResponse::ParseXML(resp.data);
+  return resp;
+}
+
+minio::s3::GetBucketTagsResponse minio::s3::BaseClient::GetBucketTags(
+    GetBucketTagsArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kGet, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("tagging", "");
+
+  Response resp = Execute(req);
+  if (resp) return GetBucketTagsResponse::ParseXML(resp.data);
+  return resp;
+}
+
+minio::s3::GetBucketVersioningResponse
+minio::s3::BaseClient::GetBucketVersioning(GetBucketVersioningArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kGet, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("versioning", "");
+
+  Response resp = Execute(req);
+  if (!resp) resp;
+
+  GetBucketVersioningResponse response;
+
+  pugi::xml_document xdoc;
+  pugi::xml_parse_result result = xdoc.load_string(resp.data.data());
+  if (!result) return error::Error("unable to parse XML");
+
+  auto root = xdoc.select_node("/VersioningConfiguration");
+
+  pugi::xpath_node text;
+
+  if (!root.node().select_node("Status")) {
+    text = root.node().select_node("Status/text()");
+    response.status = (text.node().value() == "Enabled");
+  }
+  if (!root.node().select_node("MFADelete")) {
+    text = root.node().select_node("MFADelete/text()");
+    response.mfa_delete = (text.node().value() == "Enabled");
+  }
+
+  return response;
+}
+
 minio::s3::GetObjectResponse minio::s3::BaseClient::GetObject(
     GetObjectArgs args) {
   if (error::Error err = args.Validate()) return err;
@@ -399,6 +785,226 @@ minio::s3::GetObjectResponse minio::s3::BaseClient::GetObject(
   if (args.ssec != NULL) req.headers.AddAll(args.ssec->Headers());
 
   return Execute(req);
+}
+
+minio::s3::GetObjectLockConfigResponse
+minio::s3::BaseClient::GetObjectLockConfig(GetObjectLockConfigArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kGet, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("object-lock", "");
+
+  Response resp = Execute(req);
+  if (!resp) resp;
+
+  pugi::xml_document xdoc;
+  pugi::xml_parse_result result = xdoc.load_string(resp.data.data());
+  if (!result) return error::Error("unable to parse XML");
+
+  ObjectLockConfig config;
+
+  auto rule = xdoc.select_node("/ObjectLockConfiguration/Rule");
+  if (!rule) return config;
+
+  auto text = rule.node().select_node("DefaultRetention/Mode/text()");
+  RetentionMode* mode = new RetentionMode;
+  config.retention_mode = StringToRetentionMode(text.node().value());
+
+  if (rule.node().select_node("DefaultRetention/Days")) {
+    text = rule.node().select_node("DefaultRetention/Days/text()");
+    std::string value = text.node().value();
+    config.retention_duration_days = Integer(std::stoi(value));
+  }
+
+  if (rule.node().select_node("DefaultRetention/Years")) {
+    text = rule.node().select_node("DefaultRetention/Years/text()");
+    std::string value = text.node().value();
+    config.retention_duration_years = Integer(std::stoi(value));
+  }
+
+  return config;
+}
+
+minio::s3::GetObjectRetentionResponse minio::s3::BaseClient::GetObjectRetention(
+    GetObjectRetentionArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kGet, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.object_name = args.object;
+  if (!args.version_id.empty()) {
+    req.query_params.Add("versionId", args.version_id);
+  }
+  req.query_params.Add("retention", "");
+
+  GetObjectRetentionResponse response;
+
+  Response resp = Execute(req);
+  if (!resp) {
+    if (resp.code == "NoSuchObjectLockConfiguration") return response;
+    return resp;
+  }
+
+  pugi::xml_document xdoc;
+  pugi::xml_parse_result result = xdoc.load_string(resp.data.data());
+  if (!result) return error::Error("unable to parse XML");
+
+  auto text = xdoc.select_node("/Retention/Mode/text()");
+  response.retention_mode = StringToRetentionMode(text.node().value());
+
+  text = xdoc.select_node("/Retention/RetainUntilDate/text()");
+  response.retain_until_date = utils::Time::FromISO8601UTC(text.node().value());
+
+  return response;
+}
+
+minio::s3::GetObjectTagsResponse minio::s3::BaseClient::GetObjectTags(
+    GetObjectTagsArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kGet, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.object_name = args.object;
+  if (!args.version_id.empty()) {
+    req.query_params.Add("versionId", args.version_id);
+  }
+  req.query_params.Add("tagging", "");
+
+  Response resp = Execute(req);
+  if (resp) return GetObjectTagsResponse::ParseXML(resp.data);
+  return resp;
+}
+
+minio::s3::GetPresignedObjectUrlResponse
+minio::s3::BaseClient::GetPresignedObjectUrl(GetPresignedObjectUrlArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  utils::Multimap query_params;
+  query_params.AddAll(args.extra_query_params);
+  if (!args.version_id.empty()) query_params.Add("versionId", args.version_id);
+
+  http::Url url;
+  if (error::Error err = base_url_.BuildUrl(
+          url, args.method, region, query_params, args.bucket, args.object)) {
+    std::cerr << "failed to build url. error=" << err
+              << ". This should not happen" << std::endl;
+    std::terminate();
+  }
+
+  if (provider_ != NULL) {
+    creds::Credentials creds = provider_->Fetch();
+    if (!creds.SessionToken().empty()) {
+      query_params.Add("X-Amz-Security-Token", creds.SessionToken());
+    }
+
+    utils::Time date = utils::Time::Now();
+    if (args.request_time) date = args.request_time;
+
+    std::string access_key = creds.AccessKey();
+    std::string secret_key = creds.SecretKey();
+    signer::PresignV4(args.method, url.host, url.path, region, query_params,
+                      access_key, secret_key, date, args.expiry_seconds);
+    url.query_string = query_params.ToQueryString();
+  }
+
+  return url.String();
+}
+
+minio::s3::GetPresignedPostFormDataResponse
+minio::s3::BaseClient::GetPresignedPostFormData(PostPolicy policy) {
+  if (!policy) {
+    return error::Error("valid policy must be provided");
+  }
+
+  if (provider_ == NULL) {
+    return error::Error(
+        "Anonymous access does not require presigned post form-data");
+  }
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(policy.bucket, policy.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  creds::Credentials creds = provider_->Fetch();
+  std::string access_key = creds.AccessKey();
+  std::string secret_key = creds.SecretKey();
+  std::string session_token = creds.SessionToken();
+  std::map<std::string, std::string> data;
+  if (error::Error err = policy.FormData(data, access_key, secret_key,
+                                         session_token, region)) {
+    return err;
+  }
+  return data;
+}
+
+minio::s3::IsObjectLegalHoldEnabledResponse
+minio::s3::BaseClient::IsObjectLegalHoldEnabled(
+    IsObjectLegalHoldEnabledArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kGet, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.object_name = args.object;
+  if (!args.version_id.empty()) {
+    req.query_params.Add("versionId", args.version_id);
+  }
+  req.query_params.Add("legal-hold", "");
+
+  Response resp = Execute(req);
+  if (!resp) {
+    if (resp.code == "NoSuchObjectLockConfiguration") return false;
+    return resp;
+  }
+
+  pugi::xml_document xdoc;
+  pugi::xml_parse_result result = xdoc.load_string(resp.data.data());
+  if (!result) return error::Error("unable to parse XML");
+  auto text = xdoc.select_node("/LegalHold/Status/text()");
+  std::string value = text.node().value();
+  return (value == "ON");
 }
 
 minio::s3::ListBucketsResponse minio::s3::BaseClient::ListBuckets(
@@ -737,6 +1343,319 @@ minio::s3::BaseClient::SelectObjectContent(SelectObjectContentArgs args) {
   SelectHandler handler(args.resultfunc);
   using namespace std::placeholders;
   req.datafunc = std::bind(&SelectHandler::DataFunction, &handler, _1);
+
+  return Execute(req);
+}
+
+minio::s3::SetBucketEncryptionResponse
+minio::s3::BaseClient::SetBucketEncryption(SetBucketEncryptionArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  std::stringstream ss;
+  ss << "<ServerSideEncryptionConfiguration>";
+  ss << "<Rule><ApplyServerSideEncryptionByDefault>";
+  ss << "<SSEAlgorithm>" << args.config.sse_algorithm << "</SSEAlgorithm>";
+  if (!args.config.kms_master_key_id.empty()) {
+    ss << "<KMSMasterKeyID>" << args.config.kms_master_key_id
+       << "</KMSMasterKeyID>";
+  }
+  ss << "</ApplyServerSideEncryptionByDefault></Rule>";
+  ss << "</ServerSideEncryptionConfiguration>";
+  std::string body = ss.str();
+
+  Request req(http::Method::kPut, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("encryption", "");
+  req.body = body;
+  req.headers.Add("Content-MD5", utils::Md5sumHash(body));
+
+  return Execute(req);
+}
+
+minio::s3::SetBucketLifecycleResponse minio::s3::BaseClient::SetBucketLifecycle(
+    SetBucketLifecycleArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  std::string body = args.config.ToXML();
+
+  Request req(http::Method::kPut, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("lifecycle", "");
+  req.body = body;
+  req.headers.Add("Content-MD5", utils::Md5sumHash(body));
+
+  return Execute(req);
+}
+
+minio::s3::SetBucketNotificationResponse
+minio::s3::BaseClient::SetBucketNotification(SetBucketNotificationArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  std::string body = args.config.ToXML();
+
+  Request req(http::Method::kPut, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("notification", "");
+  req.body = body;
+  req.headers.Add("Content-MD5", utils::Md5sumHash(body));
+
+  return Execute(req);
+}
+
+minio::s3::SetBucketPolicyResponse minio::s3::BaseClient::SetBucketPolicy(
+    SetBucketPolicyArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kPut, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("policy", "");
+  req.body = args.policy;
+  req.headers.Add("Content-MD5", utils::Md5sumHash(args.policy));
+
+  return Execute(req);
+}
+
+minio::s3::SetBucketReplicationResponse
+minio::s3::BaseClient::SetBucketReplication(SetBucketReplicationArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  std::string body = args.config.ToXML();
+
+  Request req(http::Method::kPut, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("replication", "");
+  req.body = body;
+  req.headers.Add("Content-MD5", utils::Md5sumHash(body));
+
+  return Execute(req);
+}
+
+minio::s3::SetBucketTagsResponse minio::s3::BaseClient::SetBucketTags(
+    SetBucketTagsArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  std::stringstream ss;
+  ss << "<Tagging>";
+  if (!args.tags.empty()) {
+    ss << "<TagSet>";
+    for (auto& [key, value] : args.tags) {
+      ss << "<Tag>"
+         << "<Key>" << key << "</Key>"
+         << "<Value>" << value << "</Value>"
+         << "</Tag>";
+    }
+    ss << "</TagSet>";
+  }
+  ss << "</Tagging>";
+
+  std::string body = ss.str();
+
+  Request req(http::Method::kPut, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("tagging", "");
+  req.body = body;
+  req.headers.Add("Content-MD5", utils::Md5sumHash(body));
+
+  return Execute(req);
+}
+
+minio::s3::SetBucketVersioningResponse
+minio::s3::BaseClient::SetBucketVersioning(SetBucketVersioningArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  std::stringstream ss;
+  ss << "<VersioningConfiguration>";
+  if (args.status) {
+    ss << "<Status>" << (args.status.Get() ? "Enabled" : "Suspended")
+       << "</Status>";
+  }
+  if (args.mfa_delete) {
+    ss << "<MFADelete>" << (args.mfa_delete.Get() ? "Enabled" : "Disabled")
+       << "</MFADelete>";
+  }
+  ss << "</VersioningConfiguration>";
+  std::string body = ss.str();
+
+  Request req(http::Method::kPut, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("versioning", "");
+  req.body = body;
+  req.headers.Add("Content-MD5", utils::Md5sumHash(body));
+
+  return Execute(req);
+}
+
+minio::s3::SetObjectLockConfigResponse
+minio::s3::BaseClient::SetObjectLockConfig(SetObjectLockConfigArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  std::stringstream ss;
+  ss << "<ObjectLockConfiguration>";
+  ss << "<ObjectLockEnabled>Enabled</ObjectLockEnabled>";
+  if (IsRetentionModeValid(args.config.retention_mode)) {
+    ss << "<Rule><DefaultRetention>";
+    ss << "<Mode>" << RetentionModeToString(args.config.retention_mode)
+       << "</Mode>";
+    if (args.config.retention_duration_days) {
+      ss << "<Days>"
+         << std::to_string(args.config.retention_duration_days.Get())
+         << "</Days>";
+    }
+    if (args.config.retention_duration_years) {
+      ss << "<Years>"
+         << std::to_string(args.config.retention_duration_years.Get())
+         << "</Years>";
+    }
+    ss << "</DefaultRetention></Rule>";
+  }
+  ss << "</ObjectLockConfiguration>";
+
+  std::string body = ss.str();
+
+  Request req(http::Method::kPut, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("object-lock", "");
+  req.body = body;
+  req.headers.Add("Content-MD5", utils::Md5sumHash(body));
+
+  return Execute(req);
+}
+
+minio::s3::SetObjectRetentionResponse minio::s3::BaseClient::SetObjectRetention(
+    SetObjectRetentionArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  std::stringstream ss;
+  ss << "<Retention>"
+     << "<Mode>" << RetentionModeToString(args.retention_mode) << "</Mode>"
+     << "<RetainUntilDate>" << args.retain_until_date.ToISO8601UTC()
+     << "</RetainUntilDate>"
+     << "</Retention>";
+
+  std::string body = ss.str();
+
+  Request req(http::Method::kPut, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.object_name = args.object;
+  if (!args.version_id.empty()) {
+    req.query_params.Add("versionId", args.version_id);
+  }
+  req.query_params.Add("retention", "");
+  req.body = body;
+  req.headers.Add("Content-MD5", utils::Md5sumHash(body));
+
+  return Execute(req);
+}
+
+minio::s3::SetObjectTagsResponse minio::s3::BaseClient::SetObjectTags(
+    SetObjectTagsArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  std::stringstream ss;
+  ss << "<Tagging>";
+  if (!args.tags.empty()) {
+    ss << "<TagSet>";
+    for (auto& [key, value] : args.tags) {
+      ss << "<Tag>"
+         << "<Key>" << key << "</Key>"
+         << "<Value>" << value << "</Value>"
+         << "</Tag>";
+    }
+    ss << "</TagSet>";
+  }
+  ss << "</Tagging>";
+
+  std::string body = ss.str();
+
+  Request req(http::Method::kPut, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.object_name = args.object;
+  if (!args.version_id.empty()) {
+    req.query_params.Add("versionId", args.version_id);
+  }
+  req.query_params.Add("tagging", "");
+  req.body = body;
+  req.headers.Add("Content-MD5", utils::Md5sumHash(body));
 
   return Execute(req);
 }

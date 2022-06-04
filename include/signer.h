@@ -55,6 +55,13 @@ utils::Multimap& SignV4STS(http::Method method, std::string& uri,
                            utils::Multimap query_params,
                            std::string& access_key, std::string& secret_key,
                            std::string& content_sha256, utils::Time& date);
+utils::Multimap& PresignV4(http::Method method, std::string& host,
+                           std::string& uri, std::string& region,
+                           utils::Multimap& query_params,
+                           std::string& access_key, std::string& secret_key,
+                           utils::Time& date, unsigned int expires);
+std::string PostPresignV4(std::string data, std::string& secret_key,
+                          utils::Time& date, std::string& region);
 }  // namespace signer
 }  // namespace minio
 #endif  // #ifndef __MINIO_SIGNER_H

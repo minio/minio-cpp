@@ -367,6 +367,262 @@ struct NotificationRecord {
 
 using NotificationRecordsFunction =
     std::function<bool(std::list<NotificationRecord>)>;
+
+struct FilterValue {
+ private:
+  std::string value_;
+  bool is_value_set_ = false;
+
+ public:
+  FilterValue() {}
+  FilterValue(std::string value) {
+    this->value_ = value;
+    this->is_value_set_ = true;
+  }
+  operator bool() const { return is_value_set_; }
+  std::string Value() { return value_; }
+};  // struct FilterValue
+
+struct PrefixFilterRule : public FilterValue {
+  static constexpr const char* name = "prefix";
+
+  PrefixFilterRule() {}
+  PrefixFilterRule(std::string value) : FilterValue(value) {}
+};  // struct PrefixFilterRule
+
+struct SuffixFilterRule : public FilterValue {
+  static constexpr const char* name = "suffix";
+
+  SuffixFilterRule() {}
+  SuffixFilterRule(std::string value) : FilterValue(value) {}
+};  // struct SuffixFilterRule
+
+struct NotificationCommonConfig {
+  std::list<std::string> events;
+  std::string id;
+  PrefixFilterRule prefix_filter_rule;
+  SuffixFilterRule suffix_filter_rule;
+};  // struct NotificationCommonConfig
+
+struct CloudFuncConfig : public NotificationCommonConfig {
+  std::string cloud_func;
+};  // struct CloudFuncConfig
+
+struct QueueConfig : public NotificationCommonConfig {
+  std::string queue;
+};  // struct QueueConfig
+
+struct TopicConfig : public NotificationCommonConfig {
+  std::string topic;
+};  // struct TopicConfig
+
+struct NotificationConfig {
+  std::list<CloudFuncConfig> cloud_func_config_list;
+  std::list<QueueConfig> queue_config_list;
+  std::list<TopicConfig> topic_config_list;
+
+  std::string ToXML();
+};  // struct NotificationConfig
+
+struct SseConfig {
+  std::string sse_algorithm;
+  std::string kms_master_key_id;
+
+  SseConfig() {}
+  static SseConfig S3() {
+    SseConfig config;
+    config.sse_algorithm = "AES256";
+    return config;
+  }
+  static SseConfig Kms(std::string masterkeyid = "") {
+    SseConfig config;
+    config.sse_algorithm = "aws:kms";
+    config.kms_master_key_id = masterkeyid;
+    return config;
+  }
+  operator bool() const { return !sse_algorithm.empty(); }
+};  //  struct SseConfig
+
+struct Tag {
+  std::string key;
+  std::string value;
+
+  operator bool() const { return !key.empty(); }
+};  // struct Tag
+
+struct Prefix {
+ private:
+  std::string value_;
+  bool is_set_ = false;
+
+ public:
+  Prefix() {}
+  Prefix(std::string value) {
+    this->value_ = value;
+    this->is_set_ = true;
+  }
+  operator bool() const { return is_set_; }
+  std::string Get() { return value_; }
+};  // struct Prefix
+
+struct Integer {
+ private:
+  int value_ = 0;
+  bool is_set_ = false;
+
+ public:
+  Integer() {}
+  Integer(int value) {
+    this->value_ = value;
+    this->is_set_ = true;
+  }
+  operator bool() const { return is_set_; }
+  int Get() { return value_; }
+};  // struct Integer
+
+struct Boolean {
+ private:
+  bool value_ = false;
+  bool is_set_ = false;
+
+ public:
+  Boolean() {}
+  Boolean(bool value) {
+    this->value_ = value;
+    this->is_set_ = true;
+  }
+  operator bool() const { return is_set_; }
+  bool Get() { return value_; }
+};  // struct Boolean
+
+struct AndOperator {
+  Prefix prefix;
+  std::map<std::string, std::string> tags;
+
+  operator bool() const { return prefix || !tags.empty(); }
+};  // struct AndOperator
+
+struct Filter {
+  AndOperator and_operator;
+  Prefix prefix;
+  Tag tag;
+
+  operator bool() const { return and_operator ^ prefix ^ tag; }
+};  // struct Filter
+
+struct AccessControlTranslation {
+  std::string owner = "Destination";
+
+  void Enable() { enabled_ = true; }
+  operator bool() const { return enabled_; }
+
+ private:
+  bool enabled_ = false;
+};  // struct AccessControlTranslation
+
+struct EncryptionConfig {
+  std::string replica_kms_key_id;
+
+  void Enable() { enabled_ = true; }
+  operator bool() const { return enabled_; }
+
+ private:
+  bool enabled_ = false;
+};  // struct EncryptionConfig
+
+struct Metrics {
+  unsigned int event_threshold_minutes = 15;
+  bool status = false;
+
+  void Enable() { enabled_ = true; }
+  operator bool() const { return enabled_; }
+
+ private:
+  bool enabled_ = false;
+};  // struct Metrics
+
+struct ReplicationTime {
+  unsigned int time_minutes = 15;
+  bool status = false;
+
+  void Enable() { enabled_ = true; }
+  operator bool() const { return enabled_; }
+
+ private:
+  bool enabled_ = false;
+};  // struct ReplicationTime
+
+struct Destination {
+  std::string bucket_arn;
+  AccessControlTranslation access_control_translation;
+  std::string account;
+  EncryptionConfig encryption_config;
+  Metrics metrics;
+  ReplicationTime replication_time;
+  std::string storage_class;
+};  // struct Destination
+
+struct SourceSelectionCriteria {
+  Boolean sse_kms_encrypted_objects_status;
+
+  void Enable() { enabled_ = true; }
+  operator bool() const { return enabled_; }
+
+ private:
+  bool enabled_ = false;
+};  // struct SourceSelectionCriteria
+
+struct ReplicationRule {
+  Destination destination;
+  Boolean delete_marker_replication_status;
+  Boolean existing_object_replication_status;
+  Filter filter;
+  std::string id;
+  Prefix prefix;
+  Integer priority;
+  SourceSelectionCriteria source_selection_criteria;
+  Boolean delete_replication_status;
+  bool status = false;
+};  // struct ReplicationRule
+
+struct ReplicationConfig {
+  std::string role;
+  std::list<ReplicationRule> rules;
+
+  std::string ToXML();
+};  // status ReplicationConfig
+
+struct LifecycleRule {
+  Integer abort_incomplete_multipart_upload_days_after_initiation;
+  utils::Time expiration_date;
+  Integer expiration_days;
+  Boolean expiration_expired_object_delete_marker;
+  Filter filter;
+  std::string id;
+  Integer noncurrent_version_expiration_noncurrent_days;
+  Integer noncurrent_version_transition_noncurrent_days;
+  std::string noncurrent_version_transition_storage_class;
+  bool status = false;
+  utils::Time transition_date;
+  Integer transition_days;
+  std::string transition_storage_class;
+
+  error::Error Validate();
+};  // struct LifecycleRule
+
+struct LifecycleConfig {
+  std::list<LifecycleRule> rules;
+
+  std::string ToXML();
+};  // struct LifecycleConfig
+
+struct ObjectLockConfig {
+  RetentionMode retention_mode;
+  Integer retention_duration_days;
+  Integer retention_duration_years;
+
+  error::Error Validate();
+};  // struct ObjectLockConfig
 }  // namespace s3
 }  // namespace minio
 #endif  // #ifndef __MINIO_S3_TYPES_H

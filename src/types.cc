@@ -233,3 +233,386 @@ minio::s3::NotificationRecord minio::s3::NotificationRecord::ParseJSON(
 
   return record;
 }
+
+std::string minio::s3::NotificationConfig::ToXML() {
+  std::stringstream ss;
+  ss << "<NotificationConfiguration>";
+
+  for (auto& config : cloud_func_config_list) {
+    ss << "<CloudFunctionConfiguration>";
+    ss << "<CloudFunction>" << config.cloud_func << "</CloudFunction>";
+    for (auto& event : config.events) ss << "<Event>" << event << "</Event>";
+    if (!config.id.empty()) ss << "<Id>" << config.id << "</Id>";
+    if (config.prefix_filter_rule || config.suffix_filter_rule) {
+      ss << "<Filter><S3Key>";
+      if (config.prefix_filter_rule) {
+        ss << "<FilterRule><Name>prefix</Name>";
+        ss << "<Value>" << config.prefix_filter_rule.Value()
+           << "</Value></FilterRule>";
+      }
+      if (config.suffix_filter_rule) {
+        ss << "<FilterRule><Name>suffix</Name>";
+        ss << "<Value>" << config.suffix_filter_rule.Value()
+           << "</Value></FilterRule>";
+      }
+      ss << "</S3Key></Filter>";
+    }
+    ss << "</CloudFunctionConfiguration>";
+  }
+
+  for (auto& config : queue_config_list) {
+    ss << "<QueueConfiguration>";
+    ss << "<Queue>" << config.queue << "</Queue>";
+    for (auto& event : config.events) ss << "<Event>" << event << "</Event>";
+    if (!config.id.empty()) ss << "<Id>" << config.id << "</Id>";
+    if (config.prefix_filter_rule || config.suffix_filter_rule) {
+      ss << "<Filter><S3Key>";
+      if (config.prefix_filter_rule) {
+        ss << "<FilterRule><Name>prefix</Name>";
+        ss << "<Value>" << config.prefix_filter_rule.Value()
+           << "</Value></FilterRule>";
+      }
+      if (config.suffix_filter_rule) {
+        ss << "<FilterRule><Name>suffix</Name>";
+        ss << "<Value>" << config.suffix_filter_rule.Value()
+           << "</Value></FilterRule>";
+      }
+      ss << "</S3Key></Filter>";
+    }
+    ss << "</QueueConfiguration>";
+  }
+
+  for (auto& config : topic_config_list) {
+    ss << "<TopicConfiguration>";
+    ss << "<Topic>" << config.topic << "</Topic>";
+    for (auto& event : config.events) ss << "<Event>" << event << "</Event>";
+    if (!config.id.empty()) ss << "<Id>" << config.id << "</Id>";
+    if (config.prefix_filter_rule || config.suffix_filter_rule) {
+      ss << "<Filter><S3Key>";
+      if (config.prefix_filter_rule) {
+        ss << "<FilterRule><Name>prefix</Name>";
+        ss << "<Value>" << config.prefix_filter_rule.Value()
+           << "</Value></FilterRule>";
+      }
+      if (config.suffix_filter_rule) {
+        ss << "<FilterRule><Name>suffix</Name>";
+        ss << "<Value>" << config.suffix_filter_rule.Value()
+           << "</Value></FilterRule>";
+      }
+      ss << "</S3Key></Filter>";
+    }
+    ss << "</TopicConfiguration>";
+  }
+
+  ss << "</NotificationConfiguration>";
+
+  return ss.str();
+}
+
+std::string minio::s3::ReplicationConfig::ToXML() {
+  auto status_xml = [](bool status) -> std::string {
+    std::stringstream ss;
+    ss << "<Status>" << (status ? "Enabled" : "Disabled") << "</Status>";
+    return ss.str();
+  };
+
+  auto prefix_xml = [](std::string prefix) -> std::string {
+    std::stringstream ss;
+    ss << "<Prefix>" << prefix << "</Prefix>";
+    return ss.str();
+  };
+
+  auto minutes_xml = [](unsigned int minutes) -> std::string {
+    std::stringstream ss;
+    ss << "<Minutes>" << std::to_string(minutes) << "</Minutes>";
+    return ss.str();
+  };
+
+  auto tag_xml = [](std::string key, std::string value) -> std::string {
+    std::stringstream ss;
+    ss << "<Tag>"
+       << "<Key>" << key << "</Key>"
+       << "<Value>" << value << "</Value>"
+       << "</Tag>";
+    return ss.str();
+  };
+
+  std::stringstream ss;
+  ss << "<ReplicationConfiguration>";
+  if (!role.empty()) ss << "<Role>" << role << "</Role>";
+  for (auto& rule : rules) {
+    ss << "<Rule>";
+
+    ss << "<Destination>";
+    ss << "<Bucket>" << rule.destination.bucket_arn << "</Bucket>";
+    if (rule.destination.access_control_translation) {
+      ss << "<AccessControlTranslation><Owner>"
+         << rule.destination.access_control_translation.owner
+         << "</Owner></AccessControlTranslation>";
+    }
+    if (!rule.destination.account.empty()) {
+      ss << "<Account>" << rule.destination.account << "</Account>";
+    }
+    if (rule.destination.encryption_config) {
+      ss << "<EncryptionConfiguration>";
+      if (!rule.destination.encryption_config.replica_kms_key_id.empty()) {
+        ss << "<ReplicaKmsKeyID>"
+           << rule.destination.encryption_config.replica_kms_key_id
+           << "</ReplicaKmsKeyID>";
+      }
+      ss << "</EncryptionConfiguration>";
+    }
+    if (rule.destination.metrics) {
+      ss << "<Metrics>"
+         << "<EventThreshold>";
+      if (rule.destination.metrics.event_threshold_minutes > 0) {
+        ss << minutes_xml(rule.destination.metrics.event_threshold_minutes);
+      }
+      ss << status_xml(rule.destination.metrics.status) << "</EventThreshold>"
+         << "</Metrics>";
+    }
+    if (rule.destination.replication_time) {
+      ss << "<ReplicationTime>"
+         << "<Time>";
+      if (rule.destination.replication_time.time_minutes > 0) {
+        ss << minutes_xml(rule.destination.replication_time.time_minutes);
+      }
+      ss << "</Time>" << status_xml(rule.destination.replication_time.status)
+         << "</ReplicationTime>";
+    }
+    if (!rule.destination.storage_class.empty()) {
+      ss << "<StorageClass>" << rule.destination.storage_class
+         << "</StorageClass>";
+    }
+    ss << "</Destination>";
+
+    if (rule.delete_marker_replication_status) {
+      ss << "<DeleteMarkerReplication>"
+         << status_xml(rule.delete_marker_replication_status.Get())
+         << "</DeleteMarkerReplication>";
+    }
+
+    if (rule.existing_object_replication_status) {
+      ss << "<ExistingObjectReplication>"
+         << status_xml(rule.existing_object_replication_status.Get())
+         << "</ExistingObjectReplication>";
+    }
+
+    if (rule.filter) {
+      ss << "<Filter>";
+      if (rule.filter.and_operator) {
+        ss << "<And>";
+        if (rule.filter.and_operator.prefix) {
+          ss << prefix_xml(rule.filter.and_operator.prefix.Get());
+        }
+        if (!rule.filter.and_operator.tags.empty()) {
+          for (auto& [key, value] : rule.filter.and_operator.tags) {
+            ss << tag_xml(key, value);
+          }
+        }
+        ss << "</And>";
+      }
+      if (rule.filter.prefix) {
+        ss << prefix_xml(rule.filter.prefix.Get());
+      }
+      if (rule.filter.tag) {
+        ss << tag_xml(rule.filter.tag.key, rule.filter.tag.value);
+      }
+      ss << "</Filter>";
+    }
+
+    if (!rule.id.empty()) ss << "<ID>" << rule.id << "</ID>";
+
+    if (rule.prefix) ss << prefix_xml(rule.prefix.Get());
+
+    if (rule.priority) {
+      ss << "<Priority>" << rule.priority << "</Priority>";
+    }
+
+    if (rule.source_selection_criteria) {
+      ss << "<SourceSelectionCriteria>";
+      if (rule.source_selection_criteria.sse_kms_encrypted_objects_status) {
+        ss << "<SseKmsEncryptedObjects>"
+           << status_xml(rule.source_selection_criteria
+                             .sse_kms_encrypted_objects_status.Get())
+           << "</SseKmsEncryptedObjects>";
+      }
+      ss << "</SourceSelectionCriteria>";
+    }
+
+    if (rule.delete_replication_status) {
+      ss << "<DeleteReplication>"
+         << status_xml(rule.delete_replication_status.Get())
+         << "</DeleteReplication>";
+    }
+
+    ss << status_xml(rule.status);
+
+    ss << "</Rule>";
+  }
+  ss << "</ReplicationConfiguration>";
+
+  return ss.str();
+}
+
+minio::error::Error minio::s3::LifecycleRule::Validate() {
+  if (!abort_incomplete_multipart_upload_days_after_initiation &&
+      !expiration_date && !expiration_days &&
+      !expiration_expired_object_delete_marker &&
+      !noncurrent_version_expiration_noncurrent_days &&
+      noncurrent_version_transition_storage_class.empty() && !transition_date &&
+      !transition_days && transition_storage_class.empty()) {
+    return error::Error(
+        "at least one of action (AbortIncompleteMultipartUpload, Expiration, "
+        "NoncurrentVersionExpiration, NoncurrentVersionTransition or "
+        "Transition) must be "
+        "specified in a rule");
+  }
+
+  if (!filter) return error::Error("valid filter must be provided");
+
+  if (expiration_expired_object_delete_marker) {
+    if (expiration_date || expiration_days) {
+      return error::Error(
+          "ExpiredObjectDeleteMarker must not be provided along with Date and "
+          "Days");
+    }
+  } else if (expiration_date && expiration_days) {
+    return error::Error("only one of date or days of expiration must be set");
+  }
+
+  if (transition_date && transition_days) {
+    return error::Error("only one of date and days of transition must be set");
+  }
+
+  if (id.length() > 255) {
+    return error::Error("id must be exceed 255 characters");
+  }
+
+  return error::SUCCESS;
+}
+
+std::string minio::s3::LifecycleConfig::ToXML() {
+  std::stringstream ss;
+
+  ss << "<LifecycleConfiguration>";
+
+  for (auto& rule : rules) {
+    ss << "<Rule>";
+
+    if (rule.abort_incomplete_multipart_upload_days_after_initiation) {
+      ss << "<AbortIncompleteMultipartUpload><DaysAfterInitiation>"
+         << std::to_string(
+                rule.abort_incomplete_multipart_upload_days_after_initiation)
+         << "</DaysAfterInitiation></AbortIncompleteMultipartUpload>";
+    }
+
+    if (rule.expiration_date || rule.expiration_days ||
+        rule.expiration_expired_object_delete_marker) {
+      ss << "<Expiration>";
+      if (rule.expiration_date) {
+        ss << "<Date>" << rule.expiration_date.ToISO8601UTC() << "</Date>";
+      }
+      if (rule.expiration_days) {
+        ss << "<Days>" << std::to_string(rule.expiration_days) << "</Days>";
+      }
+      if (rule.expiration_expired_object_delete_marker) {
+        ss << "<ExpiredObjectDeleteMarker>"
+           << utils::BoolToString(rule.expiration_expired_object_delete_marker)
+           << "</ExpiredObjectDeleteMarker>";
+      }
+      ss << "</Expiration>";
+    }
+
+    ss << "<Filter>";
+    if (rule.filter.and_operator) {
+      ss << "<And>";
+      if (rule.filter.and_operator.prefix) {
+        ss << "<Prefix>" << rule.filter.and_operator.prefix << "</Prefix>";
+      }
+      if (!rule.filter.and_operator.tags.empty()) {
+        for (auto& [key, value] : rule.filter.and_operator.tags) {
+          ss << "<Tag>"
+             << "<Key>" << key << "</Key>"
+             << "<Value>" << value << "</Value>"
+             << "</Tag>";
+        }
+      }
+      ss << "</And>";
+    }
+    if (rule.filter.prefix) {
+      ss << "<Prefix>" << rule.filter.prefix << "</Prefix>";
+    }
+    if (rule.filter.tag) {
+      ss << "<Tag>"
+         << "<Key>" << rule.filter.tag.key << "</Key>"
+         << "<Value>" << rule.filter.tag.value << "</Value>"
+         << "</Tag>";
+    }
+    ss << "</Filter>";
+
+    if (!rule.id.empty()) ss << "<ID>" << rule.id << "</ID>";
+
+    if (rule.noncurrent_version_expiration_noncurrent_days) {
+      ss << "<NoncurrentVersionExpiration><NoncurrentDays>"
+         << rule.noncurrent_version_expiration_noncurrent_days
+         << "</NoncurrentDays></NoncurrentVersionExpiration>";
+    }
+
+    if (rule.noncurrent_version_transition_noncurrent_days ||
+        !rule.noncurrent_version_transition_storage_class.empty()) {
+      ss << "<NoncurrentVersionTransition>";
+      if (rule.noncurrent_version_transition_noncurrent_days) {
+        ss << "<NoncurrentDays>"
+           << rule.noncurrent_version_expiration_noncurrent_days
+           << "</NoncurrentDays>";
+      }
+      if (!rule.noncurrent_version_transition_storage_class.empty()) {
+        ss << "<StorageClass>"
+           << rule.noncurrent_version_transition_storage_class
+           << "</StorageClass>";
+      }
+      "</NoncurrentVersionTransition>";
+    }
+
+    ss << "<Status>" << (rule.status ? "Enabled" : "Disabled") << "</Status>";
+
+    if (rule.transition_date || rule.transition_days ||
+        !rule.transition_storage_class.empty()) {
+      ss << "<Transition>";
+      if (rule.transition_date) {
+        ss << "<Date>" << rule.transition_date.ToISO8601UTC() << "</Date>";
+      }
+      if (rule.transition_days) {
+        ss << "<Days>" << std::to_string(rule.transition_days) << "</Days>";
+      }
+      if (!rule.transition_storage_class.empty()) {
+        ss << "<StorageClass>" << rule.transition_storage_class
+           << "</StorageClass>";
+      }
+      ss << "</Transition>";
+    }
+
+    ss << "</Rule>";
+  }
+
+  ss << "</LifecycleConfiguration>";
+
+  return ss.str();
+}
+
+minio::error::Error minio::s3::ObjectLockConfig::Validate() {
+  if (IsRetentionModeValid(retention_mode)) {
+    if (!(retention_duration_days ^ retention_duration_years)) {
+      return error::Error(
+          "retention mode must be provided with retention duration days or "
+          "years");
+    }
+  } else if (retention_duration_days || retention_duration_years) {
+    return error::Error(
+        "retention duration days or years must be provided with retention "
+        "mode");
+  }
+
+  return error::SUCCESS;
+}

@@ -276,6 +276,212 @@ struct RemoveObjectsResponse : public Response {
 using SelectObjectContentResponse = Response;
 
 using ListenBucketNotificationResponse = Response;
+
+using DeleteBucketPolicyResponse = Response;
+
+struct GetBucketPolicyResponse : public Response {
+  std::string policy;
+
+  GetBucketPolicyResponse(std::string policy) { this->policy = policy; }
+
+  GetBucketPolicyResponse(error::Error err) : Response(err) {}
+
+  GetBucketPolicyResponse(const Response& resp) : Response(resp) {}
+};  // struct GetBucketPolicyResponse
+
+using SetBucketPolicyResponse = Response;
+
+using DeleteBucketNotificationResponse = Response;
+
+struct GetBucketNotificationResponse : public Response {
+  NotificationConfig config;
+
+  GetBucketNotificationResponse(NotificationConfig config) {
+    this->config = config;
+  }
+
+  GetBucketNotificationResponse(error::Error err) : Response(err) {}
+
+  GetBucketNotificationResponse(const Response& resp) : Response(resp) {}
+
+  static GetBucketNotificationResponse ParseXML(std::string_view data);
+};  // struct GetBucketNotificationResponse
+
+using SetBucketNotificationResponse = Response;
+
+using DeleteBucketEncryptionResponse = Response;
+
+struct GetBucketEncryptionResponse : public Response {
+  SseConfig config;
+
+  GetBucketEncryptionResponse(SseConfig sseconfig) { this->config = config; }
+
+  GetBucketEncryptionResponse(error::Error err) : Response(err) {}
+
+  GetBucketEncryptionResponse(const Response& resp) : Response(resp) {}
+
+  static GetBucketEncryptionResponse ParseXML(std::string_view data);
+};  // struct GetBucketEncryptionResponse
+
+using SetBucketEncryptionResponse = Response;
+
+struct GetBucketVersioningResponse : public Response {
+  Boolean status;
+  Boolean mfa_delete;
+
+  GetBucketVersioningResponse() {}
+
+  GetBucketVersioningResponse(error::Error err) : Response(err) {}
+
+  GetBucketVersioningResponse(const Response& resp) : Response(resp) {}
+
+  std::string Status() {
+    if (!status) return "Off";
+    return status.Get() ? "Enabled" : "Suspended";
+  }
+  std::string MfaDelete() {
+    if (!mfa_delete) return "";
+    return mfa_delete.Get() ? "Enabled" : "Disabled";
+  }
+};  // struct GetBucketVersioningResponse
+
+using SetBucketVersioningResponse = Response;
+
+using DeleteBucketReplicationResponse = Response;
+
+struct GetBucketReplicationResponse : public Response {
+  ReplicationConfig config;
+
+  GetBucketReplicationResponse(ReplicationConfig config) {
+    this->config = config;
+  }
+
+  GetBucketReplicationResponse(error::Error err) : Response(err) {}
+
+  GetBucketReplicationResponse(const Response& resp) : Response(resp) {}
+
+  static GetBucketReplicationResponse ParseXML(std::string_view data);
+};  // struct GetBucketReplicationResponse
+
+using SetBucketReplicationResponse = Response;
+
+using DeleteBucketLifecycleResponse = Response;
+
+struct GetBucketLifecycleResponse : public Response {
+  LifecycleConfig config;
+
+  GetBucketLifecycleResponse(LifecycleConfig value) { this->config = config; }
+
+  GetBucketLifecycleResponse(error::Error err) : Response(err) {}
+
+  GetBucketLifecycleResponse(const Response& resp) : Response(resp) {}
+
+  static GetBucketLifecycleResponse ParseXML(std::string_view data);
+};  // struct GetBucketLifecycleResponse
+
+using SetBucketLifecycleResponse = Response;
+
+using DeleteBucketTagsResponse = Response;
+
+struct GetBucketTagsResponse : public Response {
+  std::map<std::string, std::string> tags;
+
+  GetBucketTagsResponse(std::map<std::string, std::string> tags) {
+    this->tags = tags;
+  }
+
+  GetBucketTagsResponse(error::Error err) : Response(err) {}
+
+  GetBucketTagsResponse(const Response& resp) : Response(resp) {}
+
+  static GetBucketTagsResponse ParseXML(std::string_view data);
+};  // struct GetBucketTagsResponse
+
+using SetBucketTagsResponse = Response;
+
+using DeleteObjectLockConfigResponse = Response;
+
+struct GetObjectLockConfigResponse : public Response {
+  ObjectLockConfig config;
+
+  GetObjectLockConfigResponse(ObjectLockConfig config) {
+    this->config = config;
+  }
+
+  GetObjectLockConfigResponse(error::Error err) : Response(err) {}
+
+  GetObjectLockConfigResponse(const Response& resp) : Response(resp) {}
+};  // struct GetObjectLockConfigResponse
+
+using SetObjectLockConfigResponse = Response;
+
+using DeleteObjectTagsResponse = Response;
+
+struct GetObjectTagsResponse : public Response {
+  std::map<std::string, std::string> tags;
+
+  GetObjectTagsResponse(std::map<std::string, std::string> tags) {
+    this->tags = tags;
+  }
+
+  GetObjectTagsResponse(error::Error err) : Response(err) {}
+
+  GetObjectTagsResponse(const Response& resp) : Response(resp) {}
+
+  static GetObjectTagsResponse ParseXML(std::string_view data);
+};  // struct GetObjectTagsResponse
+
+using SetObjectTagsResponse = Response;
+
+using EnableObjectLegalHoldResponse = Response;
+
+using DisableObjectLegalHoldResponse = Response;
+
+struct IsObjectLegalHoldEnabledResponse : public Response {
+  bool enabled = false;
+
+  IsObjectLegalHoldEnabledResponse(bool enabled) { this->enabled = enabled; }
+
+  IsObjectLegalHoldEnabledResponse(error::Error err) : Response(err) {}
+
+  IsObjectLegalHoldEnabledResponse(const Response& resp) : Response(resp) {}
+};  // struct IsObjectLegalHoldEnabledResponse
+
+struct GetObjectRetentionResponse : public Response {
+  RetentionMode retention_mode;
+  utils::Time retain_until_date;
+
+  GetObjectRetentionResponse() {}
+
+  GetObjectRetentionResponse(error::Error err) : Response(err) {}
+
+  GetObjectRetentionResponse(const Response& resp) : Response(resp) {}
+};  // struct GetObjectRetentionResponse
+
+using SetObjectRetentionResponse = Response;
+
+struct GetPresignedObjectUrlResponse : public Response {
+  std::string url;
+
+  GetPresignedObjectUrlResponse(std::string url) { this->url = url; }
+
+  GetPresignedObjectUrlResponse(error::Error err) : Response(err) {}
+
+  GetPresignedObjectUrlResponse(const Response& resp) : Response(resp) {}
+};  // struct GetPresignedObjectUrlResponse
+
+struct GetPresignedPostFormDataResponse : public Response {
+  std::map<std::string, std::string> form_data;
+
+  GetPresignedPostFormDataResponse(
+      std::map<std::string, std::string> form_data) {
+    this->form_data = form_data;
+  }
+
+  GetPresignedPostFormDataResponse(error::Error err) : Response(err) {}
+
+  GetPresignedPostFormDataResponse(const Response& resp) : Response(resp) {}
+};  // struct GetPresignedPostFormDataResponse
 }  // namespace s3
 }  // namespace minio
 
