@@ -19,91 +19,14 @@
 #include <fstream>
 
 #include "args.h"
+#include "baseclient.h"
 #include "config.h"
 #include "request.h"
 #include "response.h"
 
 namespace minio {
 namespace s3 {
-utils::Multimap GetCommonListObjectsQueryParams(std::string& delimiter,
-                                                std::string& encoding_type,
-                                                unsigned int max_keys,
-                                                std::string& prefix);
-
-class ListObjectsResult;
-
-/**
- * Simple Storage Service (aka S3) client to perform bucket and object
- * operations asynchronously.
- */
-class Client {
- private:
-  http::BaseUrl& base_url_;
-  creds::Provider* provider_ = NULL;
-  std::map<std::string, std::string> region_map_;
-  bool debug_ = false;
-  bool ignore_cert_check_ = false;
-  std::string user_agent_ = DEFAULT_USER_AGENT;
-
- public:
-  Client(http::BaseUrl& base_url, creds::Provider* provider = NULL);
-
-  void Debug(bool flag) { debug_ = flag; }
-
-  void IgnoreCertCheck(bool flag) { ignore_cert_check_ = flag; }
-
-  error::Error SetAppInfo(std::string_view app_name,
-                          std::string_view app_version);
-
-  void HandleRedirectResponse(std::string& code, std::string& message,
-                              int status_code, http::Method method,
-                              utils::Multimap headers, std::string& bucket_name,
-                              bool retry = false);
-  Response GetErrorResponse(http::Response resp, std::string_view resource,
-                            http::Method method, std::string& bucket_name,
-                            std::string& object_name);
-  Response execute(Request& req);
-  Response Execute(Request& req);
-
-  // S3 APIs
-  ListObjectsResponse ListObjectsV1(ListObjectsV1Args args);
-  ListObjectsResponse ListObjectsV2(ListObjectsV2Args args);
-  ListObjectsResponse ListObjectVersions(ListObjectVersionsArgs args);
-
-  // Bucket operations
-  GetRegionResponse GetRegion(std::string& bucket_name, std::string& region);
-  MakeBucketResponse MakeBucket(MakeBucketArgs args);
-  ListBucketsResponse ListBuckets(ListBucketsArgs args);
-  ListBucketsResponse ListBuckets();
-  BucketExistsResponse BucketExists(BucketExistsArgs args);
-  RemoveBucketResponse RemoveBucket(RemoveBucketArgs args);
-
-  // Object operations
-  AbortMultipartUploadResponse AbortMultipartUpload(
-      AbortMultipartUploadArgs args);
-  CompleteMultipartUploadResponse CompleteMultipartUpload(
-      CompleteMultipartUploadArgs args);
-  CreateMultipartUploadResponse CreateMultipartUpload(
-      CreateMultipartUploadArgs args);
-  PutObjectResponse PutObject(PutObjectApiArgs args);
-  UploadPartResponse UploadPart(UploadPartArgs args);
-  UploadPartCopyResponse UploadPartCopy(UploadPartCopyArgs args);
-  StatObjectResponse StatObject(StatObjectArgs args);
-  RemoveObjectResponse RemoveObject(RemoveObjectArgs args);
-  DownloadObjectResponse DownloadObject(DownloadObjectArgs args);
-  GetObjectResponse GetObject(GetObjectArgs args);
-  ListObjectsResult ListObjects(ListObjectsArgs args);
-  PutObjectResponse PutObject(PutObjectArgs& args, std::string& upload_id,
-                              char* buf);
-  PutObjectResponse PutObject(PutObjectArgs args);
-  CopyObjectResponse CopyObject(CopyObjectArgs args);
-  StatObjectResponse CalculatePartCount(size_t& part_count,
-                                        std::list<ComposeSource> sources);
-  ComposeObjectResponse ComposeObject(ComposeObjectArgs args,
-                                      std::string& upload_id);
-  ComposeObjectResponse ComposeObject(ComposeObjectArgs args);
-  UploadObjectResponse UploadObject(UploadObjectArgs args);
-};  // class Client
+class Client;
 
 class ListObjectsResult {
  private:
@@ -133,6 +56,29 @@ class ListObjectsResult {
     return curr;
   }
 };  // class ListObjectsResult
+
+/**
+ * Simple Storage Service (aka S3) client to perform bucket and object
+ * operations.
+ */
+class Client : public BaseClient {
+ protected:
+  StatObjectResponse CalculatePartCount(size_t& part_count,
+                                        std::list<ComposeSource> sources);
+  ComposeObjectResponse ComposeObject(ComposeObjectArgs args,
+                                      std::string& upload_id);
+  PutObjectResponse PutObject(PutObjectArgs& args, std::string& upload_id,
+                              char* buf);
+
+ public:
+  Client(http::BaseUrl& base_url, creds::Provider* provider = NULL);
+  ComposeObjectResponse ComposeObject(ComposeObjectArgs args);
+  CopyObjectResponse CopyObject(CopyObjectArgs args);
+  DownloadObjectResponse DownloadObject(DownloadObjectArgs args);
+  ListObjectsResult ListObjects(ListObjectsArgs args);
+  PutObjectResponse PutObject(PutObjectArgs args);
+  UploadObjectResponse UploadObject(UploadObjectArgs args);
+};  // class Client
 }  // namespace s3
 }  // namespace minio
 #endif  // #ifndef __MINIO_S3_CLIENT_H
