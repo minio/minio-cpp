@@ -927,17 +927,16 @@ minio::s3::BaseClient::GetPresignedObjectUrl(GetPresignedObjectUrlArgs args) {
 
   if (provider_ != NULL) {
     creds::Credentials creds = provider_->Fetch();
-    if (!creds.SessionToken().empty()) {
-      query_params.Add("X-Amz-Security-Token", creds.SessionToken());
+    if (!creds.session_token.empty()) {
+      query_params.Add("X-Amz-Security-Token", creds.session_token);
     }
 
     utils::Time date = utils::Time::Now();
     if (args.request_time) date = args.request_time;
 
-    std::string access_key = creds.AccessKey();
-    std::string secret_key = creds.SecretKey();
     signer::PresignV4(args.method, url.host, url.path, region, query_params,
-                      access_key, secret_key, date, args.expiry_seconds);
+                      creds.access_key, creds.secret_key, date,
+                      args.expiry_seconds);
     url.query_string = query_params.ToQueryString();
   }
 
@@ -963,12 +962,10 @@ minio::s3::BaseClient::GetPresignedPostFormData(PostPolicy policy) {
   }
 
   creds::Credentials creds = provider_->Fetch();
-  std::string access_key = creds.AccessKey();
-  std::string secret_key = creds.SecretKey();
-  std::string session_token = creds.SessionToken();
   std::map<std::string, std::string> data;
-  if (error::Error err = policy.FormData(data, access_key, secret_key,
-                                         session_token, region)) {
+  if (error::Error err =
+          policy.FormData(data, creds.access_key, creds.secret_key,
+                          creds.session_token, region)) {
     return err;
   }
   return data;

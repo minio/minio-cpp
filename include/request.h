@@ -16,7 +16,8 @@
 #ifndef _MINIO_REQUEST_H
 #define _MINIO_REQUEST_H
 
-#include "creds.h"
+#include "credentials.h"
+#include "providers.h"
 #include "signer.h"
 
 namespace minio {

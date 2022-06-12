@@ -195,6 +195,12 @@ minio::http::Response minio::http::Request::execute() {
       request.setOpt(new curlpp::Options::SslVerifyPeer(true));
       request.setOpt(new curlpp::Options::CaInfo(ssl_cert_file));
     }
+    if (!key_file.empty()) {
+      request.setOpt(new curlpp::Options::SslKey(key_file));
+    }
+    if (!cert_file.empty()) {
+      request.setOpt(new curlpp::Options::SslCert(cert_file));
+    }
   }
 
   utils::CharBuffer charbuf((char *)body.data(), body.size());
