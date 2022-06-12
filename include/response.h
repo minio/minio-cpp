@@ -242,6 +242,36 @@ using CopyObjectResponse = PutObjectResponse;
 using ComposeObjectResponse = PutObjectResponse;
 
 using UploadObjectResponse = PutObjectResponse;
+
+struct DeletedObject : public Response {
+  std::string name;
+  std::string version_id;
+  bool delete_marker;
+  std::string delete_marker_version_id;
+};  // struct DeletedObject
+
+struct DeleteError : public Response {
+  std::string version_id;
+
+  DeleteError() {}
+
+  DeleteError(error::Error err) : Response(err) {}
+
+  DeleteError(const Response& resp) : Response(resp) {}
+};  // struct DeleteError
+
+struct RemoveObjectsResponse : public Response {
+  std::list<DeletedObject> objects;
+  std::list<DeleteError> errors;
+
+  RemoveObjectsResponse() {}
+
+  RemoveObjectsResponse(error::Error err) : Response(err) {}
+
+  RemoveObjectsResponse(const Response& resp) : Response(resp) {}
+
+  static RemoveObjectsResponse ParseXML(std::string_view data);
+};  // struct RemoveObjectsResponse
 }  // namespace s3
 }  // namespace minio
 

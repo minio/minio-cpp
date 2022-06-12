@@ -235,6 +235,21 @@ struct UploadObjectArgs : public PutObjectBaseArgs {
 
   error::Error Validate();
 };  // struct PutObjectArgs
+
+struct RemoveObjectsApiArgs : public BucketArgs {
+  bool bypass_governance_mode = false;
+  bool quiet = true;
+  std::list<DeleteObject> objects;
+};  // struct RemoveObjectsApiArgs
+
+using DeleteObjectFunction = std::function<bool(DeleteObject &)>;
+
+struct RemoveObjectsArgs : public BucketArgs {
+  bool bypass_governance_mode = false;
+  DeleteObjectFunction func = NULL;
+
+  error::Error Validate();
+};  // struct RemoveObjectsArgs
 }  // namespace s3
 }  // namespace minio
 #endif  // #ifndef __MINIO_S3_ARGS_H

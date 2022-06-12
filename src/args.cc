@@ -355,3 +355,12 @@ minio::error::Error minio::s3::UploadObjectArgs::Validate() {
   object_size = obj_size;
   return utils::CalcPartInfo(object_size, part_size, part_count);
 }
+
+minio::error::Error minio::s3::RemoveObjectsArgs::Validate() {
+  if (error::Error err = BucketArgs::Validate()) return err;
+  if (func == NULL) {
+    return error::Error("delete object function must be set");
+  }
+
+  return error::SUCCESS;
+}

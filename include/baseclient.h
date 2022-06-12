@@ -78,6 +78,7 @@ class BaseClient {
   PutObjectResponse PutObject(PutObjectApiArgs args);
   RemoveBucketResponse RemoveBucket(RemoveBucketArgs args);
   RemoveObjectResponse RemoveObject(RemoveObjectArgs args);
+  RemoveObjectsResponse RemoveObjects(RemoveObjectsApiArgs args);
   StatObjectResponse StatObject(StatObjectArgs args);
   UploadPartResponse UploadPart(UploadPartArgs args);
   UploadPartCopyResponse UploadPartCopy(UploadPartCopyArgs args);

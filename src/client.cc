@@ -69,6 +69,45 @@ void minio::s3::ListObjectsResult::Populate() {
   itr_ = resp_.contents.begin();
 }
 
+minio::s3::RemoveObjectsResult::RemoveObjectsResult(error::Error err) {
+  done_ = true;
+  resp_.errors.push_back(DeleteError(err));
+  itr_ = resp_.errors.begin();
+}
+
+minio::s3::RemoveObjectsResult::RemoveObjectsResult(Client* client,
+                                                    RemoveObjectsArgs* args) {
+  client_ = client;
+  args_ = args;
+  Populate();
+}
+
+void minio::s3::RemoveObjectsResult::Populate() {
+  while (!done_ && resp_.errors.size() == 0) {
+    RemoveObjectsApiArgs args;
+    args.extra_headers = args_->extra_headers;
+    args.extra_query_params = args_->extra_query_params;
+    args.bucket = args_->bucket;
+    args.region = args_->region;
+    args.quiet = true;
+    args.bypass_governance_mode = args_->bypass_governance_mode;
+
+    for (int i = 0; i < 1000; i++) {
+      DeleteObject object;
+      if (!args_->func(object)) break;
+      args.objects.push_back(object);
+    }
+
+    if (args.objects.size() != 0) {
+      resp_ = client_->BaseClient::RemoveObjects(args);
+      if (!resp_) resp_.errors.push_back(DeleteError(resp_));
+      itr_ = resp_.errors.begin();
+    } else {
+      done_ = true;
+    }
+  }
+}
+
 minio::s3::Client::Client(BaseUrl& base_url, creds::Provider* provider)
     : BaseClient(base_url, provider) {}
 
@@ -656,4 +695,10 @@ minio::s3::UploadObjectResponse minio::s3::Client::UploadObject(
   PutObjectResponse resp = PutObject(po_args);
   file.close();
   return resp;
+}
+
+minio::s3::RemoveObjectsResult minio::s3::Client::RemoveObjects(
+    RemoveObjectsArgs args) {
+  if (error::Error err = args.Validate()) return err;
+  return RemoveObjectsResult(this, &args);
 }

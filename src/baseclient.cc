@@ -605,6 +605,47 @@ minio::s3::RemoveObjectResponse minio::s3::BaseClient::RemoveObject(
   return Execute(req);
 }
 
+minio::s3::RemoveObjectsResponse minio::s3::BaseClient::RemoveObjects(
+    RemoveObjectsApiArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kPost, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("delete", "");
+  if (args.bypass_governance_mode) {
+    req.headers.Add("x-amz-bypass-governance-retention", "true");
+  }
+
+  std::stringstream ss;
+  ss << "<Delete>";
+  if (args.quiet) ss << "<Quiet>true</Quiet>";
+  for (auto& object : args.objects) {
+    ss << "<Object>";
+    ss << "<Key>" << object.name << "</Key>";
+    if (!object.version_id.empty()) {
+      ss << "<VersionId>" << object.version_id << "</VersionId>";
+    }
+    ss << "</Object>";
+  }
+  ss << "</Delete>";
+  std::string body = ss.str();
+  req.body = body;
+  req.headers.Add("Content-Type", "application/xml");
+  req.headers.Add("Content-MD5", utils::Md5sumHash(body));
+
+  Response response = Execute(req);
+  if (!response) return response;
+  return RemoveObjectsResponse::ParseXML(response.data);
+}
+
 minio::s3::StatObjectResponse minio::s3::BaseClient::StatObject(
     StatObjectArgs args) {
   if (error::Error err = args.Validate()) return err;
