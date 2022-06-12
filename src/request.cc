@@ -152,39 +152,14 @@ void minio::s3::Request::BuildHeaders(http::Url& url,
       if (!headers.Contains("Content-Type")) {
         headers.Add("Content-Type", "application/octet-stream");
       }
-  }
-
-  // MD5 hash of zero length byte array.
-  // public static final String ZERO_MD5_HASH = "1B2M2Y8AsgTpgAmY7PhCfg==";
-
-  if (provider != NULL) {
-    if (url.https) {
-      sha256 = "UNSIGNED-PAYLOAD";
-      switch (method) {
-        case http::Method::kPut:
-        case http::Method::kPost:
-          if (!md5sum_added) {
-            md5sum = utils::Md5sumHash(body);
-          }
+      if (provider != NULL) {
+        sha256 = utils::Sha256Hash(body);
+      } else if (!md5sum_added) {
+        md5sum = utils::Md5sumHash(body);
       }
-    } else {
-      switch (method) {
-        case http::Method::kPut:
-        case http::Method::kPost:
-          sha256 = utils::Sha256Hash(body);
-          break;
-        default:
-          sha256 = EMPTY_SHA256;
-      }
-    }
-  } else {
-    switch (method) {
-      case http::Method::kPut:
-      case http::Method::kPost:
-        if (!md5sum_added) {
-          md5sum = utils::Md5sumHash(body);
-        }
-    }
+      break;
+    default:
+      if (provider != NULL) sha256 = EMPTY_SHA256;
   }
 
   if (!md5sum.empty()) headers.Add("Content-MD5", md5sum);
