@@ -45,14 +45,14 @@ utils::Multimap& SignV4(std::string& service_name, http::Method& method,
                         utils::Multimap& headers, utils::Multimap& query_params,
                         std::string& access_key, std::string& secret_key,
                         std::string& content_sha256, utils::Time& date);
-utils::Multimap& SignV4S3(http::Method& method, std::string& uri,
+utils::Multimap& SignV4S3(http::Method method, std::string& uri,
                           std::string& region, utils::Multimap& headers,
-                          utils::Multimap& query_params,
-                          std::string& access_key, std::string& secret_key,
-                          std::string& content_sha256, utils::Time& date);
-utils::Multimap& SignV4STS(http::Method& method, std::string& uri,
+                          utils::Multimap query_params, std::string& access_key,
+                          std::string& secret_key, std::string& content_sha256,
+                          utils::Time& date);
+utils::Multimap& SignV4STS(http::Method method, std::string& uri,
                            std::string& region, utils::Multimap& headers,
-                           utils::Multimap& query_params,
+                           utils::Multimap query_params,
                            std::string& access_key, std::string& secret_key,
                            std::string& content_sha256, utils::Time& date);
 }  // namespace signer

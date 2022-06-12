@@ -21,44 +21,64 @@
 namespace minio {
 namespace s3 {
 class Sse {
- public:
-  utils::Multimap empty_;
+ protected:
+  utils::Multimap headers_;
+  utils::Multimap copy_headers_;
 
  public:
   Sse() {}
+
   virtual ~Sse() {}
-  bool TlsRequired() { return true; }
-  utils::Multimap CopyHeaders() { return empty_; }
-  virtual utils::Multimap Headers() = 0;
+
+  utils::Multimap Headers() { return headers_; }
+
+  utils::Multimap CopyHeaders() { return copy_headers_; }
+
+  virtual bool TlsRequired() = 0;
 };  // class Sse
 
 class SseCustomerKey : public Sse {
- private:
-  utils::Multimap headers;
-  utils::Multimap copy_headers;
-
  public:
-  SseCustomerKey(std::string_view key);
-  utils::Multimap Headers() { return headers; }
-  utils::Multimap CopyHeaders() { return copy_headers; }
+  SseCustomerKey(std::string_view key) {
+    std::string b64key = utils::Base64Encode(key);
+    std::string md5key = utils::Md5sumHash(key);
+
+    this->headers_.Add("X-Amz-Server-Side-Encryption-Customer-Algorithm",
+                       "AES256");
+    this->headers_.Add("X-Amz-Server-Side-Encryption-Customer-Key", b64key);
+    this->headers_.Add("X-Amz-Server-Side-Encryption-Customer-Key-MD5", md5key);
+
+    this->copy_headers_.Add(
+        "X-Amz-Copy-Source-Server-Side-Encryption-Customer-Algorithm",
+        "AES256");
+    this->copy_headers_.Add(
+        "X-Amz-Copy-Source-Server-Side-Encryption-Customer-Key", b64key);
+    this->copy_headers_.Add(
+        "X-Amz-Copy-Source-Server-Side-Encryption-Customer-Key-MD5", md5key);
+  }
+
+  bool TlsRequired() { return true; }
 };  // class SseCustomerKey
 
 class SseKms : public Sse {
- private:
-  utils::Multimap headers;
-
  public:
-  SseKms(std::string_view key, std::string_view context);
-  utils::Multimap Headers() { return headers; }
+  SseKms(std::string_view key, std::string_view context) {
+    this->headers_.Add("X-Amz-Server-Side-Encryption-Aws-Kms-Key-Id",
+                       std::string(key));
+    this->headers_.Add("X-Amz-Server-Side-Encryption", "aws:kms");
+    if (!context.empty()) {
+      this->headers_.Add("X-Amz-Server-Side-Encryption-Context",
+                         utils::Base64Encode(context));
+    }
+  }
+
+  bool TlsRequired() { return true; }
 };  // class SseKms
 
 class SseS3 : public Sse {
- private:
-  utils::Multimap headers;
-
  public:
-  SseS3();
-  utils::Multimap Headers() { return headers; }
+  SseS3() { this->headers_.Add("X-Amz-Server-Side-Encryption", "AES256"); }
+
   bool TlsRequired() { return false; }
 };  // class SseS3
 }  // namespace s3

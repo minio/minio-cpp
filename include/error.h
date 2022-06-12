@@ -26,7 +26,7 @@ class Error {
 
  public:
   Error() {}
-  Error(std::string_view msg) { msg_ = std::string(msg); }
+  Error(std::string_view msg) { this->msg_ = std::string(msg); }
   std::string String() { return msg_; }
   operator bool() const { return !msg_.empty(); }
 };  // class Error

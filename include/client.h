@@ -71,7 +71,7 @@ class Client : public BaseClient {
                               char* buf);
 
  public:
-  Client(http::BaseUrl& base_url, creds::Provider* provider = NULL);
+  Client(BaseUrl& base_url, creds::Provider* provider = NULL);
   ComposeObjectResponse ComposeObject(ComposeObjectArgs args);
   CopyObjectResponse CopyObject(CopyObjectArgs args);
   DownloadObjectResponse DownloadObject(DownloadObjectArgs args);

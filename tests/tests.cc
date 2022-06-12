@@ -94,14 +94,18 @@ class Tests {
     minio::s3::MakeBucketArgs args;
     args.bucket = bucket_name_;
     minio::s3::MakeBucketResponse resp = client_.MakeBucket(args);
-    if (!resp) throw std::runtime_error("MakeBucket(): " + resp.GetError());
+    if (!resp) {
+      throw std::runtime_error("MakeBucket(): " + resp.Error().String());
+    }
   }
 
   ~Tests() noexcept(false) {
     minio::s3::RemoveBucketArgs args;
     args.bucket = bucket_name_;
     minio::s3::RemoveBucketResponse resp = client_.RemoveBucket(args);
-    if (!resp) throw std::runtime_error("RemoveBucket(): " + resp.GetError());
+    if (!resp) {
+      throw std::runtime_error("RemoveBucket(): " + resp.Error().String());
+    }
   }
 
   void MakeBucket(std::string bucket_name) noexcept(false) {
@@ -109,7 +113,7 @@ class Tests {
     args.bucket = bucket_name;
     minio::s3::MakeBucketResponse resp = client_.MakeBucket(args);
     if (resp) return;
-    throw MakeBucketError("MakeBucket(): " + resp.GetError());
+    throw MakeBucketError("MakeBucket(): " + resp.Error().String());
   }
 
   void RemoveBucket(std::string bucket_name) noexcept(false) {
@@ -117,7 +121,7 @@ class Tests {
     args.bucket = bucket_name;
     minio::s3::RemoveBucketResponse resp = client_.RemoveBucket(args);
     if (resp) return;
-    throw RemoveBucketError("RemoveBucket(): " + resp.GetError());
+    throw RemoveBucketError("RemoveBucket(): " + resp.Error().String());
   }
 
   void RemoveObject(std::string bucket_name, std::string object_name) {
@@ -125,7 +129,9 @@ class Tests {
     args.bucket = bucket_name;
     args.object = object_name;
     minio::s3::RemoveObjectResponse resp = client_.RemoveObject(args);
-    if (!resp) throw std::runtime_error("RemoveObject(): " + resp.GetError());
+    if (!resp) {
+      throw std::runtime_error("RemoveObject(): " + resp.Error().String());
+    }
   }
 
   void MakeBucket() {
@@ -154,7 +160,7 @@ class Tests {
       args.bucket = bucket_name;
       minio::s3::BucketExistsResponse resp = client_.BucketExists(args);
       if (!resp) {
-        throw BucketExistsError("BucketExists(): " + resp.GetError());
+        throw BucketExistsError("BucketExists(): " + resp.Error().String());
       }
       if (!resp.exist) {
         throw std::runtime_error("BucketExists(): expected: true; got: false");
@@ -180,7 +186,9 @@ class Tests {
       }
 
       minio::s3::ListBucketsResponse resp = client_.ListBuckets();
-      if (!resp) throw std::runtime_error("ListBuckets(): " + resp.GetError());
+      if (!resp) {
+        throw std::runtime_error("ListBuckets(): " + resp.Error().String());
+      }
 
       int c = 0;
       for (auto& bucket : resp.buckets) {
@@ -212,13 +220,17 @@ class Tests {
     args.bucket = bucket_name_;
     args.object = object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
-    if (!resp) throw std::runtime_error("PutObject(): " + resp.GetError());
+    if (!resp) {
+      throw std::runtime_error("PutObject(): " + resp.Error().String());
+    }
     try {
       minio::s3::StatObjectArgs args;
       args.bucket = bucket_name_;
       args.object = object_name;
       minio::s3::StatObjectResponse resp = client_.StatObject(args);
-      if (!resp) throw std::runtime_error("StatObject(): " + resp.GetError());
+      if (!resp) {
+        throw std::runtime_error("StatObject(): " + resp.Error().String());
+      }
       if (resp.size != data.length()) {
         throw std::runtime_error(
             "StatObject(): expected: " + std::to_string(data.length()) +
@@ -241,7 +253,9 @@ class Tests {
     args.bucket = bucket_name_;
     args.object = object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
-    if (!resp) throw std::runtime_error("PutObject(): " + resp.GetError());
+    if (!resp) {
+      throw std::runtime_error("PutObject(): " + resp.Error().String());
+    }
     RemoveObject(bucket_name_, object_name);
   }
 
@@ -256,7 +270,9 @@ class Tests {
     args.bucket = bucket_name_;
     args.object = object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
-    if (!resp) throw std::runtime_error("PutObject(): " + resp.GetError());
+    if (!resp) {
+      throw std::runtime_error("PutObject(): " + resp.Error().String());
+    }
 
     try {
       std::string filename = RandObjectName();
@@ -266,7 +282,7 @@ class Tests {
       args.filename = filename;
       minio::s3::DownloadObjectResponse resp = client_.DownloadObject(args);
       if (!resp) {
-        throw std::runtime_error("DownloadObject(): " + resp.GetError());
+        throw std::runtime_error("DownloadObject(): " + resp.Error().String());
       }
 
       std::ifstream file(filename);
@@ -300,21 +316,24 @@ class Tests {
     args.bucket = bucket_name_;
     args.object = object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
-    if (!resp) throw std::runtime_error("PutObject(): " + resp.GetError());
+    if (!resp) {
+      throw std::runtime_error("PutObject(): " + resp.Error().String());
+    }
 
     try {
       minio::s3::GetObjectArgs args;
       args.bucket = bucket_name_;
       args.object = object_name;
       std::string content;
-      args.data_callback = [](minio::http::DataCallbackArgs args) -> size_t {
-        std::string* content = (std::string*)args.user_arg;
-        *content += std::string(args.buffer, args.length);
-        return args.size * args.length;
+      args.datafunc =
+          [&content = content](minio::http::DataFunctionArgs args) -> bool {
+        content += args.datachunk;
+        return true;
       };
-      args.user_arg = &content;
       minio::s3::GetObjectResponse resp = client_.GetObject(args);
-      if (!resp) throw std::runtime_error("GetObject(): " + resp.GetError());
+      if (!resp) {
+        throw std::runtime_error("GetObject(): " + resp.Error().String());
+      }
       if (data != content) {
         throw std::runtime_error("GetObject(): expected: " + data +
                                  "; got: " + content);
@@ -338,7 +357,9 @@ class Tests {
         args.bucket = bucket_name_;
         args.object = object_name;
         minio::s3::PutObjectResponse resp = client_.PutObject(args);
-        if (!resp) throw std::runtime_error("PutObject(): " + resp.GetError());
+        if (!resp) {
+          throw std::runtime_error("PutObject(): " + resp.Error().String());
+        }
         object_names.push_back(object_name);
       }
 
@@ -349,7 +370,7 @@ class Tests {
       for (; result; result++) {
         minio::s3::Item item = *result;
         if (!item) {
-          throw std::runtime_error("ListObjects(): " + item.GetError());
+          throw std::runtime_error("ListObjects(): " + item.Error().String());
         }
         if (std::find(object_names.begin(), object_names.end(), item.name) !=
             object_names.end()) {
@@ -384,7 +405,9 @@ class Tests {
       args.bucket = bucket_name_;
       args.object = object_name;
       minio::s3::PutObjectResponse resp = client_.PutObject(args);
-      if (!resp) throw std::runtime_error("PutObject(): " + resp.GetError());
+      if (!resp) {
+        throw std::runtime_error("PutObject(): " + resp.Error().String());
+      }
       RemoveObject(bucket_name_, object_name);
     }
 
@@ -396,8 +419,10 @@ class Tests {
       args.bucket = bucket_name_;
       args.object = object_name;
       minio::s3::PutObjectResponse resp = client_.PutObject(args);
-      if (!resp)
-        throw std::runtime_error("<Multipart> PutObject(): " + resp.GetError());
+      if (!resp) {
+        throw std::runtime_error("<Multipart> PutObject(): " +
+                                 resp.Error().String());
+      }
       RemoveObject(bucket_name_, object_name);
     }
   }
@@ -413,7 +438,9 @@ class Tests {
     args.bucket = bucket_name_;
     args.object = src_object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
-    if (!resp) throw std::runtime_error("PutObject(): " + resp.GetError());
+    if (!resp) {
+      throw std::runtime_error("PutObject(): " + resp.Error().String());
+    }
 
     try {
       minio::s3::CopySource source;
@@ -424,7 +451,9 @@ class Tests {
       args.object = object_name;
       args.source = source;
       minio::s3::CopyObjectResponse resp = client_.CopyObject(args);
-      if (!resp) throw std::runtime_error("CopyObject(): " + resp.GetError());
+      if (!resp) {
+        throw std::runtime_error("CopyObject(): " + resp.Error().String());
+      }
       RemoveObject(bucket_name_, src_object_name);
       RemoveObject(bucket_name_, object_name);
     } catch (const std::runtime_error& err) {
@@ -449,52 +478,45 @@ class Tests {
     args.object = object_name;
     args.filename = filename;
     minio::s3::UploadObjectResponse resp = client_.UploadObject(args);
-    if (!resp) throw std::runtime_error("UploadObject(): " + resp.GetError());
+    if (!resp) {
+      throw std::runtime_error("UploadObject(): " + resp.Error().String());
+    }
     std::filesystem::remove(filename);
     RemoveObject(bucket_name_, object_name);
   }
 };  // class Tests
 
-bool GetEnv(std::string& var, const char* name) {
-  if (const char* value = std::getenv(name)) {
-    var = value;
-    return true;
-  }
-  return false;
-}
-
 int main(int argc, char* argv[]) {
   std::string host;
-  if (!GetEnv(host, "S3HOST")) {
+  if (!minio::utils::GetEnv(host, "S3HOST")) {
     std::cerr << "S3HOST environment variable must be set" << std::endl;
     return EXIT_FAILURE;
   }
 
   std::string access_key;
-  if (!GetEnv(access_key, "ACCESS_KEY")) {
+  if (!minio::utils::GetEnv(access_key, "ACCESS_KEY")) {
     std::cerr << "ACCESS_KEY environment variable must be set" << std::endl;
     return EXIT_FAILURE;
   }
 
   std::string secret_key;
-  if (!GetEnv(secret_key, "SECRET_KEY")) {
+  if (!minio::utils::GetEnv(secret_key, "SECRET_KEY")) {
     std::cerr << "SECRET_KEY environment variable must be set" << std::endl;
     return EXIT_FAILURE;
   }
 
   std::string value;
   bool secure = true;
-  if (GetEnv(value, "IS_HTTP")) secure = false;
+  if (minio::utils::GetEnv(value, "IS_HTTP")) secure = false;
 
   bool ignore_cert_check = false;
-  if (GetEnv(value, "IGNORE_CERT_CHECK")) secure = true;
+  if (minio::utils::GetEnv(value, "IGNORE_CERT_CHECK")) secure = true;
 
   std::string region;
-  GetEnv(region, "REGION");
+  minio::utils::GetEnv(region, "REGION");
 
-  minio::http::BaseUrl base_url;
-  base_url.SetHost(host);
-  base_url.is_https = secure;
+  minio::s3::BaseUrl base_url(host, secure);
+
   minio::creds::StaticProvider provider(access_key, secret_key);
   minio::s3::Client client(base_url, &provider);
 

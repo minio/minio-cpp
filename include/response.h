@@ -23,8 +23,6 @@
 namespace minio {
 namespace s3 {
 struct Response {
-  std::string error;
-
   int status_code = 0;
   utils::Multimap headers;
   std::string data;
@@ -37,24 +35,55 @@ struct Response {
   std::string bucket_name;
   std::string object_name;
 
-  Response();
-  Response(error::Error err);
-  Response(const Response& response);
+  Response() {}
+
+  Response(error::Error err) { this->err_ = err; }
+
+  Response(const Response& resp) {
+    this->err_ = resp.err_;
+
+    this->status_code = resp.status_code;
+    this->headers = resp.headers;
+    this->data = resp.data;
+    this->code = resp.code;
+    this->message = resp.message;
+    this->resource = resp.resource;
+    this->request_id = resp.request_id;
+    this->host_id = resp.host_id;
+    this->bucket_name = resp.bucket_name;
+    this->object_name = resp.object_name;
+  }
+
   operator bool() const {
-    return error.empty() && code.empty() && message.empty() &&
+    return !err_ && code.empty() && message.empty() &&
            (status_code == 0 || status_code >= 200 && status_code <= 299);
   }
-  std::string GetError();
+
+  error::Error Error() {
+    if (err_) return err_;
+    if (!code.empty()) return error::Error(code + ": " + message);
+    if (status_code && (status_code < 200 || status_code > 299)) {
+      return error::Error("failed with HTTP status code " +
+                          std::to_string(status_code));
+    }
+    return error::SUCCESS;
+  }
+
   static Response ParseXML(std::string_view data, int status_code,
                            utils::Multimap headers);
+
+ private:
+  error::Error err_;
 };  // struct Response
 
 struct GetRegionResponse : public Response {
   std::string region;
 
-  GetRegionResponse(std::string regionvalue);
-  GetRegionResponse(error::Error err);
-  GetRegionResponse(const Response& response);
+  GetRegionResponse(std::string region) { this->region = region; }
+
+  GetRegionResponse(error::Error err) : Response(err) {}
+
+  GetRegionResponse(const Response& resp) : Response(resp) {}
 };  // struct GetRegionResponse
 
 using MakeBucketResponse = Response;
@@ -62,18 +91,23 @@ using MakeBucketResponse = Response;
 struct ListBucketsResponse : public Response {
   std::list<Bucket> buckets;
 
-  ListBucketsResponse(std::list<Bucket> bucketlist);
-  ListBucketsResponse(error::Error err);
-  ListBucketsResponse(const Response& response);
+  ListBucketsResponse(std::list<Bucket> buckets) { this->buckets = buckets; }
+
+  ListBucketsResponse(error::Error err) : Response(err) {}
+
+  ListBucketsResponse(const Response& resp) : Response(resp) {}
+
   static ListBucketsResponse ParseXML(std::string_view data);
 };  // struct ListBucketsResponse
 
 struct BucketExistsResponse : public Response {
   bool exist = false;
 
-  BucketExistsResponse(bool existflag);
-  BucketExistsResponse(error::Error err);
-  BucketExistsResponse(const Response& response);
+  BucketExistsResponse(bool exist) { this->exist = exist; }
+
+  BucketExistsResponse(error::Error err) : Response(err) {}
+
+  BucketExistsResponse(const Response& resp) : Response(resp) {}
 };  // struct BucketExistsResponse
 
 using RemoveBucketResponse = Response;
@@ -85,9 +119,12 @@ struct CompleteMultipartUploadResponse : public Response {
   std::string etag;
   std::string version_id;
 
-  CompleteMultipartUploadResponse();
-  CompleteMultipartUploadResponse(error::Error err);
-  CompleteMultipartUploadResponse(const Response& response);
+  CompleteMultipartUploadResponse() {}
+
+  CompleteMultipartUploadResponse(error::Error err) : Response(err) {}
+
+  CompleteMultipartUploadResponse(const Response& resp) : Response(resp) {}
+
   static CompleteMultipartUploadResponse ParseXML(std::string_view data,
                                                   std::string version_id);
 };  // struct CompleteMultipartUploadResponse
@@ -95,18 +132,24 @@ struct CompleteMultipartUploadResponse : public Response {
 struct CreateMultipartUploadResponse : public Response {
   std::string upload_id;
 
-  CreateMultipartUploadResponse(std::string uploadid);
-  CreateMultipartUploadResponse(error::Error err);
-  CreateMultipartUploadResponse(const Response& response);
+  CreateMultipartUploadResponse(std::string upload_id) {
+    this->upload_id = upload_id;
+  }
+
+  CreateMultipartUploadResponse(error::Error err) : Response(err) {}
+
+  CreateMultipartUploadResponse(const Response& resp) : Response(resp) {}
 };  // struct CreateMultipartUploadResponse
 
 struct PutObjectResponse : public Response {
   std::string etag;
   std::string version_id;
 
-  PutObjectResponse();
-  PutObjectResponse(error::Error err);
-  PutObjectResponse(const Response& response);
+  PutObjectResponse() {}
+
+  PutObjectResponse(const Response& resp) : Response(resp) {}
+
+  PutObjectResponse(error::Error err) : Response(err) {}
 };  // struct PutObjectResponse
 
 using UploadPartResponse = PutObjectResponse;
@@ -124,9 +167,11 @@ struct StatObjectResponse : public Response {
   bool delete_marker;
   utils::Multimap user_metadata;
 
-  StatObjectResponse();
-  StatObjectResponse(error::Error err);
-  StatObjectResponse(const Response& response);
+  StatObjectResponse() {}
+
+  StatObjectResponse(error::Error err) : Response(err) {}
+
+  StatObjectResponse(const Response& resp) : Response(resp) {}
 };  // struct StatObjectResponse
 
 using RemoveObjectResponse = Response;
@@ -150,9 +195,11 @@ struct Item : public Response {
   bool is_delete_marker = false;
   std::string encoding_type;
 
-  Item();
-  Item(error::Error err);
-  Item(const Response& response);
+  Item() {}
+
+  Item(error::Error err) : Response(err) {}
+
+  Item(const Response& resp) : Response(resp) {}
 };  // struct Item
 
 struct ListObjectsResponse : public Response {
@@ -181,9 +228,12 @@ struct ListObjectsResponse : public Response {
   std::string version_id_marker;
   std::string next_version_id_marker;
 
-  ListObjectsResponse();
-  ListObjectsResponse(error::Error err);
-  ListObjectsResponse(const Response& response);
+  ListObjectsResponse() {}
+
+  ListObjectsResponse(error::Error err) : Response(err) {}
+
+  ListObjectsResponse(const Response& resp) : Response(resp) {}
+
   static ListObjectsResponse ParseXML(std::string_view data, bool version);
 };  // struct ListObjectsResponse
 

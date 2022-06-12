@@ -21,10 +21,54 @@
 
 namespace minio {
 namespace s3 {
+static std::string extractRegion(std::string& host) {
+  std::stringstream str_stream(host);
+  std::string token;
+  std::vector<std::string> tokens;
+  while (std::getline(str_stream, token, '.')) tokens.push_back(token);
+
+  token = tokens[1];
+
+  // If token is "dualstack", then region might be in next token.
+  if (token == "dualstack") token = tokens[2];
+
+  // If token is equal to "amazonaws", region is not passed in the host.
+  if (token == "amazonaws") return "";
+
+  // Return token as region.
+  return token;
+}
+
+struct BaseUrl {
+  bool https = true;
+  std::string host;
+  unsigned int port = 0;
+  std::string region;
+  bool aws_host = false;
+  bool accelerate_host = false;
+  bool dualstack_host = false;
+  bool virtual_style = false;
+
+  BaseUrl() {}
+  BaseUrl(std::string host, bool https = true);
+  error::Error BuildUrl(http::Url& url, http::Method method, std::string region,
+                        utils::Multimap query_params,
+                        std::string bucket_name = "",
+                        std::string object_name = "");
+  operator bool() const { return !err_ && !host.empty(); }
+  error::Error Error() {
+    if (host.empty() && !err_) return error::Error("empty host");
+    return err_;
+  }
+
+ private:
+  error::Error err_;
+};  // struct Url
+
 struct Request {
   http::Method method;
   std::string region;
-  http::BaseUrl& base_url;
+  BaseUrl& base_url;
 
   std::string user_agent;
 
@@ -36,8 +80,8 @@ struct Request {
 
   std::string_view body = "";
 
-  http::DataCallback data_callback = NULL;
-  void* user_arg = NULL;
+  http::DataFunction datafunc = NULL;
+  void* userdata = NULL;
 
   std::string sha256;
   utils::Time date;
@@ -45,13 +89,12 @@ struct Request {
   bool debug = false;
   bool ignore_cert_check = false;
 
-  Request(http::Method httpmethod, std::string regionvalue,
-          http::BaseUrl& baseurl, utils::Multimap extra_headers,
-          utils::Multimap extra_query_params);
+  Request(http::Method method, std::string region, BaseUrl& baseurl,
+          utils::Multimap extra_headers, utils::Multimap extra_query_params);
   http::Request ToHttpRequest(creds::Provider* provider = NULL);
 
  private:
-  void BuildHeaders(utils::Url& url, creds::Provider* provider);
+  void BuildHeaders(http::Url& url, creds::Provider* provider);
 };  // struct Request
 }  // namespace s3
 }  // namespace minio

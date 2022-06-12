@@ -124,8 +124,8 @@ minio::utils::Multimap& minio::signer::SignV4(
 }
 
 minio::utils::Multimap& minio::signer::SignV4S3(
-    http::Method& method, std::string& uri, std::string& region,
-    utils::Multimap& headers, utils::Multimap& query_params,
+    http::Method method, std::string& uri, std::string& region,
+    utils::Multimap& headers, utils::Multimap query_params,
     std::string& access_key, std::string& secret_key,
     std::string& content_sha256, utils::Time& date) {
   std::string service_name = "s3";
@@ -134,8 +134,8 @@ minio::utils::Multimap& minio::signer::SignV4S3(
 }
 
 minio::utils::Multimap& minio::signer::SignV4STS(
-    http::Method& method, std::string& uri, std::string& region,
-    utils::Multimap& headers, utils::Multimap& query_params,
+    http::Method method, std::string& uri, std::string& region,
+    utils::Multimap& headers, utils::Multimap query_params,
     std::string& access_key, std::string& secret_key,
     std::string& content_sha256, utils::Time& date) {
   std::string service_name = "sts";
