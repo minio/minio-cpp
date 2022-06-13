@@ -5,6 +5,7 @@
   "dependencies": [
     "openssl",
     "curlpp",
+    "nlohmann-json",
     "pugixml"
   ]
 }

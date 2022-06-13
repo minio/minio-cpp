@@ -274,6 +274,8 @@ struct RemoveObjectsResponse : public Response {
 };  // struct RemoveObjectsResponse
 
 using SelectObjectContentResponse = Response;
+
+using ListenBucketNotificationResponse = Response;
 }  // namespace s3
 }  // namespace minio
 

@@ -44,3 +44,6 @@ TARGET_LINK_LIBRARIES(RemoveObjects miniocpp ${S3_LIBS})
 
 ADD_EXECUTABLE(SelectObjectContent SelectObjectContent.cc)
 TARGET_LINK_LIBRARIES(SelectObjectContent miniocpp ${S3_LIBS})
+
+ADD_EXECUTABLE(ListenBucketNotification ListenBucketNotification.cc)
+TARGET_LINK_LIBRARIES(ListenBucketNotification miniocpp ${S3_LIBS})

@@ -414,6 +414,67 @@ minio::s3::ListBucketsResponse minio::s3::BaseClient::ListBuckets() {
   return ListBuckets(ListBucketsArgs());
 }
 
+minio::s3::ListenBucketNotificationResponse
+minio::s3::BaseClient::ListenBucketNotification(
+    ListenBucketNotificationArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  if (base_url_.aws_host) {
+    return error::Error(
+        "ListenBucketNotification API is not supported in Amazon S3");
+  }
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req = Request(http::Method::kGet, region, base_url_,
+                        args.extra_headers, args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("prefix", args.prefix);
+  req.query_params.Add("suffix", args.suffix);
+  if (args.events.size() > 0) {
+    for (auto& event : args.events) req.query_params.Add("events", event);
+  } else {
+    req.query_params.Add("events", "s3:ObjectCreated:*");
+    req.query_params.Add("events", "s3:ObjectRemoved:*");
+    req.query_params.Add("events", "s3:ObjectAccessed:*");
+  }
+
+  std::string data;
+  auto func = args.func;
+  req.datafunc = [&func = func,
+                  &data = data](http::DataFunctionArgs args) -> bool {
+    while (true) {
+      data += args.datachunk;
+      size_t pos = data.find('\n');
+      if (pos == std::string::npos) return true;
+      std::string line = data.substr(0, pos);
+      data.erase(0, pos + 1);
+      line = utils::Trim(line);
+      if (line.empty()) continue;
+
+      nlohmann::json json = nlohmann::json::parse(line);
+      if (!json.contains("Records")) continue;
+
+      nlohmann::json j_records = json["Records"];
+      std::list<minio::s3::NotificationRecord> records;
+      for (auto& j_record : j_records) {
+        records.push_back(NotificationRecord::ParseJSON(j_record));
+      }
+
+      if (records.size() <= 0) continue;
+
+      if (!func(records)) return false;
+    }
+  };
+
+  return Execute(req);
+}
+
 minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectsV1(
     ListObjectsV1Args args) {
   if (error::Error err = args.Validate()) return err;

@@ -72,6 +72,8 @@ class BaseClient {
   GetObjectResponse GetObject(GetObjectArgs args);
   ListBucketsResponse ListBuckets(ListBucketsArgs args);
   ListBucketsResponse ListBuckets();
+  ListenBucketNotificationResponse ListenBucketNotification(
+      ListenBucketNotificationArgs args);
   ListObjectsResponse ListObjectsV1(ListObjectsV1Args args);
   ListObjectsResponse ListObjectsV2(ListObjectsV2Args args);
   ListObjectsResponse ListObjectVersions(ListObjectVersionsArgs args);

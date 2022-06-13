@@ -259,6 +259,15 @@ struct SelectObjectContentArgs : public ObjectReadArgs {
       : request(req), resultfunc(func) {}
   error::Error Validate();
 };  // struct SelectObjectContentArgs
+
+struct ListenBucketNotificationArgs : public BucketArgs {
+  std::string prefix;
+  std::string suffix;
+  std::list<std::string> events;
+  NotificationRecordsFunction func = NULL;
+
+  error::Error Validate();
+};  // struct ListenBucketNotificationArgs
 }  // namespace s3
 }  // namespace minio
 #endif  // #ifndef __MINIO_S3_ARGS_H
