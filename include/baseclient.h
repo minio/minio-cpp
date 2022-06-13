@@ -39,6 +39,7 @@ class BaseClient {
   std::map<std::string, std::string> region_map_;
   bool debug_ = false;
   bool ignore_cert_check_ = false;
+  std::string ssl_cert_file_;
   std::string user_agent_ = DEFAULT_USER_AGENT;
 
  public:
@@ -47,6 +48,10 @@ class BaseClient {
   void Debug(bool flag) { debug_ = flag; }
 
   void IgnoreCertCheck(bool flag) { ignore_cert_check_ = flag; }
+
+  void SetSslCertFile(std::string ssl_cert_file) {
+    ssl_cert_file_ = ssl_cert_file;
+  }
 
   error::Error SetAppInfo(std::string_view app_name,
                           std::string_view app_version);

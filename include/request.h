@@ -88,6 +88,7 @@ struct Request {
 
   bool debug = false;
   bool ignore_cert_check = false;
+  std::string ssl_cert_file;
 
   Request(http::Method method, std::string region, BaseUrl& baseurl,
           utils::Multimap extra_headers, utils::Multimap extra_query_params);
