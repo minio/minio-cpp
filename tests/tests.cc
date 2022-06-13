@@ -535,6 +535,65 @@ class Tests {
       throw err;
     }
   }
+
+  void SelectObjectContent() {
+    std::cout << "SelectObjectContent()" << std::endl;
+
+    std::string object_name = RandObjectName();
+
+    std::string data =
+        "1997,Ford,E350,\"ac, abs, moon\",3000.00\n"
+        "1999,Chevy,\"Venture \"\"Extended Edition\"\"\",,4900.00\n"
+        "1999,Chevy,\"Venture \"\"Extended Edition, Very Large\"\"\",,5000.00\n"
+        "1996,Jeep,Grand Cherokee,\"MUST SELL!\n"
+        "air, moon roof, loaded\",4799.00\n";
+    std::stringstream ss("Year,Make,Model,Description,Price\n" + data);
+    minio::s3::PutObjectArgs args(ss, ss.str().length(), 0);
+    args.bucket = bucket_name_;
+    args.object = object_name;
+    minio::s3::PutObjectResponse resp = client_.PutObject(args);
+    if (!resp) {
+      throw std::runtime_error("PutObject(): " + resp.Error().String());
+    }
+
+    std::string expression = "select * from S3Object";
+    minio::s3::CsvInputSerialization csv_input;
+    minio::s3::FileHeaderInfo file_header_info =
+        minio::s3::FileHeaderInfo::kUse;
+    csv_input.file_header_info = &file_header_info;
+    minio::s3::CsvOutputSerialization csv_output;
+    minio::s3::QuoteFields quote_fields = minio::s3::QuoteFields::kAsNeeded;
+    csv_output.quote_fields = &quote_fields;
+    minio::s3::SelectRequest request(expression, &csv_input, &csv_output);
+
+    try {
+      std::string records;
+      auto func = [&records = records](minio::s3::SelectResult result) -> bool {
+        if (result.err) {
+          throw std::runtime_error("SelectResult: " + result.err.String());
+          return false;
+        }
+        records += result.records;
+        return true;
+      };
+      minio::s3::SelectObjectContentArgs args(request, func);
+      args.bucket = bucket_name_;
+      args.object = object_name;
+      minio::s3::SelectObjectContentResponse resp =
+          client_.SelectObjectContent(args);
+      if (!resp) {
+        throw std::runtime_error("SelectObjectContent(): " +
+                                 resp.Error().String());
+      }
+      if (records != data) {
+        throw std::runtime_error("expected: " + data + ", got: " + records);
+      }
+      RemoveObject(bucket_name_, object_name);
+    } catch (const std::runtime_error& err) {
+      RemoveObject(bucket_name_, object_name);
+      throw err;
+    }
+  }
 };  // class Tests
 
 int main(int argc, char* argv[]) {
@@ -585,6 +644,7 @@ int main(int argc, char* argv[]) {
   tests.CopyObject();
   tests.UploadObject();
   tests.RemoveObjects();
+  tests.SelectObjectContent();
 
   return EXIT_SUCCESS;
 }

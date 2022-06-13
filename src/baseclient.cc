@@ -172,6 +172,7 @@ minio::s3::Response minio::s3::BaseClient::GetErrorResponse(
 minio::s3::Response minio::s3::BaseClient::execute(Request& req) {
   req.user_agent = user_agent_;
   http::Request request = req.ToHttpRequest(provider_);
+  request.debug = debug_;
   http::Response response = request.Execute();
   if (response) {
     Response resp;
@@ -644,6 +645,39 @@ minio::s3::RemoveObjectsResponse minio::s3::BaseClient::RemoveObjects(
   Response response = Execute(req);
   if (!response) return response;
   return RemoveObjectsResponse::ParseXML(response.data);
+}
+
+minio::s3::SelectObjectContentResponse
+minio::s3::BaseClient::SelectObjectContent(SelectObjectContentArgs args) {
+  if (error::Error err = args.Validate()) return err;
+
+  if (args.ssec != NULL && !base_url_.https) {
+    return error::Error(
+        "SSE-C operation must be performed over a secure connection");
+  }
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+
+  Request req(http::Method::kPost, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.object_name = args.object;
+  req.query_params.Add("select", "");
+  req.query_params.Add("select-type", "2");
+  std::string body = args.request.ToXML();
+  req.headers.Add("Content-MD5", utils::Md5sumHash(body));
+  req.body = body;
+
+  SelectHandler handler(args.resultfunc);
+  using namespace std::placeholders;
+  req.datafunc = std::bind(&SelectHandler::DataFunction, &handler, _1);
+
+  return Execute(req);
 }
 
 minio::s3::StatObjectResponse minio::s3::BaseClient::StatObject(

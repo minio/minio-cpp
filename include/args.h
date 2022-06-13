@@ -250,6 +250,15 @@ struct RemoveObjectsArgs : public BucketArgs {
 
   error::Error Validate();
 };  // struct RemoveObjectsArgs
+
+struct SelectObjectContentArgs : public ObjectReadArgs {
+  SelectRequest &request;
+  SelectResultFunction resultfunc = NULL;
+
+  SelectObjectContentArgs(SelectRequest &req, SelectResultFunction func)
+      : request(req), resultfunc(func) {}
+  error::Error Validate();
+};  // struct SelectObjectContentArgs
 }  // namespace s3
 }  // namespace minio
 #endif  // #ifndef __MINIO_S3_ARGS_H

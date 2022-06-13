@@ -15,8 +15,6 @@
 
 #include "utils.h"
 
-#include <iostream>
-
 const char* HTTP_HEADER_FORMAT = "%a, %d %b %Y %H:%M:%S GMT";
 const std::regex MULTI_SPACE_REGEX("( +)");
 const std::regex VALID_BUCKET_NAME_REGEX(
@@ -37,6 +35,29 @@ std::string minio::utils::GetHomeDir() {
   std::string home;
   if (GetEnv(home, "HOME")) return home;
   return getpwuid(getuid())->pw_dir;
+}
+
+std::string minio::utils::Printable(std::string s) {
+  std::stringstream ss;
+  for (auto& ch : s) {
+    if (ch < 33 || ch > 126) {
+      ss << "\\x" << std::hex << std::setfill('0') << std::setw(2)
+         << (ch & 0xff);
+    } else {
+      ss << ch;
+    }
+  }
+
+  return ss.str();
+}
+
+unsigned long minio::utils::CRC32(std::string_view str) {
+  return crc32(0, (const unsigned char*)str.data(), str.size());
+}
+
+unsigned int minio::utils::Int(std::string_view str) {
+  unsigned char* data = (unsigned char*)str.data();
+  return data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3];
 }
 
 bool minio::utils::StringToBool(std::string str) {
@@ -383,15 +404,19 @@ void minio::utils::Multimap::GetCanonicalHeaders(
 }
 
 std::string minio::utils::Multimap::GetCanonicalQueryString() {
+  std::vector<std::string> keys;
+  for (auto& [key, _] : map_) keys.push_back(key);
+  std::sort(keys.begin(), keys.end());
+
   std::vector<std::string> values;
-  for (auto& [key, vals] : map_) {
+  for (auto& key : keys) {
+    auto vals = map_[key];
     for (auto& value : vals) {
       std::string s = curlpp::escape(key) + "=" + curlpp::escape(value);
       values.push_back(s);
     }
   }
 
-  std::sort(values.begin(), values.end());
   return utils::Join(values, "&");
 }
 
