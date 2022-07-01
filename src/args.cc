@@ -393,3 +393,102 @@ minio::error::Error minio::s3::ListenBucketNotificationArgs::Validate() {
 
   return error::SUCCESS;
 }
+
+minio::error::Error minio::s3::SetBucketPolicyArgs::Validate() {
+  if (error::Error err = BucketArgs::Validate()) return err;
+
+  if (!utils::CheckNonEmptyString(policy)) {
+    return error::Error("bucket policy cannot be empty");
+  }
+
+  return error::SUCCESS;
+}
+
+minio::error::Error minio::s3::SetBucketEncryptionArgs::Validate() {
+  if (error::Error err = BucketArgs::Validate()) return err;
+
+  if (!config) {
+    return error::Error("bucket encryption configuration cannot be empty");
+  }
+
+  return error::SUCCESS;
+}
+
+minio::error::Error minio::s3::SetBucketVersioningArgs::Validate() {
+  if (error::Error err = BucketArgs::Validate()) return err;
+  if (!status) return error::Error("versioning status must be set");
+
+  return error::SUCCESS;
+}
+
+minio::error::Error minio::s3::SetBucketTagsArgs::Validate() {
+  if (error::Error err = BucketArgs::Validate()) return err;
+
+  if (tags.size() > 50) {
+    return error::Error("too many bucket tags; allowed = 50, found = " +
+                        std::to_string(tags.size()));
+  }
+
+  for (auto& [key, value] : tags) {
+    if (key.length() == 0 || key.length() > 128 || utils::Contains(key, "&")) {
+      return error::Error("invalid tag key '" + key + "'");
+    }
+
+    if (value.length() > 256 || utils::Contains(value, "&")) {
+      return error::Error("invalid tag value '" + value + "'");
+    }
+  }
+
+  return error::SUCCESS;
+}
+
+minio::error::Error minio::s3::SetObjectLockConfigArgs::Validate() {
+  if (error::Error err = BucketArgs::Validate()) return err;
+  return config.Validate();
+}
+
+minio::error::Error minio::s3::SetObjectTagsArgs::Validate() {
+  if (error::Error err = ObjectArgs::Validate()) return err;
+
+  if (tags.size() > 10) {
+    return error::Error("too many object tags; allowed = 10, found = " +
+                        std::to_string(tags.size()));
+  }
+
+  for (auto& [key, value] : tags) {
+    if (key.length() == 0 || key.length() > 128 || utils::Contains(key, "&")) {
+      return error::Error("invalid tag key '" + key + "'");
+    }
+
+    if (value.length() > 256 || utils::Contains(value, "&")) {
+      return error::Error("invalid tag value '" + value + "'");
+    }
+  }
+
+  return error::SUCCESS;
+}
+
+minio::error::Error minio::s3::SetObjectRetentionArgs::Validate() {
+  if (error::Error err = ObjectArgs::Validate()) return err;
+  if (IsRetentionModeValid(retention_mode)) {
+    return error::Error("valid retention mode must be set");
+  }
+  if (!retain_until_date) {
+    return error::Error("retention until date must be set");
+  }
+
+  return error::SUCCESS;
+}
+
+minio::error::Error minio::s3::GetPresignedObjectUrlArgs::Validate() {
+  if (error::Error err = ObjectArgs::Validate()) return err;
+  if (method < http::Method::kGet || method > http::Method::kDelete) {
+    return error::Error("valid HTTP method must be provided");
+  }
+  if (expiry_seconds < 1 || expiry_seconds > kDefaultExpirySeconds) {
+    return error::Error("expiry seconds must be between 1 and " +
+                        std::to_string(kDefaultExpirySeconds));
+  }
+
+  return error::SUCCESS;
+}

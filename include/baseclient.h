@@ -69,7 +69,41 @@ class BaseClient {
       CompleteMultipartUploadArgs args);
   CreateMultipartUploadResponse CreateMultipartUpload(
       CreateMultipartUploadArgs args);
+  DeleteBucketEncryptionResponse DeleteBucketEncryption(
+      DeleteBucketEncryptionArgs args);
+  DisableObjectLegalHoldResponse DisableObjectLegalHold(
+      DisableObjectLegalHoldArgs args);
+  DeleteBucketLifecycleResponse DeleteBucketLifecycle(
+      DeleteBucketLifecycleArgs args);
+  DeleteBucketNotificationResponse DeleteBucketNotification(
+      DeleteBucketNotificationArgs args);
+  DeleteBucketPolicyResponse DeleteBucketPolicy(DeleteBucketPolicyArgs args);
+  DeleteBucketReplicationResponse DeleteBucketReplication(
+      DeleteBucketReplicationArgs args);
+  DeleteBucketTagsResponse DeleteBucketTags(DeleteBucketTagsArgs args);
+  DeleteObjectLockConfigResponse DeleteObjectLockConfig(
+      DeleteObjectLockConfigArgs args);
+  DeleteObjectTagsResponse DeleteObjectTags(DeleteObjectTagsArgs args);
+  EnableObjectLegalHoldResponse EnableObjectLegalHold(
+      EnableObjectLegalHoldArgs args);
+  GetBucketEncryptionResponse GetBucketEncryption(GetBucketEncryptionArgs args);
+  GetBucketLifecycleResponse GetBucketLifecycle(GetBucketLifecycleArgs args);
+  GetBucketNotificationResponse GetBucketNotification(
+      GetBucketNotificationArgs args);
+  GetBucketPolicyResponse GetBucketPolicy(GetBucketPolicyArgs args);
+  GetBucketReplicationResponse GetBucketReplication(
+      GetBucketReplicationArgs args);
+  GetBucketTagsResponse GetBucketTags(GetBucketTagsArgs args);
+  GetBucketVersioningResponse GetBucketVersioning(GetBucketVersioningArgs args);
   GetObjectResponse GetObject(GetObjectArgs args);
+  GetObjectLockConfigResponse GetObjectLockConfig(GetObjectLockConfigArgs args);
+  GetObjectRetentionResponse GetObjectRetention(GetObjectRetentionArgs args);
+  GetObjectTagsResponse GetObjectTags(GetObjectTagsArgs args);
+  GetPresignedObjectUrlResponse GetPresignedObjectUrl(
+      GetPresignedObjectUrlArgs args);
+  GetPresignedPostFormDataResponse GetPresignedPostFormData(PostPolicy policy);
+  IsObjectLegalHoldEnabledResponse IsObjectLegalHoldEnabled(
+      IsObjectLegalHoldEnabledArgs args);
   ListBucketsResponse ListBuckets(ListBucketsArgs args);
   ListBucketsResponse ListBuckets();
   ListenBucketNotificationResponse ListenBucketNotification(
@@ -82,6 +116,18 @@ class BaseClient {
   RemoveBucketResponse RemoveBucket(RemoveBucketArgs args);
   RemoveObjectResponse RemoveObject(RemoveObjectArgs args);
   RemoveObjectsResponse RemoveObjects(RemoveObjectsApiArgs args);
+  SetBucketEncryptionResponse SetBucketEncryption(SetBucketEncryptionArgs args);
+  SetBucketLifecycleResponse SetBucketLifecycle(SetBucketLifecycleArgs args);
+  SetBucketNotificationResponse SetBucketNotification(
+      SetBucketNotificationArgs args);
+  SetBucketPolicyResponse SetBucketPolicy(SetBucketPolicyArgs args);
+  SetBucketReplicationResponse SetBucketReplication(
+      SetBucketReplicationArgs args);
+  SetBucketTagsResponse SetBucketTags(SetBucketTagsArgs args);
+  SetBucketVersioningResponse SetBucketVersioning(SetBucketVersioningArgs args);
+  SetObjectLockConfigResponse SetObjectLockConfig(SetObjectLockConfigArgs args);
+  SetObjectRetentionResponse SetObjectRetention(SetObjectRetentionArgs args);
+  SetObjectTagsResponse SetObjectTags(SetObjectTagsArgs args);
   SelectObjectContentResponse SelectObjectContent(SelectObjectContentArgs args);
   StatObjectResponse StatObject(StatObjectArgs args);
   UploadPartResponse UploadPart(UploadPartArgs args);

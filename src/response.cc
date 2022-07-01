@@ -334,3 +334,456 @@ minio::s3::RemoveObjectsResponse minio::s3::RemoveObjectsResponse::ParseXML(
 
   return resp;
 }
+
+minio::s3::GetBucketNotificationResponse
+minio::s3::GetBucketNotificationResponse::ParseXML(std::string_view data) {
+  minio::s3::NotificationConfig config;
+
+  pugi::xml_document xdoc;
+  pugi::xml_parse_result result = xdoc.load_string(data.data());
+  if (!result) return error::Error("unable to parse XML");
+
+  auto root = xdoc.select_node("/NotificationConfiguration");
+
+  auto populate = [](pugi::xpath_node& common) -> NotificationCommonConfig {
+    NotificationCommonConfig cfg;
+    pugi::xpath_node text;
+
+    auto events = common.node().select_nodes("Event");
+    for (auto event : events) cfg.events.push_back(event.node().value());
+
+    text = common.node().select_node("Id/text()");
+    cfg.id = text.node().value();
+
+    if (common.node().select_node("Filter")) {
+      auto filters = common.node().select_nodes("Filter/S3Key/FilterRule");
+      for (auto filter : filters) {
+        text = filter.node().select_node("Name/text()");
+        auto name = text.node().value();
+
+        text = filter.node().select_node("Value/text()");
+        auto value = text.node().value();
+
+        if (name == "prefix") {
+          cfg.prefix_filter_rule = PrefixFilterRule(value);
+        } else {
+          cfg.suffix_filter_rule = SuffixFilterRule(value);
+        }
+      }
+    }
+
+    return cfg;
+  };
+
+  pugi::xpath_node text;
+  std::string value;
+
+  auto cloudfuncs = root.node().select_nodes("CloudFunctionConfiguration");
+  for (auto cloudfunc : cloudfuncs) {
+    CloudFuncConfig cfg;
+
+    text = cloudfunc.node().select_node("CloudFunction/text()");
+    cfg.cloud_func = text.node().value();
+
+    NotificationCommonConfig common = populate(cloudfunc);
+    cfg.events = common.events;
+    cfg.id = common.id;
+    cfg.prefix_filter_rule = common.prefix_filter_rule;
+    cfg.suffix_filter_rule = common.suffix_filter_rule;
+
+    config.cloud_func_config_list.push_back(cfg);
+  }
+
+  auto queues = root.node().select_nodes("QueueConfiguration");
+  for (auto queue : queues) {
+    QueueConfig cfg;
+
+    text = queue.node().select_node("Queue/text()");
+    cfg.queue = text.node().value();
+
+    NotificationCommonConfig common = populate(queue);
+    cfg.events = common.events;
+    cfg.id = common.id;
+    cfg.prefix_filter_rule = common.prefix_filter_rule;
+    cfg.suffix_filter_rule = common.suffix_filter_rule;
+
+    config.queue_config_list.push_back(cfg);
+  }
+
+  auto topics = root.node().select_nodes("TopicConfiguration");
+  for (auto topic : topics) {
+    TopicConfig cfg;
+
+    text = topic.node().select_node("Topic/text()");
+    cfg.topic = text.node().value();
+
+    NotificationCommonConfig common = populate(topic);
+    cfg.events = common.events;
+    cfg.id = common.id;
+    cfg.prefix_filter_rule = common.prefix_filter_rule;
+    cfg.suffix_filter_rule = common.suffix_filter_rule;
+
+    config.topic_config_list.push_back(cfg);
+  }
+
+  return config;
+}
+
+minio::s3::GetBucketEncryptionResponse
+minio::s3::GetBucketEncryptionResponse::ParseXML(std::string_view data) {
+  SseConfig config;
+
+  pugi::xml_document xdoc;
+  pugi::xml_parse_result result = xdoc.load_string(data.data());
+  if (!result) return error::Error("unable to parse XML");
+
+  auto root = xdoc.select_node(
+      "/ServerSideEncryptionConfiguration/Rule"
+      "/ApplyServerSideEncryptionByDefault");
+
+  pugi::xpath_node text = root.node().select_node("SSEAlgorithm/text()");
+  config.sse_algorithm = text.node().value();
+
+  text = root.node().select_node("KMSMasterKeyID/text()");
+  config.kms_master_key_id = text.node().value();
+
+  return config;
+}
+
+minio::s3::GetBucketReplicationResponse
+minio::s3::GetBucketReplicationResponse::ParseXML(std::string_view data) {
+  ReplicationConfig config;
+
+  pugi::xml_document xdoc;
+  pugi::xml_parse_result result = xdoc.load_string(data.data());
+  if (!result) return error::Error("unable to parse XML");
+
+  auto root = xdoc.select_node("/ReplicationConfiguration");
+
+  pugi::xpath_node text;
+  std::string value;
+
+  if (root.node().select_node("Role")) {
+    text = root.node().select_node("Role/text()");
+    config.role = text.node().value();
+  }
+
+  auto rules = root.node().select_nodes("Rule");
+  for (auto& rule : rules) {
+    ReplicationRule rrule;
+
+    text = rule.node().select_node("ID/text()");
+    rrule.id = text.node().value();
+
+    text = rule.node().select_node("Status/text()");
+    value = text.node().value();
+    rrule.status = (value == "Enabled");
+
+    auto destination = rule.node().select_node("Destination");
+
+    text = destination.node().select_node("Bucket/text()");
+    rrule.destination.bucket_arn = text.node().value();
+
+    text = destination.node().select_node("Account/text()");
+    rrule.destination.account = text.node().value();
+
+    text = destination.node().select_node("StorageClass/text()");
+    rrule.destination.storage_class = text.node().value();
+
+    if (destination.node().select_node("AccessControlTranslation")) {
+      rrule.destination.access_control_translation.Enable();
+      text = destination.node().select_node(
+          "AccessControlTranslation/Owner/text()");
+      rrule.destination.access_control_translation.owner = text.node().value();
+    }
+    if (destination.node().select_node("EncryptionConfiguration")) {
+      rrule.destination.encryption_config.Enable();
+      text = destination.node().select_node(
+          "EncryptionConfiguration/ReplicaKmsKeyID/text()");
+      rrule.destination.encryption_config.replica_kms_key_id =
+          text.node().value();
+    }
+    if (destination.node().select_node("Metrics")) {
+      rrule.destination.metrics.Enable();
+
+      text = destination.node().select_node(
+          "Metrics/EventThreshold/Minutes/text()");
+      value = text.node().value();
+      rrule.destination.metrics.event_threshold_minutes = std::stoi(value);
+
+      text = destination.node().select_node(
+          "Metrics/EventThreshold/Status/text()");
+      value = text.node().value();
+      rrule.destination.metrics.status = (value == "Enabled");
+    }
+    if (destination.node().select_node("ReplicationTime")) {
+      rrule.destination.replication_time.Enable();
+
+      text = destination.node().select_node("ReplicationTime/Time/text()");
+      value = text.node().value();
+      rrule.destination.replication_time.time_minutes = std::stoi(value);
+
+      text = destination.node().select_node("ReplicationTime/Status/text()");
+      value = text.node().value();
+      rrule.destination.replication_time.status = (value == "Enabled");
+    }
+
+    if (rule.node().select_node("DeleteMarkerReplication")) {
+      text = rule.node().select_node("DeleteMarkerReplication/Status/text()");
+      value = text.node().value();
+      rrule.delete_marker_replication_status = (value == "Enabled");
+    }
+
+    if (rule.node().select_node("ExistingObjectReplication")) {
+      text = rule.node().select_node("ExistingObjectReplication/Status/text()");
+      value = text.node().value();
+      rrule.existing_object_replication_status = (value == "Enabled");
+    }
+
+    if (rule.node().select_node("Filter")) {
+      auto filter = rule.node().select_node("Filter");
+
+      if (filter.node().select_node("And")) {
+        if (filter.node().select_node("And/Prefix")) {
+          text = filter.node().select_node("And/Prefix/text()");
+          rrule.filter.and_operator.prefix = Prefix(text.node().value());
+        }
+
+        if (filter.node().select_node("And/Tag")) {
+          auto tags = root.node().select_nodes("And/Tag");
+          for (auto& tag : tags) {
+            text = filter.node().select_node("Key/text()");
+            std::string key = text.node().value();
+
+            text = filter.node().select_node("Value/text()");
+            std::string value = text.node().value();
+
+            rrule.filter.and_operator.tags[key] = value;
+          }
+        }
+      }
+
+      if (filter.node().select_node("Prefix")) {
+        text = filter.node().select_node("Prefix/text()");
+        rrule.filter.prefix = Prefix(text.node().value());
+      }
+
+      if (filter.node().select_node("Tag")) {
+        text = filter.node().select_node("Tag/Key/text()");
+        rrule.filter.tag.key = text.node().value();
+
+        text = filter.node().select_node("Tag/Value/text()");
+        rrule.filter.tag.value = text.node().value();
+      }
+    }
+
+    if (rule.node().select_node("Prefix")) {
+      text = rule.node().select_node("Prefix/text()");
+      rrule.prefix = Prefix(text.node().value());
+    }
+
+    if (rule.node().select_node("Priority")) {
+      text = rule.node().select_node("Priority/text()");
+      value = text.node().value();
+      rrule.priority = Integer(std::stoi(value));
+    }
+
+    if (rule.node().select_node("SourceSelectionCriteria")) {
+      rrule.source_selection_criteria.Enable();
+      if (rule.node().select_node(
+              "SourceSelectionCriteria/SseKmsEncryptedObjects")) {
+        text = rule.node().select_node(
+            "SourceSelectionCriteria/SseKmsEncryptedObjects/Status/text()");
+        value = text.node().value();
+        rrule.source_selection_criteria.sse_kms_encrypted_objects_status =
+            (value == "Enabled");
+      }
+    }
+
+    if (rule.node().select_node("DeleteReplication")) {
+      text = rule.node().select_node("DeleteReplication/Status/text()");
+      value = text.node().value();
+      rrule.delete_replication_status = (value == "Enabled");
+    }
+
+    config.rules.push_back(rrule);
+  }
+
+  return config;
+}
+
+minio::s3::GetBucketLifecycleResponse
+minio::s3::GetBucketLifecycleResponse::ParseXML(std::string_view data) {
+  LifecycleConfig config;
+
+  pugi::xml_document xdoc;
+  pugi::xml_parse_result result = xdoc.load_string(data.data());
+  if (!result) return error::Error("unable to parse XML");
+
+  auto root = xdoc.select_node("/LifecycleConfiguration");
+
+  pugi::xpath_node text;
+  std::string value;
+
+  auto rules = root.node().select_nodes("Rule");
+  for (auto& rule : rules) {
+    LifecycleRule lrule;
+
+    if (rule.node().select_node("AbortIncompleteMultipartUpload")) {
+      text = rule.node().select_node(
+          "AbortIncompleteMultipartUpload/DaysAfterInitiation/text()");
+      value = text.node().value();
+      lrule.abort_incomplete_multipart_upload_days_after_initiation =
+          std::stoi(value);
+    }
+
+    if (rule.node().select_node("Expiration")) {
+      if (rule.node().select_node("Expiration/Date")) {
+        text = rule.node().select_node("Expiration/Date/text()");
+        lrule.expiration_date =
+            utils::Time::FromISO8601UTC(text.node().value());
+      }
+
+      if (rule.node().select_node("Expiration/Days")) {
+        text = rule.node().select_node("Expiration/Days/text()");
+        value = text.node().value();
+        lrule.expiration_days = std::stoi(value);
+      }
+
+      if (rule.node().select_node("Expiration/ExpiredObjectDeleteMarker")) {
+        text = rule.node().select_node(
+            "Expiration/ExpiredObjectDeleteMarker/text()");
+        lrule.expiration_expired_object_delete_marker =
+            utils::BoolToString(text.node().value());
+      }
+    }
+
+    auto filter = rule.node().select_node("Filter");
+    if (filter.node().select_node("And")) {
+      if (filter.node().select_node("And/Prefix")) {
+        text = filter.node().select_node("And/Prefix/text()");
+        lrule.filter.and_operator.prefix = Prefix(text.node().value());
+      }
+
+      if (filter.node().select_node("And/Tag")) {
+        auto tags = root.node().select_nodes("And/Tag");
+        for (auto& tag : tags) {
+          text = filter.node().select_node("Key/text()");
+          std::string key = text.node().value();
+
+          text = filter.node().select_node("Value/text()");
+          std::string value = text.node().value();
+
+          lrule.filter.and_operator.tags[key] = value;
+        }
+      }
+    }
+    if (filter.node().select_node("Prefix")) {
+      text = filter.node().select_node("Prefix/text()");
+      lrule.filter.prefix = Prefix(text.node().value());
+    }
+    if (filter.node().select_node("Tag")) {
+      text = filter.node().select_node("Tag/Key/text()");
+      lrule.filter.tag.key = text.node().value();
+
+      text = filter.node().select_node("Tag/Value/text()");
+      lrule.filter.tag.value = text.node().value();
+    }
+
+    text = rule.node().select_node("ID/text()");
+    lrule.id = text.node().value();
+
+    if (rule.node().select_node("NoncurrentVersionExpiration")) {
+      text = rule.node().select_node(
+          "NoncurrentVersionExpiration/NoncurrentDays/text()");
+      value = text.node().value();
+      lrule.noncurrent_version_expiration_noncurrent_days = std::stoi(value);
+    }
+
+    if (rule.node().select_node("NoncurrentVersionTransition")) {
+      text = rule.node().select_node(
+          "NoncurrentVersionTransition/NoncurrentDays/text()");
+      value = text.node().value();
+      lrule.noncurrent_version_transition_noncurrent_days = std::stoi(value);
+
+      text = rule.node().select_node(
+          "NoncurrentVersionTransition/StorageClass/text()");
+      lrule.noncurrent_version_transition_storage_class = text.node().value();
+    }
+
+    text = rule.node().select_node("Status/text()");
+    value = text.node().value();
+    lrule.status = (value == "Enabled");
+
+    if (rule.node().select_node("Transition")) {
+      if (rule.node().select_node("Transition/Date")) {
+        text = rule.node().select_node("Transition/Date/text()");
+        lrule.transition_date =
+            utils::Time::FromISO8601UTC(text.node().value());
+      }
+
+      if (rule.node().select_node("Transition/Days")) {
+        text = rule.node().select_node("Transition/Days/text()");
+        value = text.node().value();
+        lrule.transition_days = std::stoi(value);
+      }
+
+      text = rule.node().select_node("Transition/StorageClass/text()");
+      lrule.transition_storage_class = text.node().value();
+    }
+
+    config.rules.push_back(lrule);
+  }
+
+  return config;
+}
+
+minio::s3::GetBucketTagsResponse minio::s3::GetBucketTagsResponse::ParseXML(
+    std::string_view data) {
+  std::map<std::string, std::string> map;
+
+  pugi::xml_document xdoc;
+  pugi::xml_parse_result result = xdoc.load_string(data.data());
+  if (!result) return error::Error("unable to parse XML");
+
+  auto tags = xdoc.select_nodes("/Tagging/TagSet/Tag");
+
+  pugi::xpath_node text;
+
+  for (auto& tag : tags) {
+    text = tag.node().select_node("Key/text()");
+    std::string key = text.node().value();
+
+    text = tag.node().select_node("Value/text()");
+    std::string value = text.node().value();
+
+    map[key] = value;
+  }
+
+  return map;
+}
+
+minio::s3::GetObjectTagsResponse minio::s3::GetObjectTagsResponse::ParseXML(
+    std::string_view data) {
+  std::map<std::string, std::string> map;
+
+  pugi::xml_document xdoc;
+  pugi::xml_parse_result result = xdoc.load_string(data.data());
+  if (!result) return error::Error("unable to parse XML");
+
+  auto tags = xdoc.select_nodes("/Tagging/TagSet/Tag");
+
+  pugi::xpath_node text;
+
+  for (auto& tag : tags) {
+    text = tag.node().select_node("Key/text()");
+    std::string key = text.node().value();
+
+    text = tag.node().select_node("Value/text()");
+    std::string value = text.node().value();
+
+    map[key] = value;
+  }
+
+  return map;
+}

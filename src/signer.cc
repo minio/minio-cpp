@@ -142,3 +142,43 @@ minio::utils::Multimap& minio::signer::SignV4STS(
   return SignV4(service_name, method, uri, region, headers, query_params,
                 access_key, secret_key, content_sha256, date);
 }
+
+minio::utils::Multimap& minio::signer::PresignV4(
+    http::Method method, std::string& host, std::string& uri,
+    std::string& region, utils::Multimap& query_params, std::string& access_key,
+    std::string& secret_key, utils::Time& date, unsigned int expires) {
+  std::string service_name = "s3";
+  std::string scope = GetScope(date, region, service_name);
+  std::string canonical_headers = "host:" + host;
+  std::string signed_headers = "host";
+
+  query_params.Add("X-Amz-Algorithm", "AWS4-HMAC-SHA256");
+  query_params.Add("X-Amz-Credential", access_key + "/" + scope);
+  query_params.Add("X-Amz-Date", date.ToAmzDate());
+  query_params.Add("X-Amz-Expires", std::to_string(expires));
+  query_params.Add("X-Amz-SignedHeaders", signed_headers);
+  std::string canonical_query_string = query_params.GetCanonicalQueryString();
+  std::string methodstring = http::MethodToString(method);
+  std::string content_sha256 = "UNSIGNED-PAYLOAD";
+  std::string canonical_request_hash = GetCanonicalRequestHash(
+      methodstring, uri, canonical_query_string, canonical_headers,
+      signed_headers, content_sha256);
+
+  std::string string_to_sign =
+      GetStringToSign(date, scope, canonical_request_hash);
+  std::string signing_key =
+      GetSigningKey(secret_key, date, region, service_name);
+  std::string signature = GetSignature(signing_key, string_to_sign);
+  query_params.Add("X-Amz-Signature", signature);
+  return query_params;
+}
+
+std::string minio::signer::PostPresignV4(std::string string_to_sign,
+                                         std::string& secret_key,
+                                         utils::Time& date,
+                                         std::string& region) {
+  std::string service_name = "s3";
+  std::string signing_key =
+      GetSigningKey(secret_key, date, region, service_name);
+  return GetSignature(signing_key, string_to_sign);
+}
