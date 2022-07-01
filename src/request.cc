@@ -199,6 +199,7 @@ minio::http::Request minio::s3::Request::ToHttpRequest(
   request.userdata = userdata;
   request.debug = debug;
   request.ignore_cert_check = ignore_cert_check;
+  request.ssl_cert_file = ssl_cert_file;
 
   return request;
 }

@@ -171,6 +171,8 @@ minio::s3::Response minio::s3::BaseClient::GetErrorResponse(
 
 minio::s3::Response minio::s3::BaseClient::execute(Request& req) {
   req.user_agent = user_agent_;
+  req.ignore_cert_check = ignore_cert_check_;
+  if (!ssl_cert_file_.empty()) req.ssl_cert_file = ssl_cert_file_;
   http::Request request = req.ToHttpRequest(provider_);
   request.debug = debug_;
   http::Response response = request.Execute();

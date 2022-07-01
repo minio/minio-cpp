@@ -169,6 +169,10 @@ size_t minio::http::Response::ResponseCallback(curlpp::Multi *requests,
 minio::http::Request::Request(Method method, Url url) {
   this->method = method;
   this->url = url;
+  std::string ssl_cert_file;
+  if (url.https && utils::GetEnv(ssl_cert_file, "SSL_CERT_FILE")) {
+    this->ssl_cert_file = ssl_cert_file;
+  }
 }
 
 minio::http::Response minio::http::Request::execute() {
@@ -184,6 +188,13 @@ minio::http::Response minio::http::Request::execute() {
   if (debug) request.setOpt(new curlpp::Options::Verbose(true));
   if (ignore_cert_check) {
     request.setOpt(new curlpp::Options::SslVerifyPeer(false));
+  }
+
+  if (url.https) {
+    if (!ssl_cert_file.empty()) {
+      request.setOpt(new curlpp::Options::SslVerifyPeer(true));
+      request.setOpt(new curlpp::Options::CaInfo(ssl_cert_file));
+    }
   }
 
   utils::CharBuffer charbuf((char *)body.data(), body.size());
