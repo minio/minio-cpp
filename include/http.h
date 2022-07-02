@@ -124,8 +124,8 @@ struct Url {
     if (host.empty()) return Url{};
 
     unsigned int port = 0;
-    struct sockaddr_in dst;
-    if (inet_pton(AF_INET6, host.c_str(), &(dst.sin_addr)) <= 0) {
+    struct sockaddr_in6 dst;
+    if (inet_pton(AF_INET6, host.c_str(), &(dst.sin6_addr)) <= 0) {
       if (host.front() != '[' || host.back() != ']') {
         std::stringstream ss(host);
         std::string portstr;
