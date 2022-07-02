@@ -42,7 +42,7 @@ jobs:
     - name: Run debug build
       run: |
         cmake -B ./build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=./vcpkg-master/scripts/buildsystems/vcpkg.cmake
-        cmake --build ./build --config Debug
+        cmake --build ./build --config Debug -j 4
 
     - name: Start MinIO server
       run: |
@@ -63,7 +63,7 @@ jobs:
       run: |
         cmake --build ./build --target clean
         cmake -B ./build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=./vcpkg-master/scripts/buildsystems/vcpkg.cmake
-        cmake --build ./build --config Release
+        cmake --build ./build --config Release -j 4
 
     - name: Run tests on release build
       run: |
