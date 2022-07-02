@@ -57,7 +57,7 @@ jobs:
 
     - name: Run tests on debug build
       run: |
-        S3HOST=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ./build/tests/tests
+        SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ENABLE_HTTPS=1 ./build/tests/tests
 
     - name: Run release build
       run: |
@@ -67,7 +67,7 @@ jobs:
 
     - name: Run tests on release build
       run: |
-        S3HOST=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ./build/tests/tests
+        SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ENABLE_HTTPS=1 ./build/tests/tests
 
     - name: Test
       working-directory: ${{github.workspace}}/build
