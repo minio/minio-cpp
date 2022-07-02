@@ -42,7 +42,7 @@ jobs:
     - name: Run debug build
       run: |
         cmake -B ./build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=./vcpkg-master/scripts/buildsystems/vcpkg.cmake
-        cmake --build ./build --config Debug
+        cmake --build ./build --config Debug -j 4
 
     - name: Start MinIO server
       run: |
@@ -57,17 +57,17 @@ jobs:
 
     - name: Run tests on debug build
       run: |
-        S3HOST=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ./build/tests/tests
+        SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ENABLE_HTTPS=1 ./build/tests/tests
 
     - name: Run release build
       run: |
         cmake --build ./build --target clean
         cmake -B ./build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=./vcpkg-master/scripts/buildsystems/vcpkg.cmake
-        cmake --build ./build --config Release
+        cmake --build ./build --config Release -j 4
 
     - name: Run tests on release build
       run: |
-        S3HOST=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ./build/tests/tests
+        SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ENABLE_HTTPS=1 ./build/tests/tests
 
     - name: Test
       working-directory: ${{github.workspace}}/build

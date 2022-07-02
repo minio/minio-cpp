@@ -670,8 +670,9 @@ class Tests {
 
 int main(int argc, char* argv[]) {
   std::string host;
-  if (!minio::utils::GetEnv(host, "S3HOST")) {
-    std::cerr << "S3HOST environment variable must be set" << std::endl;
+  if (!minio::utils::GetEnv(host, "SERVER_ENDPOINT")) {
+    std::cerr << "SERVER_ENDPOINT environment variable must be set"
+              << std::endl;
     return EXIT_FAILURE;
   }
 
@@ -688,14 +689,14 @@ int main(int argc, char* argv[]) {
   }
 
   std::string value;
-  bool secure = true;
-  if (minio::utils::GetEnv(value, "IS_HTTP")) secure = false;
+  bool secure = false;
+  if (minio::utils::GetEnv(value, "ENABLE_HTTPS")) secure = true;
 
   bool ignore_cert_check = false;
   if (minio::utils::GetEnv(value, "IGNORE_CERT_CHECK")) secure = true;
 
   std::string region;
-  minio::utils::GetEnv(region, "REGION");
+  minio::utils::GetEnv(region, "SERVER_REGION");
 
   minio::s3::BaseUrl base_url(host, secure);
 
