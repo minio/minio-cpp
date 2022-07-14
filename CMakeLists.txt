@@ -48,6 +48,7 @@ ENDIF()
 SET(requiredlibs)
 
 include("${CMAKE_CURRENT_LIST_DIR}/cmake/modules/FindPugiXML.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/cmake/modules/FindInih.cmake")
 
 find_package(CURL REQUIRED)
 IF(CURL_FOUND)
@@ -59,6 +60,9 @@ ENDIF(CURL_FOUND)
 
 find_package(unofficial-curlpp CONFIG REQUIRED)
 SET(requiredlibs ${requiredlibs} unofficial::curlpp::curlpp)
+
+find_package(nlohmann_json CONFIG REQUIRED)
+SET(requiredlibs ${requiredlibs} nlohmann_json::nlohmann_json)
 
 find_package(nlohmann_json CONFIG REQUIRED)
 SET(requiredlibs ${requiredlibs} nlohmann_json::nlohmann_json)
@@ -78,6 +82,13 @@ IF(PUGIXML_FOUND)
 ELSE(PUGIXML_FOUND)
   MESSAGE(FATAL_ERROR "Could not find the pugixml library and development files.")
 ENDIF(PUGIXML_FOUND)
+
+IF(INIH_FOUND)
+  INCLUDE_DIRECTORIES(${INIH_INCLUDE_DIR})
+  SET(requiredlibs ${requiredlibs} inih)
+ELSE(INIH_FOUND)
+  MESSAGE(FATAL_ERROR "Could not find the inih library and development files.")
+ENDIF(INIH_FOUND)
 
 message(STATUS "Found required libs: ${requiredlibs}")
 

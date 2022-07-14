@@ -175,6 +175,8 @@ struct Request {
   bool debug = false;
   bool ignore_cert_check = false;
   std::string ssl_cert_file;
+  std::string key_file;
+  std::string cert_file;
 
   Request(Method method, Url url);
   Response Execute();
@@ -200,7 +202,7 @@ struct Response {
   operator bool() const {
     return error.empty() && status_code >= 200 && status_code <= 299;
   }
-  error::Error GetError() {
+  error::Error Error() {
     if (!error.empty()) return error::Error(error);
     if (status_code && (status_code < 200 || status_code > 299)) {
       return error::Error("failed with HTTP status code " +

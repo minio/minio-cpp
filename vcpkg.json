@@ -6,6 +6,7 @@
     "openssl",
     "curlpp",
     "nlohmann-json",
+    "inih",
     "pugixml"
   ]
 }
