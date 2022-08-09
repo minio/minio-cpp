@@ -1,6 +1,7 @@
 #!/bin/bash
 
 function clang_format() {
+    echo "verifying 'clang-format --output-replacements-xml --style=Google $@'"
     if clang-format --output-replacements-xml --style=Google "$@" | grep -q '<replacement '; then
         echo "ERROR:" "$@" "not in Google C/C++ style"
         echo "To fix formatting run"
@@ -10,8 +11,8 @@ function clang_format() {
 }
 
 ec=0
-mapfile -t files < <(find src include examples tests -iname "*.cc" -o -iname "*.h")
-for file in "${files[@]}"; do
+source_files=$(find src include examples tests -type f \( -name '*.h' -o -name '*.cc' \))
+for file in ${source_files}; do
     if ! clang_format "$file"; then
         ec=255
     fi
