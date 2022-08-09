@@ -18,7 +18,7 @@
 const char* HTTP_HEADER_FORMAT = "%a, %d %b %Y %H:%M:%S GMT";
 const std::regex MULTI_SPACE_REGEX("( +)");
 const std::regex VALID_BUCKET_NAME_REGEX(
-    "^[A-Za-z0-9][A-Za-z0-9\\.\\-\\_\\:]{1,61}[A-Za-z0-9]$");
+    "^[A-Za-z0-9][A-Za-z0-9_\\.\\-\\:]{1,61}[A-Za-z0-9]$");
 const std::regex VALID_BUCKET_NAME_STRICT_REGEX(
     "^[a-z0-9][a-z0-9\\.\\-]{1,61}[a-z0-9]$");
 const std::regex VALID_IP_ADDR_REGEX("^(\\d+\\.){3}\\d+$");

@@ -444,7 +444,10 @@ class IamAwsProvider : public Provider {
     if (!lines.empty()) role_names.push_back(lines);
 
     if (role_names.empty()) {
-      return error::Error("no IAM roles attached to EC2 service " + url);
+      const char* err;
+      err = "no IAM roles attached to EC2 service ";
+      err += url;
+      return error::Error(err);
     }
 
     role_name = utils::Trim(role_names.front(), '\r');

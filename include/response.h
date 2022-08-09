@@ -314,7 +314,7 @@ using DeleteBucketEncryptionResponse = Response;
 struct GetBucketEncryptionResponse : public Response {
   SseConfig config;
 
-  GetBucketEncryptionResponse(SseConfig sseconfig) { this->config = config; }
+  GetBucketEncryptionResponse(SseConfig config) { this->config = config; }
 
   GetBucketEncryptionResponse(error::Error err) : Response(err) {}
 
@@ -370,7 +370,7 @@ using DeleteBucketLifecycleResponse = Response;
 struct GetBucketLifecycleResponse : public Response {
   LifecycleConfig config;
 
-  GetBucketLifecycleResponse(LifecycleConfig value) { this->config = config; }
+  GetBucketLifecycleResponse(LifecycleConfig config) { this->config = config; }
 
   GetBucketLifecycleResponse(error::Error err) : Response(err) {}
 

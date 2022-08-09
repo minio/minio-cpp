@@ -16,7 +16,6 @@
 #include "signer.h"
 
 const char* SIGN_V4_ALGORITHM = "AWS4-HMAC-SHA256";
-const std::regex MULTI_SPACE_REGEX("( +)");
 
 std::string minio::signer::GetScope(utils::Time& time, std::string& region,
                                     std::string& service_name) {

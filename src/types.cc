@@ -572,7 +572,7 @@ std::string minio::s3::LifecycleConfig::ToXML() {
            << rule.noncurrent_version_transition_storage_class
            << "</StorageClass>";
       }
-      "</NoncurrentVersionTransition>";
+      ss << "</NoncurrentVersionTransition>";
     }
 
     ss << "<Status>" << (rule.status ? "Enabled" : "Disabled") << "</Status>";
