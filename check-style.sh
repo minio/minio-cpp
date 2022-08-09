@@ -10,12 +10,14 @@ function clang_format() {
     fi
 }
 
+tmpfile="tmpfile.$RANDOM"
+find src include examples tests -iname "*.cc" -o -iname "*.h" > "$tmpfile"
 ec=0
-source_files=$(find src include examples tests -type f \( -name '*.h' -o -name '*.cc' \))
-for file in ${source_files}; do
+while read -r file; do
     if ! clang_format "$file"; then
         ec=255
     fi
-done
+done < "$tmpfile"
+rm -f "$tmpfile"
 
 exit "$ec"
