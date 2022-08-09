@@ -735,7 +735,7 @@ minio::s3::BaseClient::GetBucketVersioning(GetBucketVersioningArgs args) {
   req.query_params.Add("versioning", "");
 
   Response resp = Execute(req);
-  if (!resp) resp;
+  if (!resp) return resp;
 
   GetBucketVersioningResponse response;
 
@@ -749,11 +749,11 @@ minio::s3::BaseClient::GetBucketVersioning(GetBucketVersioningArgs args) {
 
   if (!root.node().select_node("Status")) {
     text = root.node().select_node("Status/text()");
-    response.status = (text.node().value() == "Enabled");
+    response.status = (strcmp(text.node().value(), "Enabled") == 0);
   }
   if (!root.node().select_node("MFADelete")) {
     text = root.node().select_node("MFADelete/text()");
-    response.mfa_delete = (text.node().value() == "Enabled");
+    response.mfa_delete = (strcmp(text.node().value(), "Enabled") == 0);
   }
 
   return response;
@@ -806,7 +806,7 @@ minio::s3::BaseClient::GetObjectLockConfig(GetObjectLockConfigArgs args) {
   req.query_params.Add("object-lock", "");
 
   Response resp = Execute(req);
-  if (!resp) resp;
+  if (!resp) return resp;
 
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(resp.data.data());
@@ -1099,7 +1099,7 @@ minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectsV1(
   if (!args.marker.empty()) req.query_params.Add("marker", args.marker);
 
   Response resp = Execute(req);
-  if (!resp) resp;
+  if (!resp) return resp;
 
   return ListObjectsResponse::ParseXML(resp.data, false);
 }
@@ -1131,7 +1131,7 @@ minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectsV2(
   if (args.include_user_metadata) req.query_params.Add("metadata", "true");
 
   Response resp = Execute(req);
-  if (!resp) resp;
+  if (!resp) return resp;
 
   return ListObjectsResponse::ParseXML(resp.data, false);
 }
@@ -1161,7 +1161,7 @@ minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectVersions(
   }
 
   Response resp = Execute(req);
-  if (!resp) resp;
+  if (!resp) return resp;
 
   return ListObjectsResponse::ParseXML(resp.data, true);
 }

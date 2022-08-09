@@ -207,6 +207,9 @@ minio::http::Response minio::http::Request::execute() {
   std::istream body_stream(&charbuf);
 
   switch (method) {
+    case Method::kDelete:
+    case Method::kGet:
+      break;
     case Method::kHead:
       request.setOpt(new curlpp::options::NoBody(true));
       break;

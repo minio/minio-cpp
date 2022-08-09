@@ -364,7 +364,7 @@ minio::s3::GetBucketNotificationResponse::ParseXML(std::string_view data) {
         text = filter.node().select_node("Value/text()");
         auto value = text.node().value();
 
-        if (name == "prefix") {
+        if (strcmp(name, "prefix") == 0) {
           cfg.prefix_filter_rule = PrefixFilterRule(value);
         } else {
           cfg.suffix_filter_rule = SuffixFilterRule(value);

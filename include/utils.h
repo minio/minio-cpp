@@ -24,14 +24,17 @@
 #include <unistd.h>
 #include <zlib.h>
 
+#include <array>
 #include <cmath>
 #include <cstring>
 #include <curlpp/cURLpp.hpp>
 #include <iomanip>
 #include <iostream>
 #include <list>
+#include <map>
 #include <regex>
 #include <set>
+#include <sstream>
 
 #include "error.h"
 

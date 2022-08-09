@@ -50,13 +50,13 @@ class RandomBuf : public std::streambuf {
   RandomBuf(size_t size) : size_(size) {}
 };
 
-class RandCharStream : public std::istream {
- private:
-  RandomBuf buf_;
-
+class RandCharStream : private RandomBuf, public std::istream {
  public:
-  RandCharStream(size_t size) : buf_(size) { rdbuf(&buf_); }
+  explicit RandCharStream(size_t size);
 };
+
+RandCharStream::RandCharStream(size_t size)
+    : RandomBuf(size), std::istream(this) {}
 
 std::string RandomString(std::string chrs, std::string::size_type length) {
   thread_local static std::uniform_int_distribution<std::string::size_type>
