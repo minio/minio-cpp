@@ -74,6 +74,7 @@ jobs:
         unzip -qq vcpkg-master.zip
         ./vcpkg-master/bootstrap-vcpkg.sh
         ./vcpkg-master/vcpkg integrate install
+        ./vcpkg-master/vcpkg install
 
     - name: C++ Style check
       shell: bash

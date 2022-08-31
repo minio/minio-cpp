@@ -7,7 +7,12 @@
   "supports": "!windows & !osx & !uwp",
   "dependencies": [
     "curlpp",
-    "inih",
+    {
+      "name": "inih",
+      "features": [
+        "cpp"
+      ]
+    },
     "nlohmann-json",
     "openssl",
     "pugixml",

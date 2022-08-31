@@ -47,9 +47,6 @@ ENDIF()
 # Look for required libraries
 SET(requiredlibs)
 
-include("${CMAKE_CURRENT_LIST_DIR}/cmake/modules/FindPugiXML.cmake")
-include("${CMAKE_CURRENT_LIST_DIR}/cmake/modules/FindInih.cmake")
-
 find_package(CURL REQUIRED)
 IF(CURL_FOUND)
   INCLUDE_DIRECTORIES(${CURL_INCLUDE_DIRS})
@@ -61,11 +58,14 @@ ENDIF(CURL_FOUND)
 find_package(unofficial-curlpp CONFIG REQUIRED)
 list(APPEND requiredlibs unofficial::curlpp::curlpp)
 
-find_package(nlohmann_json CONFIG REQUIRED)
-list(APPEND requiredlibs nlohmann_json::nlohmann_json)
+find_package(unofficial-inih CONFIG REQUIRED)
+list(APPEND requiredlibs unofficial::inih::inih)
 
 find_package(nlohmann_json CONFIG REQUIRED)
 list(APPEND requiredlibs nlohmann_json::nlohmann_json)
+
+find_package(pugixml CONFIG REQUIRED)
+list(APPEND requiredlibs pugixml)
 
 find_package(OpenSSL REQUIRED)
 IF(OPENSSL_FOUND)
@@ -74,21 +74,6 @@ IF(OPENSSL_FOUND)
 ELSE(OPENSSL_FOUND)
   MESSAGE(FATAL_ERROR "Could not find the OpenSSL library and development files.")
 ENDIF(OPENSSL_FOUND)
-
-find_package(PugiXML REQUIRED)
-IF(PUGIXML_FOUND)
-  INCLUDE_DIRECTORIES(${PUGIXML_INCLUDE_DIR})
-  list(APPEND requiredlibs pugixml)
-ELSE(PUGIXML_FOUND)
-  MESSAGE(FATAL_ERROR "Could not find the pugixml library and development files.")
-ENDIF(PUGIXML_FOUND)
-
-IF(INIH_FOUND)
-  INCLUDE_DIRECTORIES(${INIH_INCLUDE_DIR})
-  list(APPEND requiredlibs inih)
-ELSE(INIH_FOUND)
-  MESSAGE(FATAL_ERROR "Could not find the inih library and development files.")
-ENDIF(INIH_FOUND)
 
 message(STATUS "Found required libs: ${requiredlibs}")
 
