@@ -15,6 +15,10 @@
 
 #include "http.h"
 
+#include <system_error>
+#include <thread>
+#include <chrono>
+
 minio::error::Error minio::http::Response::ReadStatusCode() {
   size_t pos = response_.find("\r\n");
   if (pos == std::string::npos) {
@@ -251,6 +255,10 @@ minio::http::Response minio::http::Request::execute() {
     fd_set fdwrite;
     fd_set fdexcep;
     int maxfd = 0;
+    int rc; /* select() return code */
+    struct timeval timeout;
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
 
     FD_ZERO(&fdread);
     FD_ZERO(&fdwrite);
@@ -258,11 +266,27 @@ minio::http::Response minio::http::Request::execute() {
 
     requests.fdset(&fdread, &fdwrite, &fdexcep, &maxfd);
 
-    if (select(maxfd + 1, &fdread, &fdwrite, &fdexcep, NULL) < 0) {
-      std::cerr << "select() failed; this should not happen" << std::endl;
-      std::terminate();
+    // 2022-9-22 16:49:35, fix error use timeout NULL arg for select, then cause current thread always waiting, if 'maxfd' equal -1.
+    // see https://github.com/curl/curl/blob/5ccddf64398c1186deb5769dac086d738e150e09/docs/examples/multi-legacy.c
+    if (maxfd == -1)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    while (!requests.perform(&left)) {
+    else
+    {
+        /* Note that on some platforms 'timeout' may be modified by select().
+          If you need access to the original value save a copy beforehand. */
+        rc = select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &timeout);
+    }
+
+    switch(rc) {
+    case -1:
+      /* select error */
+        throw std::system_error(std::error_code(rc, std::generic_category()),
+                                "unexpected error code -1 while invoking select()");
+    case 0: /* timeout */
+    default: /* action */
+          while (!requests.perform(&left)) {}
     }
   }
 
