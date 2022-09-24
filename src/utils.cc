@@ -181,7 +181,7 @@ std::string minio::utils::Sha256Hash(std::string_view str) {
   std::string hash;
   char buf[3];
   for (int i = 0; i < length; ++i) {
-    sprintf(buf, "%02x", digest[i]);
+    snprintf(buf, 3, "%02x", digest[i]);
     hash += buf;
   }
 
@@ -291,7 +291,7 @@ minio::utils::Time minio::utils::Time::FromHttpHeaderValue(const char* value) {
 
 std::string minio::utils::Time::ToISO8601UTC() {
   char buf[64];
-  snprintf(buf, 64, "%03ld", tv_.tv_usec);
+  snprintf(buf, 64, "%03ld", (long int)tv_.tv_usec);
   std::string usec_str(buf);
   if (usec_str.size() > 3) usec_str = usec_str.substr(0, 3);
   std::tm* utc = ToUTC();
@@ -302,9 +302,10 @@ std::string minio::utils::Time::ToISO8601UTC() {
 
 minio::utils::Time minio::utils::Time::FromISO8601UTC(const char* value) {
   std::tm t{0};
-  suseconds_t tv_usec = 0;
   char* rv = strptime(value, "%Y-%m-%dT%H:%M:%S", &t);
-  sscanf(rv, ".%lu", &tv_usec);
+  unsigned long ul = 0;
+  sscanf(rv, ".%lu", &ul);
+  suseconds_t tv_usec = (suseconds_t)ul;
   std::time_t time = std::mktime(&t);
   return Time(time, tv_usec, true);
 }

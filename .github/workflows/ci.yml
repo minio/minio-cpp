@@ -62,7 +62,7 @@ jobs:
     - name: Install dependencies on macOS
       if: startsWith(matrix.config.os, 'macos')
       run: |
-        brew install cmake clang-format minio/stable/minio
+        brew install pkg-config cmake clang-format minio/stable/minio
         cmake --version
         minio --version
         clang-format --version
