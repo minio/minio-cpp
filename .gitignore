@@ -7,9 +7,14 @@ libminiocpp.so
 *.so
 build/
 *.pc
+*.patch
 .vs
 CMakeSettings.json
+bin/
+include/miniocpp
 vcpkg_installed/
+vcpkg-master.zip
+vcpkg-master/
 docs/search
 docs/*html
 docs/*png
