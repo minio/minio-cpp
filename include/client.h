@@ -31,7 +31,7 @@ class Client;
 class ListObjectsResult {
  private:
   Client* client_ = NULL;
-  ListObjectsArgs* args_ = NULL;
+  ListObjectsArgs args_;
   bool failed_ = false;
   ListObjectsResponse resp_;
   std::list<Item>::iterator itr_;
@@ -40,7 +40,7 @@ class ListObjectsResult {
 
  public:
   ListObjectsResult(error::Error err);
-  ListObjectsResult(Client* client, ListObjectsArgs* args);
+  ListObjectsResult(Client* client, ListObjectsArgs &args);
   Item& operator*() const { return *itr_; }
   operator bool() const { return itr_ != resp_.contents.end(); }
   ListObjectsResult& operator++() {
@@ -104,7 +104,7 @@ class Client : public BaseClient {
   ComposeObjectResponse ComposeObject(ComposeObjectArgs args);
   CopyObjectResponse CopyObject(CopyObjectArgs args);
   DownloadObjectResponse DownloadObject(DownloadObjectArgs args);
-  ListObjectsResult ListObjects(ListObjectsArgs args);
+  ListObjectsResult ListObjects(ListObjectsArgs &args);
   PutObjectResponse PutObject(PutObjectArgs args);
   UploadObjectResponse UploadObject(UploadObjectArgs args);
   RemoveObjectsResult RemoveObjects(RemoveObjectsArgs args);

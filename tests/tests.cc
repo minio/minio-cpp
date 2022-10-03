@@ -335,6 +335,7 @@ class Tests {
       }
       std::filesystem::remove(filename);
       RemoveObject(bucket_name_, object_name);
+      delete[] buf;
     } catch (const std::runtime_error& err) {
       RemoveObject(bucket_name_, object_name);
       throw err;
@@ -381,12 +382,12 @@ class Tests {
     }
   }
 
-  void ListObjects() {
+  void ListObjects(unsigned int quantity = 3) {
     std::cout << "ListObjects()" << std::endl;
 
     std::list<std::string> object_names;
     try {
-      for (int i = 0; i < 3; i++) {
+      for (unsigned int i = 0; i < quantity; i++) {
         std::string object_name = RandObjectName();
         std::stringstream ss;
         minio::s3::PutObjectArgs args(ss, 0, 0);
@@ -666,6 +667,7 @@ class Tests {
       throw err;
     }
   }
+
 };  // class Tests
 
 int main(int argc, char* argv[]) {
@@ -719,6 +721,8 @@ int main(int argc, char* argv[]) {
   tests.RemoveObjects();
   tests.SelectObjectContent();
   tests.ListenBucketNotification();
+
+  tests.ListObjects(1010);
 
   return EXIT_SUCCESS;
 }

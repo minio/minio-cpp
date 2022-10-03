@@ -22,39 +22,39 @@ minio::s3::ListObjectsResult::ListObjectsResult(error::Error err) {
 }
 
 minio::s3::ListObjectsResult::ListObjectsResult(Client* client,
-                                                ListObjectsArgs* args) {
+                                                ListObjectsArgs &args) {
   this->client_ = client;
   this->args_ = args;
   Populate();
 }
 
 void minio::s3::ListObjectsResult::Populate() {
-  if (args_->include_versions) {
-    args_->key_marker = resp_.next_key_marker;
-    args_->version_id_marker = resp_.next_version_id_marker;
-  } else if (args_->use_api_v1) {
-    args_->marker = resp_.next_marker;
+  if (args_.include_versions) {
+    args_.key_marker = resp_.next_key_marker;
+    args_.version_id_marker = resp_.next_version_id_marker;
+  } else if (args_.use_api_v1) {
+    args_.marker = resp_.next_marker;
   } else {
-    args_->start_after = resp_.start_after;
-    args_->continuation_token = resp_.next_continuation_token;
+    args_.start_after = resp_.start_after;
+    args_.continuation_token = resp_.next_continuation_token;
   }
 
   std::string region;
   if (GetRegionResponse resp =
-          client_->GetRegion(args_->bucket, args_->region)) {
+          client_->GetRegion(args_.bucket, args_.region)) {
     region = resp.region;
-    if (args_->recursive) {
-      args_->delimiter = "";
-    } else if (args_->delimiter.empty()) {
-      args_->delimiter = "/";
+    if (args_.recursive) {
+      args_.delimiter = "";
+    } else if (args_.delimiter.empty()) {
+      args_.delimiter = "/";
     }
 
-    if (args_->include_versions || !args_->version_id_marker.empty()) {
-      resp_ = client_->ListObjectVersions(*args_);
-    } else if (args_->use_api_v1) {
-      resp_ = client_->ListObjectsV1(*args_);
+    if (args_.include_versions || !args_.version_id_marker.empty()) {
+      resp_ = client_->ListObjectVersions(args_);
+    } else if (args_.use_api_v1) {
+      resp_ = client_->ListObjectsV1(args_);
     } else {
-      resp_ = client_->ListObjectsV2(*args_);
+      resp_ = client_->ListObjectsV2(args_);
     }
 
     if (!resp_) {
@@ -629,9 +629,10 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
 }
 
 minio::s3::ListObjectsResult minio::s3::Client::ListObjects(
-    ListObjectsArgs args) {
+    ListObjectsArgs &args) {
   if (error::Error err = args.Validate()) return err;
-  return ListObjectsResult(this, &args);
+
+  return ListObjectsResult(this, args);
 }
 
 minio::s3::PutObjectResponse minio::s3::Client::PutObject(PutObjectArgs args) {
@@ -642,16 +643,11 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(PutObjectArgs args) {
         "SSE operation must be performed over a secure connection");
   }
 
-  char* buf = NULL;
-  if (args.part_count > 0) {
-    buf = new char[args.part_size];
-  } else {
-    buf = new char[args.part_size + 1];
-  }
+  char* buf = new char[args.part_size + (args.part_count > 0 ? 0 : 1)];
 
   std::string upload_id;
   PutObjectResponse resp = PutObject(args, upload_id, buf);
-  delete buf;
+  delete[] buf;
 
   if (!resp && !upload_id.empty()) {
     AbortMultipartUploadArgs amu_args;
