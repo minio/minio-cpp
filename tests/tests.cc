@@ -695,7 +695,8 @@ int main(int argc, char* argv[]) {
   if (minio::utils::GetEnv(value, "ENABLE_HTTPS")) secure = true;
 
   bool ignore_cert_check = false;
-  if (minio::utils::GetEnv(value, "IGNORE_CERT_CHECK")) ignore_cert_check = true;
+  if (minio::utils::GetEnv(value, "IGNORE_CERT_CHECK"))
+    ignore_cert_check = true;
 
   std::string region;
   minio::utils::GetEnv(region, "SERVER_REGION");
