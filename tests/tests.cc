@@ -723,7 +723,7 @@ int main(int argc, char* argv[]) {
   tests.SelectObjectContent();
   tests.ListenBucketNotification();
 
-  tests.ListObjects(1010);
+  // tests.ListObjects(1010);
 
   return EXIT_SUCCESS;
 }
