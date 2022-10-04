@@ -22,7 +22,7 @@ minio::s3::ListObjectsResult::ListObjectsResult(error::Error err) {
 }
 
 minio::s3::ListObjectsResult::ListObjectsResult(Client* client,
-                                                ListObjectsArgs &args) {
+                                                ListObjectsArgs& args) {
   this->client_ = client;
   this->args_ = args;
   Populate();
@@ -40,8 +40,7 @@ void minio::s3::ListObjectsResult::Populate() {
   }
 
   std::string region;
-  if (GetRegionResponse resp =
-          client_->GetRegion(args_.bucket, args_.region)) {
+  if (GetRegionResponse resp = client_->GetRegion(args_.bucket, args_.region)) {
     region = resp.region;
     if (args_.recursive) {
       args_.delimiter = "";
@@ -629,7 +628,7 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
 }
 
 minio::s3::ListObjectsResult minio::s3::Client::ListObjects(
-    ListObjectsArgs &args) {
+    ListObjectsArgs& args) {
   if (error::Error err = args.Validate()) return err;
 
   return ListObjectsResult(this, args);
