@@ -34,7 +34,8 @@ std::string minio::signer::GetCanonicalRequestHash(
   //   CanonicalHeaders + '\n\n' +
   //   SignedHeaders + '\n' +
   //   HexEncode(Hash(RequestPayload))
-  std::string canonical_request = method + "\n" + uri + "\n" + query_string +
+  std::string new_uri = uri.empty()?"/":uri;
+  std::string canonical_request = method + "\n" + new_uri + "\n" + query_string +
                                   "\n" + headers + "\n\n" + signed_headers +
                                   "\n" + content_sha256;
   return utils::Sha256Hash(canonical_request);
