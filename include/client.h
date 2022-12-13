@@ -31,7 +31,7 @@ class Client;
 class ListObjectsResult {
  private:
   Client* client_ = NULL;
-  ListObjectsArgs* args_ = NULL;
+  ListObjectsArgs args_;
   bool failed_ = false;
   ListObjectsResponse resp_;
   std::list<Item>::iterator itr_;
@@ -40,7 +40,7 @@ class ListObjectsResult {
 
  public:
   ListObjectsResult(error::Error err);
-  ListObjectsResult(Client* client, ListObjectsArgs* args);
+  ListObjectsResult(Client* client, ListObjectsArgs args);
   Item& operator*() const { return *itr_; }
   operator bool() const { return itr_ != resp_.contents.end(); }
   ListObjectsResult& operator++() {
@@ -60,7 +60,7 @@ class ListObjectsResult {
 class RemoveObjectsResult {
  private:
   Client* client_ = NULL;
-  RemoveObjectsArgs* args_ = NULL;
+  RemoveObjectsArgs args_;
   bool done_ = false;
   RemoveObjectsResponse resp_;
   std::list<DeleteError>::iterator itr_;
@@ -69,7 +69,7 @@ class RemoveObjectsResult {
 
  public:
   RemoveObjectsResult(error::Error err);
-  RemoveObjectsResult(Client* client, RemoveObjectsArgs* args);
+  RemoveObjectsResult(Client* client, RemoveObjectsArgs args);
   DeleteError& operator*() const { return *itr_; }
   operator bool() const { return itr_ != resp_.errors.end(); }
   RemoveObjectsResult& operator++() {
