@@ -70,6 +70,8 @@ jobs:
     - name: Install vcpkg
       shell: bash
       run: |
+        mkdir -p ~/.vcpkg
+        touch ~/.vcpkg/vcpkg.path.txt
         wget --quiet -O vcpkg-master.zip https://github.com/microsoft/vcpkg/archive/refs/heads/master.zip
         unzip -qq vcpkg-master.zip
         ./vcpkg-master/bootstrap-vcpkg.sh

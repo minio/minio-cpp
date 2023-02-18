@@ -22,39 +22,38 @@ minio::s3::ListObjectsResult::ListObjectsResult(error::Error err) {
 }
 
 minio::s3::ListObjectsResult::ListObjectsResult(Client* client,
-                                                ListObjectsArgs* args) {
+                                                ListObjectsArgs args) {
   this->client_ = client;
   this->args_ = args;
   Populate();
 }
 
 void minio::s3::ListObjectsResult::Populate() {
-  if (args_->include_versions) {
-    args_->key_marker = resp_.next_key_marker;
-    args_->version_id_marker = resp_.next_version_id_marker;
-  } else if (args_->use_api_v1) {
-    args_->marker = resp_.next_marker;
+  if (args_.include_versions) {
+    args_.key_marker = resp_.next_key_marker;
+    args_.version_id_marker = resp_.next_version_id_marker;
+  } else if (args_.use_api_v1) {
+    args_.marker = resp_.next_marker;
   } else {
-    args_->start_after = resp_.start_after;
-    args_->continuation_token = resp_.next_continuation_token;
+    args_.start_after = resp_.start_after;
+    args_.continuation_token = resp_.next_continuation_token;
   }
 
   std::string region;
-  if (GetRegionResponse resp =
-          client_->GetRegion(args_->bucket, args_->region)) {
+  if (GetRegionResponse resp = client_->GetRegion(args_.bucket, args_.region)) {
     region = resp.region;
-    if (args_->recursive) {
-      args_->delimiter = "";
-    } else if (args_->delimiter.empty()) {
-      args_->delimiter = "/";
+    if (args_.recursive) {
+      args_.delimiter = "";
+    } else if (args_.delimiter.empty()) {
+      args_.delimiter = "/";
     }
 
-    if (args_->include_versions || !args_->version_id_marker.empty()) {
-      resp_ = client_->ListObjectVersions(*args_);
-    } else if (args_->use_api_v1) {
-      resp_ = client_->ListObjectsV1(*args_);
+    if (args_.include_versions || !args_.version_id_marker.empty()) {
+      resp_ = client_->ListObjectVersions(args_);
+    } else if (args_.use_api_v1) {
+      resp_ = client_->ListObjectsV1(args_);
     } else {
-      resp_ = client_->ListObjectsV2(*args_);
+      resp_ = client_->ListObjectsV2(args_);
     }
 
     if (!resp_) {
@@ -76,7 +75,7 @@ minio::s3::RemoveObjectsResult::RemoveObjectsResult(error::Error err) {
 }
 
 minio::s3::RemoveObjectsResult::RemoveObjectsResult(Client* client,
-                                                    RemoveObjectsArgs* args) {
+                                                    RemoveObjectsArgs args) {
   client_ = client;
   args_ = args;
   Populate();
@@ -85,16 +84,16 @@ minio::s3::RemoveObjectsResult::RemoveObjectsResult(Client* client,
 void minio::s3::RemoveObjectsResult::Populate() {
   while (!done_ && resp_.errors.size() == 0) {
     RemoveObjectsApiArgs args;
-    args.extra_headers = args_->extra_headers;
-    args.extra_query_params = args_->extra_query_params;
-    args.bucket = args_->bucket;
-    args.region = args_->region;
+    args.extra_headers = args_.extra_headers;
+    args.extra_query_params = args_.extra_query_params;
+    args.bucket = args_.bucket;
+    args.region = args_.region;
     args.quiet = true;
-    args.bypass_governance_mode = args_->bypass_governance_mode;
+    args.bypass_governance_mode = args_.bypass_governance_mode;
 
     for (int i = 0; i < 1000; i++) {
       DeleteObject object;
-      if (!args_->func(object)) break;
+      if (!args_.func(object)) break;
       args.objects.push_back(object);
     }
 
@@ -631,7 +630,7 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
 minio::s3::ListObjectsResult minio::s3::Client::ListObjects(
     ListObjectsArgs args) {
   if (error::Error err = args.Validate()) return err;
-  return ListObjectsResult(this, &args);
+  return ListObjectsResult(this, args);
 }
 
 minio::s3::PutObjectResponse minio::s3::Client::PutObject(PutObjectArgs args) {
@@ -700,5 +699,5 @@ minio::s3::UploadObjectResponse minio::s3::Client::UploadObject(
 minio::s3::RemoveObjectsResult minio::s3::Client::RemoveObjects(
     RemoveObjectsArgs args) {
   if (error::Error err = args.Validate()) return err;
-  return RemoveObjectsResult(this, &args);
+  return RemoveObjectsResult(this, args);
 }
