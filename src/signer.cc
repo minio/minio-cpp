@@ -75,7 +75,7 @@ std::string minio::signer::GetSignature(std::string_view signing_key,
   std::string signature;
   char buf[3];
   for (int i = 0; i < hash.size(); ++i) {
-    sprintf(buf, "%02x", (unsigned char)hash[i]);
+    snprintf(buf, 3, "%02x", (unsigned char)hash[i]);
     signature += buf;
   }
   return signature;
