@@ -15,7 +15,10 @@
 
 #include "utils.h"
 
-const char* HTTP_HEADER_FORMAT = "%a, %d %b %Y %H:%M:%S GMT";
+const std::string WEEK_DAYS[] = {"Sun", "Mon", "Tue", "Wed",
+                                 "Thu", "Fri", "Sat"};
+const std::string MONTHS[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 const std::regex MULTI_SPACE_REGEX("( +)");
 const std::regex VALID_BUCKET_NAME_REGEX(
     "^[A-Za-z0-9][A-Za-z0-9_\\.\\-\\:]{1,61}[A-Za-z0-9]$");
@@ -273,20 +276,46 @@ std::string minio::utils::Time::ToAmzDate() {
 
 std::string minio::utils::Time::ToHttpHeaderValue() {
   std::tm* utc = ToUTC();
-  std::locale("C");
-  std::string result = FormatTime(utc, HTTP_HEADER_FORMAT);
-  std::locale("");
-  delete utc;
-  return result;
+  std::stringstream ss;
+  ss << WEEK_DAYS[utc->tm_wday] << ", " << FormatTime(utc, "%d ")
+     << MONTHS[utc->tm_mon] << FormatTime(utc, " %Y %H:%M:%S GMT");
+  return ss.str();
 }
 
 minio::utils::Time minio::utils::Time::FromHttpHeaderValue(const char* value) {
-  std::tm t{0};
-  std::locale("C");
-  strptime(value, HTTP_HEADER_FORMAT, &t);
-  std::locale("");
-  std::time_t time = std::mktime(&t);
-  return Time(time, 0, true);
+  std::string s(value);
+  if (s.size() != 29) return Time();
+
+  // Parse week day.
+  auto pos =
+      std::find(std::begin(WEEK_DAYS), std::end(WEEK_DAYS), s.substr(0, 3));
+  if (pos == std::end(WEEK_DAYS)) return Time();
+  if (s.at(3) != ',') return Time();
+  if (s.at(4) != ' ') return Time();
+  auto week_day = pos - std::begin(WEEK_DAYS);
+
+  // Parse day.
+  std::tm day{0};
+  strptime(s.substr(5, 2).c_str(), "%d", &day);
+  if (s.at(7) != ' ') return Time();
+
+  // Parse month.
+  pos = std::find(std::begin(MONTHS), std::end(MONTHS), s.substr(8, 3));
+  if (pos == std::end(MONTHS)) return Time();
+  auto month = pos - std::begin(MONTHS);
+
+  // Parse rest of values.
+  std::tm ltm{0};
+  strptime(s.substr(11).c_str(), " %Y %H:%M:%S GMT", &ltm);
+  ltm.tm_mday = day.tm_mday;
+  ltm.tm_mon = month;
+
+  // Validate week day.
+  std::time_t time = std::mktime(&ltm);
+  std::tm* t = std::localtime(&time);
+  if (week_day != t->tm_wday) return Time();
+
+  return Time(std::mktime(t), 0, true);
 }
 
 std::string minio::utils::Time::ToISO8601UTC() {
