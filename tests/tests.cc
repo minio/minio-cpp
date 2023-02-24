@@ -381,12 +381,12 @@ class Tests {
     }
   }
 
-  void ListObjects() {
-    std::cout << "ListObjects()" << std::endl;
+  void listObjects(std::string testname, int count) {
+    std::cout << testname << std::endl;
 
     std::list<std::string> object_names;
     try {
-      for (int i = 0; i < 3; i++) {
+      for (int i = 0; i < count; i++) {
         std::string object_name = RandObjectName();
         std::stringstream ss;
         minio::s3::PutObjectArgs args(ss, 0, 0);
@@ -425,6 +425,10 @@ class Tests {
       throw err;
     }
   }
+
+  void ListObjects() { listObjects("ListObjects()", 3); }
+
+  void ListObjects1010() { listObjects("ListObjects() 1010 objects", 1010); }
 
   void PutObject() {
     std::cout << "PutObject()" << std::endl;
@@ -713,6 +717,7 @@ int main(int argc, char* argv[]) {
   tests.DownloadObject();
   tests.GetObject();
   tests.ListObjects();
+  tests.ListObjects1010();
   tests.PutObject();
   tests.CopyObject();
   tests.UploadObject();
