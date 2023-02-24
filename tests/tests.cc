@@ -697,7 +697,9 @@ int main(int argc, char* argv[]) {
   if (minio::utils::GetEnv(value, "ENABLE_HTTPS")) secure = true;
 
   bool ignore_cert_check = false;
-  if (minio::utils::GetEnv(value, "IGNORE_CERT_CHECK")) secure = true;
+  if (minio::utils::GetEnv(value, "IGNORE_CERT_CHECK")) {
+    ignore_cert_check = true;
+  }
 
   std::string region;
   minio::utils::GetEnv(region, "SERVER_REGION");
@@ -706,6 +708,7 @@ int main(int argc, char* argv[]) {
 
   minio::creds::StaticProvider provider(access_key, secret_key);
   minio::s3::Client client(base_url, &provider);
+  if (secure) client.IgnoreCertCheck(ignore_cert_check);
 
   Tests tests(client);
   tests.MakeBucket();
