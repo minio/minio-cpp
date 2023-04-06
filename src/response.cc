@@ -240,23 +240,10 @@ minio::s3::ListObjectsResponse minio::s3::ListObjectsResponse::ParseXML(
       text = content.node().select_node("VersionId/text()");
       item.version_id = text.node().value();
 
-      if (content.node().select_node("UserMetadata")) {
-        std::cout << "DEBUG:: inside UserMetadata" << std::endl;
-        auto user_meta_items =
-            content.node().select_nodes("UserMetadata/Items");
-        std::cout << "DEBUG:: after UserMetadata/Items" << std::endl;
-        std::string key;
-        for (auto user_meta_item : user_meta_items) {
-          std::cout << "DEBUG:: key" << std::endl;
-          text = user_meta_item.node().select_node("Key/text()");
-          key = text.node().value();
-
-          std::cout << "DEBUG:: value" << std::endl;
-          text = user_meta_item.node().select_node("Value/text()");
-          value = text.node().value();
-
-          item.user_metadata[key] = value;
-        }
+      auto user_metadata = content.node().select_node("UserMetadata");
+      for (auto metadata = user_metadata.node().first_child(); metadata;
+           metadata = metadata.next_sibling()) {
+        item.user_metadata[metadata.name()] = metadata.child_value();
       }
 
       item.is_delete_marker = is_delete_marker;
