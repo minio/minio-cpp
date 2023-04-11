@@ -21,6 +21,9 @@
 #include <curlpp/Easy.hpp>
 #include <curlpp/Multi.hpp>
 #include <curlpp/Options.hpp>
+#include <curlpp/Info.hpp>
+#include <curlpp/Infos.hpp>
+
 
 #include "utils.h"
 
@@ -185,7 +188,14 @@ struct Request {
     return url;
   }
 
+  int ProgressCallback(double dltotal, double dlnow, double ultotal, double ulnow);
+  double GetUploadSpeed() { return upload_speed; }
+  double GetUploadedSize() { return uploaded_size; }
+
  private:
+  double uploaded_size = 0;
+  double upload_speed = 0;
+
   Response execute();
 };  // struct Request
 

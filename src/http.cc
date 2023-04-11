@@ -114,7 +114,7 @@ size_t minio::http::Response::ResponseCallback(curlpp::Multi *requests,
                                                char *buffer, size_t size,
                                                size_t length) {
   size_t realsize = size * length;
-
+  
   // If error occurred previously, just cancel the request.
   if (!error.empty()) {
     requests->remove(request);
@@ -240,6 +240,10 @@ minio::http::Response minio::http::Request::execute() {
       std::bind(&Response::ResponseCallback, &response, &requests, &request, _1,
                 _2, _3)));
 
+  request.setOpt(new curlpp::options::NoProgress(false));
+  request.setOpt(new curlpp::options::ProgressFunction(
+         std::bind(&Request::ProgressCallback, this, _1, _2, _3, _4)));
+
   int left = 0;
   requests.add(&request);
 
@@ -266,6 +270,8 @@ minio::http::Response minio::http::Request::execute() {
     }
   }
 
+  curlpp::infos::SpeedUpload::get(request, upload_speed);
+  
   return response;
 }
 
@@ -281,4 +287,12 @@ minio::http::Response minio::http::Request::Execute() {
     response.error = std::string("curlpp::RuntimeError: ") + e.what();
     return response;
   }
+}
+
+int minio::http::Request::ProgressCallback(double dltotal, double dlnow, double ultotal, double ulnow) {
+  int ulPos = (int) ((ulnow/ultotal)*100);
+  if (ulPos == 100) {
+    uploaded_size = ultotal;
+  }
+  return CURL_PROGRESSFUNC_CONTINUE;
 }

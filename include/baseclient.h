@@ -21,6 +21,7 @@
 #include "request.h"
 #include "response.h"
 #include "select.h"
+#include "http.h" // xyq
 
 namespace minio {
 namespace s3 {
@@ -41,6 +42,9 @@ class BaseClient {
   bool ignore_cert_check_ = false;
   std::string ssl_cert_file_;
   std::string user_agent_ = DEFAULT_USER_AGENT;
+  double upload_speed = 0;
+  double uploaded_size = 0;
+  long file_size = 0;
 
  public:
   BaseClient(BaseUrl& base_url, creds::Provider* provider = NULL);
