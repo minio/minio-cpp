@@ -82,6 +82,8 @@ struct Request {
   std::string_view body = "";
 
   http::DataFunction datafunc = NULL;
+  http::ProgressFunction progressfunc = NULL;
+  http::SpeedFunction speedfunc = NULL;
   void* userdata = NULL;
 
   std::string sha256;

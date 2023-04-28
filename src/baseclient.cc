@@ -176,8 +176,6 @@ minio::s3::Response minio::s3::BaseClient::execute(Request& req) {
   http::Request request = req.ToHttpRequest(provider_);
   request.debug = debug_;
   http::Response response = request.Execute();
-  upload_speed = request.GetUploadSpeed();
-  uploaded_size = request.GetUploadedSize();
   if (response) {
     Response resp;
     resp.status_code = response.status_code;
@@ -785,6 +783,8 @@ minio::s3::GetObjectResponse minio::s3::BaseClient::GetObject(
     req.query_params.Add("versionId", args.version_id);
   }
   req.datafunc = args.datafunc;
+  // req.progressfunc = args.progressfunc;
+  // req.speedfunc = args.speedfunc;
   req.userdata = args.userdata;
   if (args.ssec != NULL) req.headers.AddAll(args.ssec->Headers());
 

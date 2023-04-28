@@ -194,6 +194,8 @@ minio::http::Request minio::s3::Request::ToHttpRequest(
   request.body = body;
   request.headers = headers;
   request.datafunc = datafunc;
+  request.progressfunc = progressfunc;
+  request.speedfunc = speedfunc;
   request.userdata = userdata;
   request.debug = debug;
   request.ignore_cert_check = ignore_cert_check;

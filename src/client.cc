@@ -667,7 +667,7 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(PutObjectArgs args) {
 minio::s3::UploadObjectResponse minio::s3::Client::UploadObject(
     UploadObjectArgs args) {
   if (error::Error err = args.Validate()) return err;
-  file_size = args.object_size;
+  // file_size = args.object_size;
 
   std::ifstream file;
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);

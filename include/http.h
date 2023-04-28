@@ -156,8 +156,12 @@ struct Url {
 };  // struct Url
 
 struct DataFunctionArgs;
+struct ProgressFunctionArgs;
+struct SpeedFunctionArgs;
 
 using DataFunction = std::function<bool(DataFunctionArgs)>;
+using ProgressFunction = std::function<int(ProgressFunctionArgs)>;
+using SpeedFunction = std::function<void(SpeedFunctionArgs)>;
 
 struct Response;
 
@@ -168,18 +172,35 @@ struct DataFunctionArgs {
   void* userdata = NULL;
 };  // struct DataFunctionArgs
 
+struct ProgressFunctionArgs {
+  int uploaded_part_num = 0;
+  double uploaded_part_size = 0;
+  double downloaded_size = 0;
+}; // struct ProgressFunctionArgs
+
+struct SpeedFunctionArgs {
+  double upload_speed = 0;
+  double download_speed = 0;
+}; // struct SpeedFunctionArgs
+
 struct Request {
   Method method;
   http::Url url;
   utils::Multimap headers;
   std::string_view body = "";
   DataFunction datafunc = NULL;
+  ProgressFunction progressfunc = NULL;
+  SpeedFunction speedfunc = NULL;
   void* userdata = NULL;
   bool debug = false;
   bool ignore_cert_check = false;
   std::string ssl_cert_file;
   std::string key_file;
   std::string cert_file;
+
+  // double GetUploadSpeed() { return upload_speed; }
+  // double GetDownloadSpeed() { return download_speed; }
+  SpeedFunctionArgs args;
 
   Request(Method method, Url url);
   Response Execute();
@@ -188,13 +209,9 @@ struct Request {
     return url;
   }
 
-  int ProgressCallback(double dltotal, double dlnow, double ultotal, double ulnow);
-  double GetUploadSpeed() { return upload_speed; }
-  double GetUploadedSize() { return uploaded_size; }
-
  private:
-  double uploaded_size = 0;
-  double upload_speed = 0;
+  // double upload_speed = 0;
+  // double download_speed = 0;
 
   Response execute();
 };  // struct Request
@@ -202,13 +219,19 @@ struct Request {
 struct Response {
   std::string error;
   DataFunction datafunc = NULL;
+  ProgressFunction progressfunc = NULL;
   void* userdata = NULL;
   int status_code = 0;
   utils::Multimap headers;
   std::string body;
 
+  double uploaded_part_size = 0;
+  double downloaded_size = 0;
+
   size_t ResponseCallback(curlpp::Multi* requests, curlpp::Easy* request,
                           char* buffer, size_t size, size_t length);
+  int ProgressCallback(double dltotal, double dlnow, double ultotal, double ulnow);
+
   operator bool() const {
     return error.empty() && status_code >= 200 && status_code <= 299;
   }

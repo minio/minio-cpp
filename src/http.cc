@@ -233,6 +233,7 @@ minio::http::Response minio::http::Request::execute() {
 
   Response response;
   response.datafunc = datafunc;
+  response.progressfunc = progressfunc;
   response.userdata = userdata;
 
   using namespace std::placeholders;
@@ -242,7 +243,7 @@ minio::http::Response minio::http::Request::execute() {
 
   request.setOpt(new curlpp::options::NoProgress(false));
   request.setOpt(new curlpp::options::ProgressFunction(
-         std::bind(&Request::ProgressCallback, this, _1, _2, _3, _4)));
+         std::bind(&Response::ProgressCallback, &response, _1, _2, _3, _4)));
 
   int left = 0;
   requests.add(&request);
@@ -270,7 +271,11 @@ minio::http::Response minio::http::Request::execute() {
     }
   }
 
-  curlpp::infos::SpeedUpload::get(request, upload_speed);
+  curlpp::infos::SpeedUpload::get(request, args.upload_speed);
+  curlpp::infos::SpeedDownload::get(request, args.download_speed);
+  if (args.upload_speed > 0 || args.download_speed > 0) {
+    speedfunc(args);
+  }
   
   return response;
 }
@@ -289,10 +294,16 @@ minio::http::Response minio::http::Request::Execute() {
   }
 }
 
-int minio::http::Request::ProgressCallback(double dltotal, double dlnow, double ultotal, double ulnow) {
-  int ulPos = (int) ((ulnow/ultotal)*100);
-  if (ulPos == 100) {
-    uploaded_size = ultotal;
-  }
+int minio::http::Response::ProgressCallback(double dltotal, double dlnow, double ultotal, double ulnow) {
+    ProgressFunctionArgs args{0, 0, 0};
+    if (progressfunc != NULL && status_code >= 200 && status_code <= 299) {
+      args.downloaded_size = dlnow;
+      args.uploaded_part_size = ulnow;
+      if (ulnow == ultotal) {
+        args.uploaded_part_num++;
+      }
+    }
+    progressfunc(args);
+
   return CURL_PROGRESSFUNC_CONTINUE;
 }
