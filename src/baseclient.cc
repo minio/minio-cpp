@@ -784,6 +784,8 @@ minio::s3::GetObjectResponse minio::s3::BaseClient::GetObject(
   }
   req.datafunc = args.datafunc;
   req.userdata = args.userdata;
+  req.progressfunc = args.progressfunc;
+  req.progress_userdata = args.progress_userdata;
   if (args.ssec != NULL) req.headers.AddAll(args.ssec->Headers());
 
   return Execute(req);
@@ -1221,6 +1223,8 @@ minio::s3::PutObjectResponse minio::s3::BaseClient::PutObject(
   req.query_params.AddAll(args.query_params);
   req.headers.AddAll(args.headers);
   req.body = args.data;
+  req.progressfunc = args.progressfunc;
+  req.progress_userdata = args.progress_userdata;
 
   Response response = Execute(req);
   if (!response) return response;
@@ -1746,6 +1750,8 @@ minio::s3::UploadPartResponse minio::s3::BaseClient::UploadPart(
   api_args.region = args.region;
   api_args.object = args.object;
   api_args.data = args.data;
+  api_args.progressfunc = args.progressfunc;
+  api_args.progress_userdata = args.progress_userdata;
   api_args.query_params = query_params;
 
   return PutObject(api_args);

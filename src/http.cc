@@ -15,6 +15,8 @@
 
 #include "http.h"
 
+#include <curlpp/Infos.hpp>
+
 minio::error::Error minio::http::Response::ReadStatusCode() {
   size_t pos = response_.find("\r\n");
   if (pos == std::string::npos) {
@@ -240,6 +242,23 @@ minio::http::Response minio::http::Request::execute() {
       std::bind(&Response::ResponseCallback, &response, &requests, &request, _1,
                 _2, _3)));
 
+  auto progress =
+      [&progressfunc = progressfunc, &progress_userdata = progress_userdata](
+          double dltotal, double dlnow, double ultotal, double ulnow) -> int {
+    ProgressFunctionArgs args;
+    args.download_total_bytes = dltotal;
+    args.downloaded_bytes = dlnow;
+    args.upload_total_bytes = ultotal;
+    args.uploaded_bytes = ulnow;
+    args.userdata = progress_userdata;
+    progressfunc(args);
+    return CURL_PROGRESSFUNC_CONTINUE;
+  };
+  if (progressfunc != NULL) {
+    request.setOpt(new curlpp::options::NoProgress(false));
+    request.setOpt(new curlpp::options::ProgressFunction(progress));
+  }
+
   int left = 0;
   requests.add(&request);
 
@@ -264,6 +283,14 @@ minio::http::Response minio::http::Request::execute() {
     }
     while (!requests.perform(&left)) {
     }
+  }
+
+  if (progressfunc != NULL) {
+    ProgressFunctionArgs args;
+    args.userdata = progress_userdata;
+    curlpp::infos::SpeedUpload::get(request, args.upload_speed);
+    curlpp::infos::SpeedDownload::get(request, args.download_speed);
+    progressfunc(args);
   }
 
   return response;

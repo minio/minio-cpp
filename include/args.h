@@ -114,12 +114,16 @@ struct PutObjectBaseArgs : public ObjectWriteArgs {
 struct PutObjectApiArgs : public PutObjectBaseArgs {
   std::string_view data;
   utils::Multimap query_params;
+  http::ProgressFunction progressfunc = NULL;
+  void *progress_userdata = NULL;
 };  // struct PutObjectApiArgs
 
 struct UploadPartArgs : public ObjectWriteArgs {
   std::string upload_id;
   unsigned int part_number;
   std::string_view data;
+  http::ProgressFunction progressfunc = NULL;
+  void *progress_userdata = NULL;
 
   error::Error Validate();
 };  // struct UploadPartArgs
@@ -139,6 +143,8 @@ using RemoveObjectArgs = ObjectVersionArgs;
 struct DownloadObjectArgs : public ObjectReadArgs {
   std::string filename;
   bool overwrite;
+  http::ProgressFunction progressfunc = NULL;
+  void *progress_userdata = NULL;
 
   error::Error Validate();
 };  // struct DownloadObjectArgs
@@ -146,6 +152,8 @@ struct DownloadObjectArgs : public ObjectReadArgs {
 struct GetObjectArgs : public ObjectConditionalReadArgs {
   http::DataFunction datafunc;
   void *userdata = NULL;
+  http::ProgressFunction progressfunc = NULL;
+  void *progress_userdata = NULL;
 
   error::Error Validate();
 };  // struct GetObjectArgs
@@ -201,6 +209,8 @@ struct ListObjectVersionsArgs : public ListObjectsCommonArgs {
 
 struct PutObjectArgs : public PutObjectBaseArgs {
   std::istream &stream;
+  http::ProgressFunction progressfunc = NULL;
+  void *progress_userdata = NULL;
 
   PutObjectArgs(std::istream &stream, long object_size, long part_size);
   error::Error Validate();
@@ -234,9 +244,11 @@ struct ComposeObjectArgs : public ObjectWriteArgs {
 
 struct UploadObjectArgs : public PutObjectBaseArgs {
   std::string filename;
+  http::ProgressFunction progressfunc = NULL;
+  void *progress_userdata = NULL;
 
   error::Error Validate();
-};  // struct PutObjectArgs
+};  // struct UploadObjectArgs
 
 struct RemoveObjectsApiArgs : public BucketArgs {
   bool bypass_governance_mode = false;
