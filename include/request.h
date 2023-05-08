@@ -84,6 +84,9 @@ struct Request {
   http::DataFunction datafunc = NULL;
   void* userdata = NULL;
 
+  http::ProgressFunction progressfunc = NULL;
+  void* progress_userdata = NULL;
+
   std::string sha256;
   utils::Time date;
 

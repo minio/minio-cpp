@@ -156,6 +156,10 @@ struct DataFunctionArgs;
 
 using DataFunction = std::function<bool(DataFunctionArgs)>;
 
+struct ProgressFunctionArgs;
+
+using ProgressFunction = std::function<void(ProgressFunctionArgs)>;
+
 struct Response;
 
 struct DataFunctionArgs {
@@ -165,6 +169,16 @@ struct DataFunctionArgs {
   void* userdata = NULL;
 };  // struct DataFunctionArgs
 
+struct ProgressFunctionArgs {
+  double download_total_bytes = 0;
+  double downloaded_bytes = 0;
+  double upload_total_bytes = 0;
+  double uploaded_bytes = 0;
+  double download_speed = 0;
+  double upload_speed = 0;
+  void* userdata = NULL;
+};  // struct ProgressFunctionArgs
+
 struct Request {
   Method method;
   http::Url url;
@@ -172,6 +186,8 @@ struct Request {
   std::string_view body = "";
   DataFunction datafunc = NULL;
   void* userdata = NULL;
+  ProgressFunction progressfunc = NULL;
+  void* progress_userdata = NULL;
   bool debug = false;
   bool ignore_cert_check = false;
   std::string ssl_cert_file;

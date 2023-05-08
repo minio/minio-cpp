@@ -335,6 +335,9 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
   std::list<Part> parts;
   long part_count = args.part_count;
 
+  double uploaded_bytes = 0;  // for progress
+  double upload_speed = -1;   // for progress
+
   while (!stop) {
     part_number++;
 
@@ -396,6 +399,8 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
       api_args.region = args.region;
       api_args.object = args.object;
       api_args.data = data;
+      api_args.progressfunc = args.progressfunc;
+      api_args.progress_userdata = args.progress_userdata;
       api_args.headers = headers;
 
       return BaseClient::PutObject(api_args);
@@ -423,6 +428,28 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
     up_args.upload_id = upload_id;
     up_args.part_number = part_number;
     up_args.data = data;
+    if (args.progressfunc != NULL) {
+      up_args.progressfunc =
+          [&object_size = object_size, &uploaded_bytes = uploaded_bytes,
+           &upload_speed = upload_speed, &progressfunc = args.progressfunc,
+           &progress_userdata = args.progress_userdata](
+              http::ProgressFunctionArgs args) -> void {
+        if (args.upload_speed > 0) {
+          if (upload_speed == -1) {
+            upload_speed = args.upload_speed;
+          } else {
+            upload_speed = (upload_speed + args.upload_speed) / 2;
+          }
+          return;
+        }
+
+        http::ProgressFunctionArgs actual_args;
+        actual_args.upload_total_bytes = object_size;
+        actual_args.uploaded_bytes = uploaded_bytes + args.uploaded_bytes;
+        actual_args.userdata = progress_userdata;
+        progressfunc(actual_args);
+      };
+    }
     if (args.sse != NULL) {
       if (SseCustomerKey* ssec = dynamic_cast<SseCustomerKey*>(args.sse)) {
         up_args.headers = ssec->Headers();
@@ -430,6 +457,14 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
     }
 
     if (UploadPartResponse resp = UploadPart(up_args)) {
+      if (args.progressfunc != NULL) {
+        uploaded_bytes += data.length();
+        http::ProgressFunctionArgs actual_args;
+        actual_args.upload_total_bytes = object_size;
+        actual_args.uploaded_bytes = uploaded_bytes;
+        actual_args.userdata = args.progress_userdata;
+        args.progressfunc(actual_args);
+      }
       parts.push_back(Part{part_number, resp.etag});
     } else {
       return resp;
@@ -442,10 +477,15 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
   cmu_args.object = args.object;
   cmu_args.upload_id = upload_id;
   cmu_args.parts = parts;
-  return CompleteMultipartUpload(cmu_args);
+  CompleteMultipartUploadResponse resp = CompleteMultipartUpload(cmu_args);
+  if (resp && args.progressfunc != NULL) {
+    http::ProgressFunctionArgs actual_args;
+    actual_args.upload_speed = upload_speed;
+    actual_args.userdata = args.progress_userdata;
+    args.progressfunc(actual_args);
+  }
+  return resp;
 }
-
-//////////////////////////////////////////////////////////////////////////////
 
 minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
     ComposeObjectArgs args) {
@@ -620,6 +660,8 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
     fout << args.datachunk;
     return true;
   };
+  req.progressfunc = args.progressfunc;
+  req.progress_userdata = args.progress_userdata;
 
   Response response = Execute(req);
   fout.close();

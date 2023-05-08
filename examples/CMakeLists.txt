@@ -146,3 +146,9 @@ TARGET_LINK_LIBRARIES(GetPresignedObjectUrl miniocpp ${S3_LIBS})
 
 ADD_EXECUTABLE(GetPresignedPostFormData GetPresignedPostFormData.cc)
 TARGET_LINK_LIBRARIES(GetPresignedPostFormData miniocpp ${S3_LIBS})
+
+ADD_EXECUTABLE(PutObjectProgress PutObjectProgress.cc)
+TARGET_LINK_LIBRARIES(PutObjectProgress miniocpp ${S3_LIBS})
+
+ADD_EXECUTABLE(GetObjectProgress GetObjectProgress.cc)
+TARGET_LINK_LIBRARIES(GetObjectProgress miniocpp ${S3_LIBS})
