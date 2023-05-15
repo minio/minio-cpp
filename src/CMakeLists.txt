@@ -18,12 +18,6 @@ list(APPEND SRCS args.cc baseclient.cc client.cc http.cc request.cc response.cc 
 add_library(miniocpp STATIC ${SRCS})
 target_link_libraries(miniocpp ${requiredlibs})
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU"
-    AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 8.0
-    AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0 AND NOT MINGW)
-    target_compile_options(miniocpp PUBLIC -lstdc++fs)
-endif()
-
 list(APPEND S3CLIENT_INSTALL_LIST miniocpp)
 
 SET_TARGET_PROPERTIES(miniocpp PROPERTIES 
