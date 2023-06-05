@@ -228,7 +228,7 @@ minio::s3::ListObjectsResponse minio::s3::ListObjectsResponse::ParseXML(
 
       text = content.node().select_node("Size/text()");
       value = text.node().value();
-      if (!value.empty()) item.size = std::stoi(value);
+      if (!value.empty()) item.size = std::stol(value);
 
       text = content.node().select_node("StorageClass/text()");
       item.storage_class = text.node().value();

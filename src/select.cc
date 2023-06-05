@@ -183,15 +183,15 @@ bool minio::s3::SelectHandler::process(http::DataFunctionArgs args,
 
     text = root.node().select_node("BytesScanned/text()");
     value = text.node().value();
-    if (!value.empty()) bytes_scanned = std::stoi(value);
+    if (!value.empty()) bytes_scanned = std::stol(value);
 
     text = root.node().select_node("BytesProcessed/text()");
     value = text.node().value();
-    if (!value.empty()) bytes_processed = std::stoi(value);
+    if (!value.empty()) bytes_processed = std::stol(value);
 
     text = root.node().select_node("BytesReturned/text()");
     value = text.node().value();
-    if (!value.empty()) bytes_returned = std::stoi(value);
+    if (!value.empty()) bytes_returned = std::stol(value);
 
     cont = result_func_(
         SelectResult(bytes_scanned, bytes_processed, bytes_returned));
