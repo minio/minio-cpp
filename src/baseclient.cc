@@ -1699,7 +1699,7 @@ minio::s3::StatObjectResponse minio::s3::BaseClient::StatObject(
   resp.etag = utils::Trim(response.headers.GetFront("etag"), '"');
 
   std::string value = response.headers.GetFront("content-length");
-  if (!value.empty()) resp.size = std::stoi(value);
+  if (!value.empty()) resp.size = std::stol(value);
 
   value = response.headers.GetFront("last-modified");
   if (!value.empty()) {
