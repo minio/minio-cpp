@@ -247,7 +247,7 @@ minio::s3::GetRegionResponse minio::s3::BaseClient::GetRegion(
   if (value.empty()) {
     value = "us-east-1";
   } else if (value == "EU") {
-    if (base_url_.aws_host) value = "eu-west-1";
+    if (!base_url_.aws_domain_suffix.empty()) value = "eu-west-1";
   }
 
   region_map_[bucket_name] = value;
@@ -1026,7 +1026,7 @@ minio::s3::BaseClient::ListenBucketNotification(
     ListenBucketNotificationArgs args) {
   if (error::Error err = args.Validate()) return err;
 
-  if (base_url_.aws_host) {
+  if (!base_url_.aws_domain_suffix.empty()) {
     return error::Error(
         "ListenBucketNotification API is not supported in Amazon S3");
   }

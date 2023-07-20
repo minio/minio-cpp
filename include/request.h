@@ -22,6 +22,38 @@
 
 namespace minio {
 namespace s3 {
+const std::string AWS_S3_PREFIX =
+    "^(((bucket\\.|accesspoint\\.)"
+    "vpce(-(?!_)[a-z_\\d]+)+\\.s3\\.)|"
+    "((?!s3)(?!-)(?!_)[a-z_\\d-]{1,63}\\.)"
+    "s3-control(-(?!_)[a-z_\\d]+)*\\.|"
+    "(s3(-(?!_)[a-z_\\d]+)*\\.))";
+const std::regex HOSTNAME_REGEX(
+    "^((?!-)(?!_)[a-z_\\d-]{1,63}\\.)*"
+    "((?!_)(?!-)[a-z_\\d-]{1,63})$",
+    std::regex_constants::icase);
+const std::regex AWS_ENDPOINT_REGEX(".*\\.amazonaws\\.com(|\\.cn)$",
+                                    std::regex_constants::icase);
+const std::regex AWS_S3_ENDPOINT_REGEX(
+    AWS_S3_PREFIX + "((?!s3)(?!-)(?!_)[a-z_\\d-]{1,63}\\.)*" +
+        "amazonaws\\.com(|\\.cn)$",
+    std::regex_constants::icase);
+const std::regex AWS_ELB_ENDPOINT_REGEX(
+    "^(?!-)(?!_)[a-z_\\d-]{1,63}\\."
+    "(?!-)(?!_)[a-z_\\d-]{1,63}\\."
+    "elb\\.amazonaws\\.com$",
+    std::regex_constants::icase);
+const std::regex AWS_S3_PREFIX_REGEX(AWS_S3_PREFIX,
+                                     std::regex_constants::icase);
+const std::regex REGION_REGEX("^((?!_)(?!-)[a-z_\\d-]{1,63})$",
+                              std::regex_constants::icase);
+
+bool awsRegexMatch(std::string_view value, std::regex regex);
+
+error::Error getAwsInfo(std::string host, bool https, std::string& region,
+                        std::string& aws_s3_prefix,
+                        std::string& aws_domain_suffix, bool& dualstack);
+
 static std::string extractRegion(std::string& host) {
   std::stringstream str_stream(host);
   std::string token;
@@ -45,13 +77,13 @@ struct BaseUrl {
   std::string host;
   unsigned int port = 0;
   std::string region;
-  bool aws_host = false;
-  bool accelerate_host = false;
-  bool dualstack_host = false;
+  std::string aws_s3_prefix;
+  std::string aws_domain_suffix;
+  bool dualstack = false;
   bool virtual_style = false;
 
   BaseUrl() {}
-  BaseUrl(std::string host, bool https = true);
+  BaseUrl(std::string host, bool https = true, std::string region = "");
   error::Error BuildUrl(http::Url& url, http::Method method, std::string region,
                         utils::Multimap query_params,
                         std::string bucket_name = "",
@@ -64,6 +96,10 @@ struct BaseUrl {
 
  private:
   error::Error err_;
+
+  error::Error BuildAwsUrl(http::Url& url, std::string bucket_name,
+                           bool enforce_path_style, std::string region);
+  void BuildListBucketsUrl(http::Url& url, std::string region);
 };  // struct Url
 
 struct Request {
