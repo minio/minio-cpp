@@ -104,6 +104,16 @@ struct CreateMultipartUploadArgs : public ObjectArgs {
   utils::Multimap headers;
 };  // struct CreateMultipartUploadArgs
 
+struct ListMultipartUploadArgs : public BucketArgs{
+  std::string delimiter;
+  std::string encoding_type;
+  std::string key_marker;
+  unsigned int max_uploads = 1000;
+  std::string prefix;
+  std::string upload_id_marker;
+  utils::Multimap headers;
+}; // struct ListMultipartUploadArgs
+
 struct PutObjectBaseArgs : public ObjectWriteArgs {
   long object_size = -1;
   size_t part_size = 0;
