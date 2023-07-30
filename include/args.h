@@ -111,7 +111,8 @@ struct ListMultipartUploadArgs : public BucketArgs{
   unsigned int max_uploads = 1000;
   std::string prefix;
   std::string upload_id_marker;
-  utils::Multimap headers;
+  utils::Multimap extra_headers;
+  utils::Multimap extra_query_params;
 }; // struct ListMultipartUploadArgs
 
 struct PutObjectBaseArgs : public ObjectWriteArgs {
