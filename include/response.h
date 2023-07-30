@@ -216,6 +216,14 @@ struct ListMultipartUploadsResponse : public Response{
   std::string next_upload_id_marker;
   UploadPartResponse upload; //? is this correct?
   std::string upload_id_marker;
+
+  ListMultipartUploadsResponse() {}
+
+  ListMultipartUploadsResponse(error::Error err) : Response(err) {}
+
+  ListMultipartUploadsResponse(const Response& resp) : Response(resp) {}
+
+  static ListMultipartUploadsResponse ParseXML(std::string_view data);
 };
 
 struct ListObjectsResponse : public Response {
