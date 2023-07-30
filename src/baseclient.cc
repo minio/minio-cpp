@@ -1021,6 +1021,45 @@ minio::s3::ListBucketsResponse minio::s3::BaseClient::ListBuckets() {
   return ListBuckets(ListBucketsArgs());
 }
 
+minio::s3::ListMultipartUploadsResponse minio::s3::BaseClient::ListMultipartUploads(
+  ListMultipartUploadArgs args) {
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return resp;
+  }
+  
+  Request req(http::Method::kGet, region, base_url_,
+              args.extra_headers, args.extra_query_params);
+  
+  req.bucket_name = args.bucket;
+
+  req.query_params.Add("uploads","");
+  req.query_params.Add("delimiter","");
+  req.query_params.Add("max-uploads", "1000");
+  req.query_params.Add("prefix",args.prefix);
+  req.query_params.Add("encoding-type","url");
+
+  if (!args.encoding_type.empty()) {
+    req.query_params.Add("encoding-type",args.encoding_type);
+  }
+
+  if (!args.key_marker.empty()) {
+    req.query_params.Add("key-marker",args.key_marker);
+  }
+
+  if (!args.upload_id_marker.empty()) {
+    req.query_params.Add("upload-id-marker",args.upload_id_marker);
+  }
+
+  Response resp = Execute(req);
+  if (!resp) return resp;
+  
+  return ListMultipartUploadsResponse::ParseXML(resp.data);
+}
+
 minio::s3::ListenBucketNotificationResponse
 minio::s3::BaseClient::ListenBucketNotification(
     ListenBucketNotificationArgs args) {
