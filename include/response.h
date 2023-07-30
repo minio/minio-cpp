@@ -205,17 +205,16 @@ struct Item : public Response {
 struct ListMultipartUploadsResponse : public Response{
   // Common
   std::string bucket_name;
-  std::string encoding_type;
-  std::string prefix;
-  std::string delimeter;
-  bool is_truncated;
-
   std::string key_marker;
-  std::string next_key_marker;
-  unsigned int max_uploads;
   std::string next_upload_id_marker;
-  UploadPartResponse upload; //? is this correct?
+  std::string next_key_marker;
   std::string upload_id_marker;
+  unsigned int max_uploads;
+  bool is_truncated;
+  std::string encoding_type;
+
+  UploadPartResponse upload; //? is this correct?
+  
 
   ListMultipartUploadsResponse() {}
 
