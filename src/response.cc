@@ -125,6 +125,53 @@ minio::s3::ListMultipartUploadsResponse minio::s3::ListMultipartUploadsResponse:
   value = text.node().value();
   if (!value.empty()) resp.is_truncated = utils::StringToBool(value);
 
+  auto populate = [&resp = resp](
+                      std::list<Upload>& uploads, pugi::xpath_node_set& partuploads) -> void {
+
+      for(auto partupload : partuploads) {
+        pugi::xpath_node text;
+        std::string value;
+        Upload upload;
+        
+        text = partupload.node().select_node("EncodingType/text()");
+        upload.encoding_type = text.node().value();
+
+        text = partupload.node().select_node("Key/text()");
+        value = text.node().value();
+        upload.object_name =
+            (resp.encoding_type == "url") ? curlpp::unescape(value) : value;
+        
+        text = partupload.node().select_node("UploadId/text()");
+        upload.upload_id = text.node().value();
+
+        text = partupload.node().select_node("Initiator/ID/text()");
+        upload.initiator_id = text.node().value();
+
+        text = partupload.node().select_node("Initiator/DisplayName/text()");
+        upload.initiator_name = text.node().value();
+
+        text = partupload.node().select_node("Owner/ID/text()");
+        upload.owner_id = text.node().value();
+
+        text = partupload.node().select_node("Owner/DisplayName/text()");
+        upload.owner_name = text.node().value();
+
+        text = partupload.node().select_node("StorageClass/text()");
+        upload.storage_class = text.node().value();
+
+        text = partupload.node().select_node("Initiated/text()");
+        value = text.node().value();
+        upload.initiated_time = utils::Time::FromISO8601UTC(value.c_str());
+
+        uploads.push_back(upload);
+      }
+
+    };
+
+  
+  auto tag = root.node().select_nodes("Upload");
+  populate(resp.uploads,tag);
+
   return resp;
 
   }

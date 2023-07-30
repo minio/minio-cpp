@@ -202,6 +202,25 @@ struct Item : public Response {
   Item(const Response& resp) : Response(resp) {}
 };  // struct Item
 
+struct Upload : public Response {
+  std::string encoding_type;
+  std::string object_name;
+  std::string upload_id;
+  std::string initiator_id;
+  std::string initiator_name;
+  std::string tag;
+  std::string owner_id;
+  std::string owner_name;
+  std::string storage_class;
+  std::string initiated_time;
+
+  Upload() {}
+
+  Upload(error::Error err) : Response(err) {}
+
+  Upload(const Response& resp) : Response(resp) {}
+}; // struct Upload
+
 struct ListMultipartUploadsResponse : public Response{
   // Common
   std::string bucket_name;
@@ -213,7 +232,7 @@ struct ListMultipartUploadsResponse : public Response{
   bool is_truncated;
   std::string encoding_type;
 
-  UploadPartResponse upload; //? is this correct?
+  std::list<Upload> uploads;
   
 
   ListMultipartUploadsResponse() {}
