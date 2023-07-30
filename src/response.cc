@@ -82,6 +82,54 @@ minio::s3::ListBucketsResponse minio::s3::ListBucketsResponse::ParseXML(
   return buckets;
 }
 
+minio::s3::ListMultipartUploadsResponse minio::s3::ListMultipartUploadsResponse::ParseXML(
+  std::string_view data){
+  ListMultipartUploadsResponse resp;
+
+  pugi::xml_document xdoc;
+  pugi::xml_parse_result result = xdoc.load_string(data.data());
+  if (!result) return error::Error("unable to parse XML");
+
+  auto root = xdoc.select_node("/ListMultipartUploadsResult");
+
+  pugi::xpath_node text;
+  std::string value;
+
+  text = root.node().select_node("EncodingType/text()");
+  resp.encoding_type = text.node().value();
+
+  text = root.node().select_node("Bucket/text()");
+  resp.bucket_name = text.node().value();
+
+  text = root.node().select_node("KeyMarker/text()");
+    value = text.node().value();
+    resp.key_marker =
+        (resp.encoding_type == "url") ? curlpp::unescape(value) : value;
+
+  text = root.node().select_node("UploadIdMarker/text()");
+  resp.upload_id_marker = text.node().value();
+
+  text = root.node().select_node("NextKeyMarker/text()");
+    value = text.node().value();
+    resp.next_key_marker =
+        (resp.encoding_type == "url") ? curlpp::unescape(value) : value;
+
+  text = root.node().select_node("NextUploadIdMarker/text()");
+  resp.next_upload_id_marker = text.node().value();
+
+  text = root.node().select_node("MaxUploads/text()");
+  value = text.node().value();
+  if (!value.empty()) resp.max_uploads = std::stoul(value);
+
+  text = root.node().select_node("IsTruncated/text()");
+  value = text.node().value();
+  if (!value.empty()) resp.is_truncated = utils::StringToBool(value);
+
+  return resp;
+
+  }
+
+
 minio::s3::CompleteMultipartUploadResponse
 minio::s3::CompleteMultipartUploadResponse::ParseXML(std::string_view data,
                                                      std::string version_id) {
