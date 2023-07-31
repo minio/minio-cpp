@@ -111,8 +111,8 @@ class BaseClient {
       IsObjectLegalHoldEnabledArgs args);
   ListBucketsResponse ListBuckets(ListBucketsArgs args);
   ListBucketsResponse ListBuckets();
-  ListMultipartUploadsResponse  ListMultipartUploads(ListMultipartUploadArgs args);
-  ListMultipartUploadsResponse  ListMultipartUploads();
+  ListMultipartUploadsResponse ListMultipartUploads(
+      ListMultipartUploadArgs args);
   ListenBucketNotificationResponse ListenBucketNotification(
       ListenBucketNotificationArgs args);
   ListObjectsResponse ListObjectsV1(ListObjectsV1Args args);

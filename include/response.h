@@ -203,37 +203,35 @@ struct Item : public Response {
 };  // struct Item
 
 struct Upload : public Response {
-  std::string encoding_type;
-  std::string object_name;
-  std::string upload_id;
+  utils::Time initiated;
+  std::string initiator_display_name;
   std::string initiator_id;
-  std::string initiator_name;
-  std::string tag;
+  std::string object_name;
+  std::string owner_display_name;
   std::string owner_id;
-  std::string owner_name;
   std::string storage_class;
-  std::string initiated_time;
+  std::string upload_id;
 
   Upload() {}
 
   Upload(error::Error err) : Response(err) {}
 
   Upload(const Response& resp) : Response(resp) {}
-}; // struct Upload
+};  // struct Upload
 
-struct ListMultipartUploadsResponse : public Response{
+struct ListMultipartUploadsResponse : public Response {
   // Common
   std::string bucket_name;
   std::string key_marker;
   std::string next_upload_id_marker;
   std::string next_key_marker;
   std::string upload_id_marker;
-  unsigned int max_uploads;
+  std::string max_uploads;
   bool is_truncated;
   std::string encoding_type;
-
+  std::string prefix;
+  std::string delimiter;
   std::list<Upload> uploads;
-  
 
   ListMultipartUploadsResponse() {}
 
