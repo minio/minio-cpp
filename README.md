@@ -7,7 +7,6 @@ For a complete list of APIs and examples, please take a look at the [MinIO C++ C
 ## Build requirements
 * A working C++ development environment supporting C++17 standards.
 * CMake 3.10 or higher.
-* [vcpkg](https://vcpkg.io/en/index.html).
 
 ## Install from `vcpkg`
 ```
@@ -18,11 +17,7 @@ vcpkg install minio-cpp
 ```bash
 $ git clone https://github.com/minio/minio-cpp
 $ cd minio-cpp
-$ wget --quiet -O vcpkg-master.zip https://github.com/microsoft/vcpkg/archive/refs/heads/master.zip
-$ unzip -qq vcpkg-master.zip
-$ ./vcpkg-master/bootstrap-vcpkg.sh
-$ ./vcpkg-master/vcpkg integrate install
-$ cmake -B ./build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=./vcpkg-master/scripts/buildsystems/vcpkg.cmake
+$ cmake -B ./build -DCMAKE_BUILD_TYPE=Debug
 $ cmake --build ./build --config Debug
 ```
 
