@@ -20,11 +20,13 @@ const std::string WEEK_DAYS[] = {"Sun", "Mon", "Tue", "Wed",
 const std::string MONTHS[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
                               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 const std::regex MULTI_SPACE_REGEX("( +)");
-const std::regex VALID_BUCKET_NAME_REGEX(
-    "^[A-Za-z0-9][A-Za-z0-9_\\.\\-\\:]{1,61}[A-Za-z0-9]$");
-const std::regex VALID_BUCKET_NAME_STRICT_REGEX(
-    "^[a-z0-9][a-z0-9\\.\\-]{1,61}[a-z0-9]$");
-const std::regex VALID_IP_ADDR_REGEX("^(\\d+\\.){3}\\d+$");
+
+const std::regex BUCKET_NAME_REGEX("^[a-z0-9][a-z0-9\\.\\-]{1,61}[a-z0-9]$");
+const std::regex OLD_BUCKET_NAME_REGEX(
+    "^[a-z0-9][a-z0-9_\\.\\-\\:]{1,61}[a-z0-9]$", std::regex_constants::icase);
+const std::regex IPV4_REGEX(
+    "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\\.){3}"
+    "(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$");
 
 bool minio::utils::GetEnv(std::string& var, const char* name) {
   if (const char* value = std::getenv(name)) {
@@ -464,7 +466,7 @@ minio::error::Error minio::utils::CheckBucketName(std::string_view bucket_name,
     return error::Error("Bucket name cannot be greater than 63 characters");
   }
 
-  if (std::regex_match(bucket_name.data(), VALID_IP_ADDR_REGEX)) {
+  if (std::regex_match(bucket_name.data(), IPV4_REGEX)) {
     return error::Error("bucket name cannot be an IP address");
   }
 
@@ -477,10 +479,10 @@ minio::error::Error minio::utils::CheckBucketName(std::string_view bucket_name,
   }
 
   if (strict) {
-    if (!std::regex_match(bucket_name.data(), VALID_BUCKET_NAME_STRICT_REGEX)) {
+    if (!std::regex_match(bucket_name.data(), BUCKET_NAME_REGEX)) {
       return error::Error("bucket name does not follow S3 standards strictly");
     }
-  } else if (!std::regex_match(bucket_name.data(), VALID_BUCKET_NAME_REGEX)) {
+  } else if (!std::regex_match(bucket_name.data(), OLD_BUCKET_NAME_REGEX)) {
     return error::Error("bucket name does not follow S3 standards");
   }
 
