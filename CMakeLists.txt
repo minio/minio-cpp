@@ -62,7 +62,7 @@ find_package(unofficial-curlpp CONFIG REQUIRED)
 list(APPEND requiredlibs unofficial::curlpp::curlpp)
 
 find_package(unofficial-inih CONFIG REQUIRED)
-list(APPEND requiredlibs unofficial::inih::inih)
+list(APPEND requiredlibs unofficial::inih::inireader)
 
 find_package(nlohmann_json CONFIG REQUIRED)
 list(APPEND requiredlibs nlohmann_json::nlohmann_json)
