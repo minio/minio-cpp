@@ -1055,8 +1055,8 @@ minio::s3::BaseClient::ListenBucketNotification(
   auto func = args.func;
   req.datafunc = [&func = func,
                   &data = data](http::DataFunctionArgs args) -> bool {
+    data += args.datachunk;
     while (true) {
-      data += args.datachunk;
       size_t pos = data.find('\n');
       if (pos == std::string::npos) return true;
       std::string line = data.substr(0, pos);
