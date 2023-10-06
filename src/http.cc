@@ -196,7 +196,6 @@ minio::http::Response minio::http::Request::execute() {
   if (url.https) {
     if (!ssl_cert_file.empty()) {
       request.setOpt(new curlpp::Options::SslVerifyPeer(true));
-      request.setOpt(new curlpp::Options::SslVerifyHost(2L));
       request.setOpt(new curlpp::Options::CaInfo(ssl_cert_file));
     }
     if (!key_file.empty()) {
