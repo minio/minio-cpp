@@ -190,6 +190,7 @@ minio::http::Response minio::http::Request::execute() {
   if (debug) request.setOpt(new curlpp::Options::Verbose(true));
   if (ignore_cert_check) {
     request.setOpt(new curlpp::Options::SslVerifyPeer(false));
+    request.setOpt(new curlpp::Options::SslVerifyHost(0L));
   }
 
   if (url.https) {
