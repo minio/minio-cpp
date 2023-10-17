@@ -109,6 +109,10 @@ minio::s3::CompleteMultipartUploadResponse::ParseXML(std::string_view data,
 
   resp.version_id = version_id;
 
+  utils::Multimap headers;
+  headers.Add("x-amz-version-id", version_id);
+  resp.headers = headers;
+
   return resp;
 }
 

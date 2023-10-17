@@ -703,6 +703,8 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(PutObjectArgs args) {
     AbortMultipartUpload(amu_args);
   }
 
+  resp.version_id = resp.headers.GetFront("x-amz-version-id");
+
   return resp;
 }
 
