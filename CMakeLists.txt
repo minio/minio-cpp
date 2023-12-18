@@ -17,6 +17,9 @@ project(miniocpp)
 
 cmake_minimum_required(VERSION 3.10)
 
+# for unix platform, define install directories.
+include(GNUInstallDirs)
+
 macro(set_globals)
   set(CMAKE_BUILD_TYPE_INIT Release)
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
