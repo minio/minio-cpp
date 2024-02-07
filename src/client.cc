@@ -683,16 +683,10 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(PutObjectArgs args) {
         "SSE operation must be performed over a secure connection");
   }
 
-  char* buf = NULL;
-  if (args.part_count > 0) {
-    buf = new char[args.part_size];
-  } else {
-    buf = new char[args.part_size + 1];
-  }
+  std::vector<char> buf(args.part_size + 1);
 
   std::string upload_id;
-  PutObjectResponse resp = PutObject(args, upload_id, buf);
-  delete buf;
+  PutObjectResponse resp = PutObject(args, upload_id, (char *)&buf[0]);
 
   if (!resp && !upload_id.empty()) {
     AbortMultipartUploadArgs amu_args;
