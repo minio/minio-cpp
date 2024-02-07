@@ -686,7 +686,7 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(PutObjectArgs args) {
   std::vector<char> buf(args.part_size + 1);
 
   std::string upload_id;
-  PutObjectResponse resp = PutObject(args, upload_id, (char *)&buf[0]);
+  PutObjectResponse resp = PutObject(args, upload_id, (char*)&buf[0]);
 
   if (!resp && !upload_id.empty()) {
     AbortMultipartUploadArgs amu_args;
