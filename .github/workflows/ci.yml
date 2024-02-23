@@ -128,6 +128,7 @@ jobs:
       run: |
         mkdir -p ~/.minio/certs
         cp ./tests/public.crt ./tests/private.key ~/.minio/certs/
+        certutil -addstore -f "ROOT" ./tests/public.crt
         MINIO_CI_CD=true ./minio.exe server test-xl/{1...4}/ &
         sleep 10
 
@@ -145,7 +146,7 @@ jobs:
       shell: bash
       if: startsWith(matrix.config.os, 'windows')
       run: |
-        SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ./build/tests/tests.exe
+        SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ENABLE_HTTPS=1 ./build/tests/tests.exe
 
     - name: Run CMake test
       working-directory: ${{github.workspace}}/build
