@@ -30,16 +30,14 @@ const std::regex IPV4_REGEX(
 
 #ifdef _WIN32
 // strptime is defined here because it's not available on Windows.
-static char* strptime(const char* s,
-                          const char* f,
-                          struct tm* tm) {
-    std::istringstream input(s);
-    input.imbue(std::locale(setlocale(LC_ALL, nullptr)));
-    input >> std::get_time(tm, f);
-    if (input.fail()) {
-        return nullptr;
-    }
-    return (char*)(s + input.tellg());
+static char* strptime(const char* s, const char* f, struct tm* tm) {
+  std::istringstream input(s);
+  input.imbue(std::locale(setlocale(LC_ALL, nullptr)));
+  input >> std::get_time(tm, f);
+  if (input.fail()) {
+    return nullptr;
+  }
+  return (char*)(s + input.tellg());
 }
 #endif
 
@@ -278,7 +276,7 @@ std::string minio::utils::FormatTime(const std::tm* time, const char* format) {
 
 std::tm* minio::utils::Time::ToUTC() {
   std::tm* t = new std::tm;
-  const time_t secs =  tv_.tv_sec;
+  const time_t secs = tv_.tv_sec;
   *t = utc_ ? *std::localtime(&secs) : *std::gmtime(&secs);
   return t;
 }

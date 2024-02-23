@@ -45,7 +45,7 @@ namespace minio {
 namespace utils {
 inline constexpr unsigned int kMaxMultipartCount = 10000;  // 10000 parts
 inline constexpr unsigned long long kMaxObjectSize = 5497558138880ULL;  // 5TiB
-inline constexpr unsigned long long kMaxPartSize = 5368709120UL;  // 5GiB
+inline constexpr unsigned long long kMaxPartSize = 5368709120UL;        // 5GiB
 inline constexpr unsigned int kMinPartSize = 5 * 1024 * 1024;           // 5MiB
 
 bool GetEnv(std::string& var, const char* name);
@@ -149,7 +149,8 @@ class Time {
   static Time Now() {
     Time t;
     auto now = std::chrono::high_resolution_clock::now();
-    auto usec = std::chrono::system_clock::now().time_since_epoch() / std::chrono::microseconds(1);
+    auto usec = std::chrono::system_clock::now().time_since_epoch() /
+                std::chrono::microseconds(1);
     t.tv_.tv_sec = static_cast<long>(usec / 1000000);
     t.tv_.tv_usec = static_cast<long>(usec % 1000000);
     return t;
