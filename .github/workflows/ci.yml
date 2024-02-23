@@ -126,6 +126,8 @@ jobs:
       if: startsWith(matrix.config.os, 'windows')
       shell: bash
       run: |
+        mkdir -p ~/.minio/certs
+        cp ./tests/public.crt ./tests/private.key ~/.minio/certs/
         MINIO_CI_CD=true ./minio.exe server test-xl/{1...4}/ &
         sleep 10
 
