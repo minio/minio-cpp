@@ -126,7 +126,7 @@ jobs:
       if: startsWith(matrix.config.os, 'windows')
       shell: bash
       run: |
-        MINIO_CI_CD=true ./minio.exe server /tmp/test-xl/{1...4}/ &
+        MINIO_CI_CD=true ./minio.exe server test-xl/{1...4}/ &
         sleep 10
 
     - name: Run tests if Ubuntu
