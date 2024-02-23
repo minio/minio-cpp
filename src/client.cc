@@ -692,7 +692,7 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(PutObjectArgs args) {
 
   std::string upload_id;
   PutObjectResponse resp = PutObject(args, upload_id, buf);
-  delete buf;
+  delete[] buf;
 
   if (!resp && !upload_id.empty()) {
     AbortMultipartUploadArgs amu_args;
