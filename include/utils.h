@@ -16,17 +16,20 @@
 #ifndef _MINIO_UTILS_H
 #define _MINIO_UTILS_H
 
-#include <arpa/inet.h>
+#ifndef _WIN32
+#include <pwd.h>
+#endif
+
 #include <openssl/buffer.h>
 #include <openssl/evp.h>
-#include <pwd.h>
 #include <sys/types.h>
-#include <unistd.h>
 #include <zlib.h>
 
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstring>
+#include <ctime>
 #include <curlpp/cURLpp.hpp>
 #include <iomanip>
 #include <iostream>
@@ -41,9 +44,8 @@
 namespace minio {
 namespace utils {
 inline constexpr unsigned int kMaxMultipartCount = 10000;  // 10000 parts
-inline constexpr unsigned long kMaxObjectSize =
-    5L * 1024 * 1024 * 1024 * 1024;                                     // 5TiB
-inline constexpr unsigned long kMaxPartSize = 5L * 1024 * 1024 * 1024;  // 5GiB
+inline constexpr unsigned long long kMaxObjectSize = 5497558138880ULL;  // 5TiB
+inline constexpr unsigned long long kMaxPartSize = 5368709120UL;  // 5GiB
 inline constexpr unsigned int kMinPartSize = 5 * 1024 * 1024;           // 5MiB
 
 bool GetEnv(std::string& var, const char* name);
@@ -122,7 +124,7 @@ class Time {
  public:
   Time() {}
 
-  Time(std::time_t tv_sec, suseconds_t tv_usec, bool utc) {
+  Time(std::time_t tv_sec, long tv_usec, bool utc) {
     this->tv_.tv_sec = tv_sec;
     this->tv_.tv_usec = tv_usec;
     this->utc_ = utc;
@@ -146,7 +148,10 @@ class Time {
 
   static Time Now() {
     Time t;
-    gettimeofday(&t.tv_, NULL);
+    auto now = std::chrono::high_resolution_clock::now();
+    auto usec = std::chrono::system_clock::now().time_since_epoch() / std::chrono::microseconds(1);
+    t.tv_.tv_sec = static_cast<long>(usec / 1000000);
+    t.tv_.tv_usec = static_cast<long>(usec % 1000000);
     return t;
   }
 

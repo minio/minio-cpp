@@ -17,9 +17,14 @@
 #define _MINIO_CREDS_PROVIDERS_H
 
 #include <INIReader.h>
+#ifdef _WIN32
+#include <ws2def.h>
+#include <ws2tcpip.h>
+#else
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#endif
 #include <sys/types.h>
 
 #include <fstream>
