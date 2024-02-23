@@ -37,6 +37,13 @@ jobs:
             cc: "clang",
             cxx: "clang++"
           }
+        - {
+            name: "Windows Latest MSVC",
+            os: windows-latest,
+            build_type: "Release",
+            cc: "cl",
+            cxx: "cl"
+          }
 
     steps:
     - uses: actions/checkout@v2
@@ -67,6 +74,15 @@ jobs:
         minio --version
         clang-format --version
 
+    - name: Install dependencies if Windows
+      shell: bash
+      if: startsWith(matrix.config.os, 'windows')
+      run: |
+        choco install -y cmake wget
+        wget --quiet https://dl.min.io/server/minio/release/windows-amd64/minio.exe
+        chmod +x minio.exe
+        cmake --version
+
     - name: Install vcpkg
       shell: bash
       run: |
@@ -78,7 +94,8 @@ jobs:
         ./vcpkg-master/vcpkg integrate install
         ./vcpkg-master/vcpkg install
 
-    - name: C++ Style check
+    - name: C++ Style check if not Windows
+      if: ${{ !startsWith(matrix.config.os, 'windows') }}
       shell: bash
       run: |
         ./check-style.sh
@@ -105,6 +122,13 @@ jobs:
         MINIO_CI_CD=true minio server test-xl/{1...4}/ &
         sleep 10
 
+    - name: Start MinIO server if Windows
+      if: startsWith(matrix.config.os, 'windows')
+      shell: bash
+      run: |
+        MINIO_CI_CD=true ./minio.exe server /tmp/test-xl/{1...4}/ &
+        sleep 10
+
     - name: Run tests if Ubuntu
       if: startsWith(matrix.config.name, 'Ubuntu_Latest_GCC')
       run: |
@@ -114,6 +138,12 @@ jobs:
       if: startsWith(matrix.config.name, 'macos')
       run: |
         SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ./build/tests/tests
+
+    - name: Run tests if Windows
+      shell: bash
+      if: startsWith(matrix.config.os, 'windows')
+      run: |
+        SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ./build/tests/tests.exe
 
     - name: Run CMake test
       working-directory: ${{github.workspace}}/build
