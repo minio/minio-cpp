@@ -621,8 +621,7 @@ class Tests {
       }
     }};
 
-    std::this_thread::sleep_for(
-        std::chrono::milliseconds(10));  // sleep for 10ms.
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     std::string object_name = RandObjectName();
     try {

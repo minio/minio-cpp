@@ -148,7 +148,6 @@ class Time {
 
   static Time Now() {
     Time t;
-    auto now = std::chrono::high_resolution_clock::now();
     auto usec = std::chrono::system_clock::now().time_since_epoch() /
                 std::chrono::microseconds(1);
     t.tv_.tv_sec = static_cast<long>(usec / 1000000);

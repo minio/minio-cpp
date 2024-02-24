@@ -51,11 +51,11 @@ bool minio::utils::GetEnv(std::string& var, const char* name) {
 
 std::string minio::utils::GetHomeDir() {
   std::string home;
-  if (GetEnv(home, "HOME")) return home;
-  if (GetEnv(home, "USERPROFILE")) return home;
 #ifdef _WIN32
+  if (GetEnv(home, "USERPROFILE")) return home;
   return "";
 #else
+  if (GetEnv(home, "HOME")) return home;
   return getpwuid(getuid())->pw_dir;
 #endif
 }
