@@ -637,7 +637,7 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
 
   std::string temp_filename =
       args.filename + "." + curlpp::escape(etag) + ".part.minio";
-  std::ofstream fout(temp_filename, fout.trunc | fout.out);
+  std::ofstream fout(temp_filename, std::ios::trunc | std::ios::out);
   if (!fout.is_open()) {
     return error::Error("unable to open file " + temp_filename);
   }

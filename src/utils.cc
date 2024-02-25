@@ -28,6 +28,19 @@ const std::regex IPV4_REGEX(
     "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\\.){3}"
     "(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$");
 
+#ifdef _WIN32
+// strptime is defined here because it's not available on Windows.
+static char* strptime(const char* s, const char* f, struct tm* tm) {
+  std::istringstream input(s);
+  input.imbue(std::locale(setlocale(LC_ALL, nullptr)));
+  input >> std::get_time(tm, f);
+  if (input.fail()) {
+    return nullptr;
+  }
+  return (char*)(s + input.tellg());
+}
+#endif
+
 bool minio::utils::GetEnv(std::string& var, const char* name) {
   if (const char* value = std::getenv(name)) {
     var = value;
@@ -38,8 +51,13 @@ bool minio::utils::GetEnv(std::string& var, const char* name) {
 
 std::string minio::utils::GetHomeDir() {
   std::string home;
+#ifdef _WIN32
+  GetEnv(home, "USERPROFILE");
+  return home;
+#else
   if (GetEnv(home, "HOME")) return home;
   return getpwuid(getuid())->pw_dir;
+#endif
 }
 
 std::string minio::utils::Printable(std::string s) {
@@ -258,7 +276,8 @@ std::string minio::utils::FormatTime(const std::tm* time, const char* format) {
 
 std::tm* minio::utils::Time::ToUTC() {
   std::tm* t = new std::tm;
-  *t = utc_ ? *std::localtime(&tv_.tv_sec) : *std::gmtime(&tv_.tv_sec);
+  const time_t secs = tv_.tv_sec;
+  *t = utc_ ? *std::localtime(&secs) : *std::gmtime(&secs);
   return t;
 }
 
@@ -336,7 +355,7 @@ minio::utils::Time minio::utils::Time::FromISO8601UTC(const char* value) {
   char* rv = strptime(value, "%Y-%m-%dT%H:%M:%S", &t);
   unsigned long ul = 0;
   sscanf(rv, ".%lu", &ul);
-  suseconds_t tv_usec = (suseconds_t)ul;
+  long tv_usec = (long)ul;
   std::time_t time = std::mktime(&t);
   return Time(time, tv_usec, true);
 }

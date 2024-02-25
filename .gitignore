@@ -19,3 +19,8 @@ docs/*svg
 docs/*map
 docs/*md5
 include/config.h
+.idea/
+cmake-build*
+vcpkg-master.zip
+vcpkg-master/
+
