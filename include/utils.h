@@ -156,6 +156,43 @@ class Time {
   }
 
   explicit operator bool() const { return tv_.tv_sec != 0 && tv_.tv_usec != 0; }
+
+  int Compare(const Time& rhs) const; // PWTODO: implement me
+
+  bool Equal(const Time& rhs) const {
+    return Compare(rhs) == 0; // PWTODO: can be optimized, good enough for now
+  }
+
+  bool operator ==(const Time& rhs) const {
+    return Equal(rhs);
+  }
+
+  bool operator !=(const Time& rhs) const {
+    return !operator ==(rhs);
+  }
+
+  bool operator <(const Time& rhs) const {
+    return Compare(rhs) < 0; // PWTODO: can be optimized, good enough for now
+  }
+
+  bool operator >(const Time& rhs) const {
+    return Compare(rhs) > 0; // PWTODO: can be optimized, good enough for now
+  }
+
+  bool operator <=(const Time& rhs) const {
+    return !operator >(rhs);
+  }
+
+  bool operator >=(const Time& rhs) const {
+    return !operator <(rhs);
+  }
+
+  /* PWTODO: add the spaceship operator
+
+  auto operator <=>(const Time& rhs) const {
+    return Compare(rhs);
+  }
+  */
 };  // class Time
 
 /**
