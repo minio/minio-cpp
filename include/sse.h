@@ -26,15 +26,13 @@ class Sse {
   utils::Multimap copy_headers_;
 
  public:
-  Sse() {}
+  Sse() = default;
+  virtual ~Sse() = default;
 
-  virtual ~Sse() {}
+  utils::Multimap Headers() const { return headers_; }
+  utils::Multimap CopyHeaders() const { return copy_headers_; }
 
-  utils::Multimap Headers() { return headers_; }
-
-  utils::Multimap CopyHeaders() { return copy_headers_; }
-
-  virtual bool TlsRequired() = 0;
+  virtual bool TlsRequired() const = 0;
 };  // class Sse
 
 class SseCustomerKey : public Sse {
@@ -57,7 +55,9 @@ class SseCustomerKey : public Sse {
         "X-Amz-Copy-Source-Server-Side-Encryption-Customer-Key-MD5", md5key);
   }
 
-  bool TlsRequired() { return true; }
+  virtual ~SseCustomerKey() = default;
+
+  virtual bool TlsRequired() const override { return true; }
 };  // class SseCustomerKey
 
 class SseKms : public Sse {
@@ -72,14 +72,17 @@ class SseKms : public Sse {
     }
   }
 
-  bool TlsRequired() { return true; }
+  virtual ~SseKms() = default;
+
+  virtual bool TlsRequired() const override { return true; }
 };  // class SseKms
 
 class SseS3 : public Sse {
  public:
   SseS3() { this->headers_.Add("X-Amz-Server-Side-Encryption", "AES256"); }
+  virtual ~SseS3() = default;
 
-  bool TlsRequired() { return false; }
+  virtual bool TlsRequired() const override { return false; }
 };  // class SseS3
 }  // namespace s3
 }  // namespace minio
