@@ -17,16 +17,16 @@
 
 const char* SIGN_V4_ALGORITHM = "AWS4-HMAC-SHA256";
 
-std::string minio::signer::GetScope(utils::Time& time, std::string& region,
-                                    std::string& service_name) {
+std::string minio::signer::GetScope(const utils::Time& time, const std::string& region,
+                                    const std::string& service_name) {
   return time.ToSignerDate() + "/" + region + "/" + service_name +
          "/aws4_request";
 }
 
 std::string minio::signer::GetCanonicalRequestHash(
-    std::string& method, std::string& uri, std::string& query_string,
-    std::string& headers, std::string& signed_headers,
-    std::string& content_sha256) {
+    const std::string& method, const std::string& uri, const std::string& query_string,
+    const std::string& headers, const std::string& signed_headers,
+    const std::string& content_sha256) {
   // CanonicalRequest =
   //   HTTPRequestMethod + '\n' +
   //   CanonicalURI + '\n' +
@@ -41,8 +41,8 @@ std::string minio::signer::GetCanonicalRequestHash(
 }
 
 std::string minio::signer::GetStringToSign(
-    utils::Time& date, std::string& scope,
-    std::string& canonical_request_hash) {
+    const utils::Time& date, const std::string& scope,
+    const std::string& canonical_request_hash) {
   return "AWS4-HMAC-SHA256\n" + date.ToAmzDate() + "\n" + scope + "\n" +
          canonical_request_hash;
 }
@@ -59,8 +59,8 @@ std::string minio::signer::HmacHash(std::string_view key,
   return std::string{reinterpret_cast<char const*>(hash.data()), hash_len};
 }
 
-std::string minio::signer::GetSigningKey(std::string& secret_key,
-                                         utils::Time& date,
+std::string minio::signer::GetSigningKey(const std::string& secret_key,
+                                         const utils::Time& date,
                                          std::string_view region,
                                          std::string_view service_name) {
   std::string date_key = HmacHash("AWS4" + secret_key, date.ToSignerDate());
@@ -81,19 +81,19 @@ std::string minio::signer::GetSignature(std::string_view signing_key,
   return signature;
 }
 
-std::string minio::signer::GetAuthorization(std::string& access_key,
-                                            std::string& scope,
-                                            std::string& signed_headers,
-                                            std::string& signature) {
+std::string minio::signer::GetAuthorization(const std::string& access_key,
+                                            const std::string& scope,
+                                            const std::string& signed_headers,
+                                            const std::string& signature) {
   return "AWS4-HMAC-SHA256 Credential=" + access_key + "/" + scope + ", " +
          "SignedHeaders=" + signed_headers + ", " + "Signature=" + signature;
 }
 
-minio::utils::Multimap& minio::signer::SignV4(
-    std::string& service_name, http::Method& method, std::string& uri,
-    std::string& region, utils::Multimap& headers,
-    utils::Multimap& query_params, std::string& access_key,
-    std::string& secret_key, std::string& content_sha256, utils::Time& date) {
+minio::utils::Multimap minio::signer::SignV4(
+    const std::string& service_name, const http::Method& method, const std::string& uri,
+    const std::string& region, utils::Multimap& headers,
+    utils::Multimap query_params, const std::string& access_key,
+    const std::string& secret_key, const std::string& content_sha256, const utils::Time& date) {
   std::string scope = GetScope(date, region, service_name);
 
   std::string signed_headers;
@@ -122,30 +122,30 @@ minio::utils::Multimap& minio::signer::SignV4(
   return headers;
 }
 
-minio::utils::Multimap& minio::signer::SignV4S3(
-    http::Method method, std::string& uri, std::string& region,
+minio::utils::Multimap minio::signer::SignV4S3(
+    const http::Method& method, const std::string& uri, const std::string& region,
     utils::Multimap& headers, utils::Multimap query_params,
-    std::string& access_key, std::string& secret_key,
-    std::string& content_sha256, utils::Time& date) {
+    const std::string& access_key, const std::string& secret_key,
+    const std::string& content_sha256, const utils::Time& date) {
   std::string service_name = "s3";
-  return SignV4(service_name, method, uri, region, headers, query_params,
+  return SignV4(service_name, method, uri, region, headers, std::move(query_params),
                 access_key, secret_key, content_sha256, date);
 }
 
-minio::utils::Multimap& minio::signer::SignV4STS(
-    http::Method method, std::string& uri, std::string& region,
+minio::utils::Multimap minio::signer::SignV4STS(
+    const http::Method& method, const std::string& uri, const std::string& region,
     utils::Multimap& headers, utils::Multimap query_params,
-    std::string& access_key, std::string& secret_key,
-    std::string& content_sha256, utils::Time& date) {
+    const std::string& access_key, const std::string& secret_key,
+    const std::string& content_sha256, const utils::Time& date) {
   std::string service_name = "sts";
-  return SignV4(service_name, method, uri, region, headers, query_params,
+  return SignV4(service_name, method, uri, region, headers, std::move(query_params),
                 access_key, secret_key, content_sha256, date);
 }
 
-minio::utils::Multimap& minio::signer::PresignV4(
-    http::Method method, std::string& host, std::string& uri,
-    std::string& region, utils::Multimap& query_params, std::string& access_key,
-    std::string& secret_key, utils::Time& date, unsigned int expires) {
+minio::utils::Multimap minio::signer::PresignV4(
+    const http::Method& method, const std::string& host, const std::string& uri,
+    const std::string& region, utils::Multimap query_params, const std::string& access_key,
+    const std::string& secret_key, const utils::Time& date, unsigned int expires) {
   std::string service_name = "s3";
   std::string scope = GetScope(date, region, service_name);
   std::string canonical_headers = "host:" + host;
@@ -172,10 +172,10 @@ minio::utils::Multimap& minio::signer::PresignV4(
   return query_params;
 }
 
-std::string minio::signer::PostPresignV4(std::string string_to_sign,
-                                         std::string& secret_key,
-                                         utils::Time& date,
-                                         std::string& region) {
+std::string minio::signer::PostPresignV4(const std::string& string_to_sign,
+                                         const std::string& secret_key,
+                                         const utils::Time& date,
+                                         const std::string& region) {
   std::string service_name = "s3";
   std::string signing_key =
       GetSigningKey(secret_key, date, region, service_name);
