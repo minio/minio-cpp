@@ -88,7 +88,7 @@ struct BaseUrl {
                         utils::Multimap query_params,
                         std::string bucket_name = "",
                         std::string object_name = "");
-  operator bool() const { return !err_ && !host.empty(); }
+  explicit operator bool() const { return !err_ && !host.empty(); }
   error::Error Error() {
     if (host.empty() && !err_) return error::Error("empty host");
     return err_;

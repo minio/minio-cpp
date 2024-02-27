@@ -45,7 +45,7 @@ struct Jwt {
   std::string token;
   unsigned int expiry = 0;
 
-  operator bool() const { return !token.empty(); }
+  explicit operator bool() const { return !token.empty(); }
 };  // struct Jwt
 
 using JwtFunction = std::function<Jwt()>;
@@ -86,7 +86,7 @@ class Provider {
 
   virtual ~Provider() {}
 
-  operator bool() const { return !err_; }
+  explicit operator bool() const { return !err_; }
 
   virtual Credentials Fetch() = 0;
 };  // class Provider

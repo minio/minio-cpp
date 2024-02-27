@@ -379,7 +379,7 @@ struct FilterValue {
     this->value_ = value;
     this->is_value_set_ = true;
   }
-  operator bool() const { return is_value_set_; }
+  explicit operator bool() const { return is_value_set_; }
   std::string Value() { return value_; }
 };  // struct FilterValue
 
@@ -440,14 +440,14 @@ struct SseConfig {
     config.kms_master_key_id = masterkeyid;
     return config;
   }
-  operator bool() const { return !sse_algorithm.empty(); }
+  explicit operator bool() const { return !sse_algorithm.empty(); }
 };  //  struct SseConfig
 
 struct Tag {
   std::string key;
   std::string value;
 
-  operator bool() const { return !key.empty(); }
+  explicit operator bool() const { return !key.empty(); }
 };  // struct Tag
 
 struct Prefix {
@@ -461,7 +461,7 @@ struct Prefix {
     this->value_ = value;
     this->is_set_ = true;
   }
-  operator bool() const { return is_set_; }
+  explicit operator bool() const { return is_set_; }
   std::string Get() { return value_; }
 };  // struct Prefix
 
@@ -476,7 +476,7 @@ struct Integer {
     this->value_ = value;
     this->is_set_ = true;
   }
-  operator bool() const { return is_set_; }
+  explicit operator bool() const { return is_set_; }
   int Get() { return value_; }
 };  // struct Integer
 
@@ -491,7 +491,7 @@ struct Boolean {
     this->value_ = value;
     this->is_set_ = true;
   }
-  operator bool() const { return is_set_; }
+  explicit operator bool() const { return is_set_; }
   bool Get() { return value_; }
 };  // struct Boolean
 
@@ -499,7 +499,7 @@ struct AndOperator {
   Prefix prefix;
   std::map<std::string, std::string> tags;
 
-  operator bool() const { return prefix || !tags.empty(); }
+  explicit operator bool() const { return prefix || !tags.empty(); }
 };  // struct AndOperator
 
 struct Filter {
@@ -507,14 +507,14 @@ struct Filter {
   Prefix prefix;
   Tag tag;
 
-  operator bool() const { return and_operator ^ prefix ^ tag; }
+  explicit operator bool() const { return static_cast<bool>(and_operator) ^ static_cast<bool>(prefix) ^ static_cast<bool>(tag); }
 };  // struct Filter
 
 struct AccessControlTranslation {
   std::string owner = "Destination";
 
   void Enable() { enabled_ = true; }
-  operator bool() const { return enabled_; }
+  explicit operator bool() const { return enabled_; }
 
  private:
   bool enabled_ = false;
@@ -524,7 +524,7 @@ struct EncryptionConfig {
   std::string replica_kms_key_id;
 
   void Enable() { enabled_ = true; }
-  operator bool() const { return enabled_; }
+  explicit operator bool() const { return enabled_; }
 
  private:
   bool enabled_ = false;
@@ -535,7 +535,7 @@ struct Metrics {
   bool status = false;
 
   void Enable() { enabled_ = true; }
-  operator bool() const { return enabled_; }
+  explicit operator bool() const { return enabled_; }
 
  private:
   bool enabled_ = false;
@@ -546,7 +546,7 @@ struct ReplicationTime {
   bool status = false;
 
   void Enable() { enabled_ = true; }
-  operator bool() const { return enabled_; }
+  explicit operator bool() const { return enabled_; }
 
  private:
   bool enabled_ = false;
@@ -566,7 +566,7 @@ struct SourceSelectionCriteria {
   Boolean sse_kms_encrypted_objects_status;
 
   void Enable() { enabled_ = true; }
-  operator bool() const { return enabled_; }
+  explicit operator bool() const { return enabled_; }
 
  private:
   bool enabled_ = false;

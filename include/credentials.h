@@ -42,7 +42,7 @@ struct Credentials {
 
   bool IsExpired() { return expired(expiration); }
 
-  operator bool() const {
+  explicit operator bool() const {
     return !err && !access_key.empty() && expired(expiration);
   }
 

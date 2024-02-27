@@ -42,7 +42,7 @@ class ListObjectsResult {
   ListObjectsResult(error::Error err);
   ListObjectsResult(Client* client, ListObjectsArgs args);
   Item& operator*() const { return *itr_; }
-  operator bool() const { return itr_ != resp_.contents.end(); }
+  explicit operator bool() const { return itr_ != resp_.contents.end(); }
   ListObjectsResult& operator++() {
     itr_++;
     if (!failed_ && itr_ == resp_.contents.end() && resp_.is_truncated) {
@@ -71,7 +71,7 @@ class RemoveObjectsResult {
   RemoveObjectsResult(error::Error err);
   RemoveObjectsResult(Client* client, RemoveObjectsArgs args);
   DeleteError& operator*() const { return *itr_; }
-  operator bool() const { return itr_ != resp_.errors.end(); }
+  explicit operator bool() const { return itr_ != resp_.errors.end(); }
   RemoveObjectsResult& operator++() {
     itr_++;
     if (!done_ && itr_ == resp_.errors.end()) {

@@ -64,7 +64,7 @@ struct Url {
   std::string path;
   std::string query_string;
 
-  operator bool() const { return !host.empty(); }
+  explicit operator bool() const { return !host.empty(); }
 
   std::string String() {
     if (host.empty()) return "";
@@ -200,9 +200,9 @@ struct Request {
 
   Request(Method method, Url url);
   Response Execute();
-  operator bool() const {
+  explicit operator bool() const {
     if (method < Method::kGet || method > Method::kDelete) return false;
-    return url;
+    return static_cast<bool>(url);
   }
 
  private:
@@ -219,7 +219,7 @@ struct Response {
 
   size_t ResponseCallback(curlpp::Multi* requests, curlpp::Easy* request,
                           char* buffer, size_t size, size_t length);
-  operator bool() const {
+  explicit operator bool() const {
     return error.empty() && status_code >= 200 && status_code <= 299;
   }
   error::Error Error() {

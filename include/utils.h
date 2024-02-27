@@ -155,7 +155,7 @@ class Time {
     return t;
   }
 
-  operator bool() const { return tv_.tv_sec != 0 && tv_.tv_usec != 0; }
+  explicit operator bool() const { return tv_.tv_sec != 0 && tv_.tv_usec != 0; }
 };  // class Time
 
 /**
@@ -179,7 +179,7 @@ class Multimap {
 
   std::string ToQueryString();
 
-  operator bool() const { return !map_.empty(); }
+  explicit operator bool() const { return !map_.empty(); }
 
   bool Contains(std::string_view key);
 

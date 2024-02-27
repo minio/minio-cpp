@@ -54,7 +54,7 @@ struct Response {
     this->object_name = resp.object_name;
   }
 
-  operator bool() const {
+  explicit operator bool() const {
     return !err_ && code.empty() && message.empty() &&
            (status_code == 0 || status_code >= 200 && status_code <= 299);
   }
