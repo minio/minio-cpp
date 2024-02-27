@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <memory>
 #include "utils.h"
 
 const std::string WEEK_DAYS[] = {"Sun", "Mon", "Tue", "Wed",
@@ -275,32 +276,30 @@ std::string minio::utils::FormatTime(const std::tm* time, const char* format) {
   return std::string(buf);
 }
 
-std::tm* minio::utils::Time::ToUTC() {
-  std::tm* t = new std::tm;
+std::tm* minio::utils::Time::ToUTC() const {
+  std::tm* t = new std::tm; // PWTODO: why a dynamic object? Can it lead to memory leaks?
   const time_t secs = tv_.tv_sec;
   *t = utc_ ? *std::localtime(&secs) : *std::gmtime(&secs);
   return t;
 }
 
-std::string minio::utils::Time::ToSignerDate() {
-  std::tm* utc = ToUTC();
-  std::string result = FormatTime(utc, "%Y%m%d");
-  delete utc;
+std::string minio::utils::Time::ToSignerDate() const {
+  std::unique_ptr<std::tm> utc(ToUTC());
+  std::string result = FormatTime(utc.get(), "%Y%m%d");
   return result;
 }
 
-std::string minio::utils::Time::ToAmzDate() {
-  std::tm* utc = ToUTC();
-  std::string result = FormatTime(utc, "%Y%m%dT%H%M%SZ");
-  delete utc;
+std::string minio::utils::Time::ToAmzDate() const {
+  std::unique_ptr<std::tm> utc(ToUTC());
+  std::string result = FormatTime(utc.get(), "%Y%m%dT%H%M%SZ");
   return result;
 }
 
-std::string minio::utils::Time::ToHttpHeaderValue() {
-  std::tm* utc = ToUTC();
+std::string minio::utils::Time::ToHttpHeaderValue() const {
+  std::unique_ptr<std::tm> utc(ToUTC());
   std::stringstream ss;
-  ss << WEEK_DAYS[utc->tm_wday] << ", " << FormatTime(utc, "%d ")
-     << MONTHS[utc->tm_mon] << FormatTime(utc, " %Y %H:%M:%S GMT");
+  ss << WEEK_DAYS[utc->tm_wday] << ", " << FormatTime(utc.get(), "%d ")
+     << MONTHS[utc->tm_mon] << FormatTime(utc.get(), " %Y %H:%M:%S GMT");
   return ss.str();
 }
 
@@ -340,14 +339,13 @@ minio::utils::Time minio::utils::Time::FromHttpHeaderValue(const char* value) {
   return Time(std::mktime(t), 0, true);
 }
 
-std::string minio::utils::Time::ToISO8601UTC() {
+std::string minio::utils::Time::ToISO8601UTC() const {
   char buf[64];
   snprintf(buf, 64, "%03ld", (long int)tv_.tv_usec);
   std::string usec_str(buf);
   if (usec_str.size() > 3) usec_str = usec_str.substr(0, 3);
-  std::tm* utc = ToUTC();
-  std::string result = FormatTime(utc, "%Y-%m-%dT%H:%M:%S.") + usec_str + "Z";
-  delete utc;
+  std::unique_ptr<std::tm> utc(ToUTC());
+  std::string result = FormatTime(utc.get(), "%Y-%m-%dT%H:%M:%S.") + usec_str + "Z";
   return result;
 }
 
@@ -362,7 +360,7 @@ minio::utils::Time minio::utils::Time::FromISO8601UTC(const char* value) {
 }
 
 void minio::utils::Multimap::Add(std::string key, std::string value) {
-  map_[key].insert(value);
+  map_[key].insert(value); // PWTODO: move construction
   keys_[ToLower(key)].insert(key);
 }
 
@@ -374,7 +372,7 @@ void minio::utils::Multimap::AddAll(const Multimap& headers) {
   }
 }
 
-std::list<std::string> minio::utils::Multimap::ToHttpHeaders() {
+std::list<std::string> minio::utils::Multimap::ToHttpHeaders() const {
   std::list<std::string> headers;
   for (auto& [key, values] : map_) {
     for (auto& value : values) {
@@ -384,7 +382,7 @@ std::list<std::string> minio::utils::Multimap::ToHttpHeaders() {
   return headers;
 }
 
-std::string minio::utils::Multimap::ToQueryString() {
+std::string minio::utils::Multimap::ToQueryString() const {
   std::string query_string;
   for (auto& [key, values] : map_) {
     for (auto& value : values) {
@@ -396,33 +394,36 @@ std::string minio::utils::Multimap::ToQueryString() {
   return query_string;
 }
 
-bool minio::utils::Multimap::Contains(std::string_view key) {
+bool minio::utils::Multimap::Contains(std::string_view key) const {
   return keys_.find(ToLower(std::string(key))) != keys_.end();
 }
 
-std::list<std::string> minio::utils::Multimap::Get(std::string_view key) {
+std::list<std::string> minio::utils::Multimap::Get(std::string_view key) const {
   std::list<std::string> result;
-  std::set<std::string> keys = keys_[ToLower(std::string(key))];
-  for (auto& key : keys) {
-    std::set<std::string> values = map_[key];
-    result.insert(result.end(), values.begin(), values.end());
+  
+  if (const auto i = keys_.find(ToLower(std::string(key))); i != keys_.cend()) {
+    for (auto& k : i->second) {
+      if (const auto j = map_.find(k); j != map_.cend()) {
+        result.insert(result.end(), j->second.begin(), j->second.cend());
+      }
+    }
   }
   return result;
 }
 
-std::string minio::utils::Multimap::GetFront(std::string_view key) {
+std::string minio::utils::Multimap::GetFront(std::string_view key) const {
   std::list<std::string> values = Get(key);
   return (values.size() > 0) ? values.front() : "";
 }
 
-std::list<std::string> minio::utils::Multimap::Keys() {
+std::list<std::string> minio::utils::Multimap::Keys() const {
   std::list<std::string> keys;
   for (const auto& [key, _] : keys_) keys.push_back(key);
   return keys;
 }
 
 void minio::utils::Multimap::GetCanonicalHeaders(
-    std::string& signed_headers, std::string& canonical_headers) {
+    std::string& signed_headers, std::string& canonical_headers) const {
   std::vector<std::string> signed_headerslist;
   std::map<std::string, std::string> map;
 
@@ -455,20 +456,23 @@ void minio::utils::Multimap::GetCanonicalHeaders(
   canonical_headers = utils::Join(canonical_headerslist, "\n");
 }
 
-std::string minio::utils::Multimap::GetCanonicalQueryString() {
+std::string minio::utils::Multimap::GetCanonicalQueryString() const {
   std::vector<std::string> keys;
-  for (auto& [key, _] : map_) keys.push_back(key);
-  std::sort(keys.begin(), keys.end());
-
-  std::vector<std::string> values;
-  for (auto& key : keys) {
-    auto vals = map_[key];
-    for (auto& value : vals) {
-      std::string s = curlpp::escape(key) + "=" + curlpp::escape(value);
-      values.push_back(s);
-    }
+  for (auto& [key, _] : map_) {
+    keys.push_back(key);
   }
 
+  std::sort(keys.begin(), keys.end());
+  std::vector<std::string> values;
+
+  for (auto& key : keys) {
+    if (const auto i = map_.find(key); i != map_.cend()) {
+      for (auto& value : i->second) {
+        values.push_back(curlpp::escape(key) + "=" + curlpp::escape(value));   
+      }
+    }
+  }
+ 
   return utils::Join(values, "&");
 }
 

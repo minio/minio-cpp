@@ -123,27 +123,27 @@ class Time {
   bool utc_ = false;
 
  public:
-  Time() {}
+  Time() = default;
 
-  Time(std::time_t tv_sec, long tv_usec, bool utc) {
-    this->tv_.tv_sec = tv_sec;
-    this->tv_.tv_usec = tv_usec;
-    this->utc_ = utc;
-  }
+  Time(std::time_t tv_sec, suseconds_t tv_usec, bool utc)
+    : tv_{ .tv_sec = std::move(tv_sec), .tv_usec = std::move(tv_usec) } // PWTODO: validate if .x is supported in C++11
+    , utc_(utc) {}
+
+  ~Time() = default;
 
   void Add(time_t seconds) { tv_.tv_sec += seconds; }
 
-  std::tm* ToUTC();
+  std::tm* ToUTC() const;
 
-  std::string ToSignerDate();
+  std::string ToSignerDate() const;
 
-  std::string ToAmzDate();
+  std::string ToAmzDate() const;
 
-  std::string ToHttpHeaderValue();
+  std::string ToHttpHeaderValue() const;
 
   static Time FromHttpHeaderValue(const char* value);
 
-  std::string ToISO8601UTC();
+  std::string ToISO8601UTC() const;
 
   static Time FromISO8601UTC(const char* value);
 
@@ -205,32 +205,34 @@ class Multimap {
   std::map<std::string, std::set<std::string>> keys_;
 
  public:
-  Multimap() {}
+  Multimap() = default;
 
   Multimap(const Multimap& headers) { this->AddAll(headers); }
+
+  ~Multimap() = default;
 
   void Add(std::string key, std::string value);
 
   void AddAll(const Multimap& headers);
 
-  std::list<std::string> ToHttpHeaders();
+  std::list<std::string> ToHttpHeaders() const;
 
-  std::string ToQueryString();
+  std::string ToQueryString() const;
 
   explicit operator bool() const { return !map_.empty(); }
 
-  bool Contains(std::string_view key);
+  bool Contains(std::string_view key) const;
 
-  std::list<std::string> Get(std::string_view key);
+  std::list<std::string> Get(std::string_view key) const;
 
-  std::string GetFront(std::string_view key);
+  std::string GetFront(std::string_view key) const;
 
-  std::list<std::string> Keys();
+  std::list<std::string> Keys() const;
 
   void GetCanonicalHeaders(std::string& signed_headers,
-                           std::string& canonical_headers);
+                           std::string& canonical_headers) const;
 
-  std::string GetCanonicalQueryString();
+  std::string GetCanonicalQueryString() const;
 };  // class Multimap
 
 /**
@@ -250,7 +252,9 @@ struct CharBuffer : std::streambuf {
     return gptr() - eback();
   }
 
-  pos_type seekpos(pos_type sp, std::ios_base::openmode which) override {
+  virtual ~CharBuffer() = default;
+
+  virtual pos_type seekpos(pos_type sp, std::ios_base::openmode which) override {
     return seekoff(sp - pos_type(off_type(0)), std::ios_base::beg, which);
   }
 };  // struct CharBuffer
