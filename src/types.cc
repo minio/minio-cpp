@@ -502,8 +502,7 @@ std::string minio::s3::LifecycleConfig::ToXML() {
 
     if (rule.abort_incomplete_multipart_upload_days_after_initiation) {
       ss << "<AbortIncompleteMultipartUpload><DaysAfterInitiation>"
-         << std::to_string(
-                rule.abort_incomplete_multipart_upload_days_after_initiation)
+         << rule.abort_incomplete_multipart_upload_days_after_initiation
          << "</DaysAfterInitiation></AbortIncompleteMultipartUpload>";
     }
 
@@ -514,11 +513,11 @@ std::string minio::s3::LifecycleConfig::ToXML() {
         ss << "<Date>" << rule.expiration_date.ToISO8601UTC() << "</Date>";
       }
       if (rule.expiration_days) {
-        ss << "<Days>" << std::to_string(rule.expiration_days) << "</Days>";
+        ss << "<Days>" << rule.expiration_days << "</Days>";
       }
       if (rule.expiration_expired_object_delete_marker) {
         ss << "<ExpiredObjectDeleteMarker>"
-           << utils::BoolToString(rule.expiration_expired_object_delete_marker)
+           << rule.expiration_expired_object_delete_marker
            << "</ExpiredObjectDeleteMarker>";
       }
       ss << "</Expiration>";
@@ -584,7 +583,7 @@ std::string minio::s3::LifecycleConfig::ToXML() {
         ss << "<Date>" << rule.transition_date.ToISO8601UTC() << "</Date>";
       }
       if (rule.transition_days) {
-        ss << "<Days>" << std::to_string(rule.transition_days) << "</Days>";
+        ss << "<Days>" << rule.transition_days << "</Days>";
       }
       if (!rule.transition_storage_class.empty()) {
         ss << "<StorageClass>" << rule.transition_storage_class
@@ -603,7 +602,7 @@ std::string minio::s3::LifecycleConfig::ToXML() {
 
 minio::error::Error minio::s3::ObjectLockConfig::Validate() {
   if (IsRetentionModeValid(retention_mode)) {
-    if (!(retention_duration_days ^ retention_duration_years)) {
+    if (!(static_cast<bool>(retention_duration_days) ^ static_cast<bool>(retention_duration_years))) {
       return error::Error(
           "retention mode must be provided with retention duration days or "
           "years");

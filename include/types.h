@@ -17,6 +17,7 @@
 #define _MINIO_S3_TYPES_H
 
 #include <iostream>
+#include <ostream>
 #include <nlohmann/json.hpp>
 
 #include "utils.h"
@@ -456,13 +457,20 @@ struct Prefix {
   bool is_set_ = false;
 
  public:
-  Prefix() {}
-  Prefix(std::string value) {
-    this->value_ = value;
-    this->is_set_ = true;
-  }
+  Prefix() = default;
+
+  Prefix(std::string value)
+    : value_(std::move(value))
+    , is_set_(true) {} // PWTODO: get rid of converting constructors
+
+  ~Prefix() = default;
+
   explicit operator bool() const { return is_set_; }
-  std::string Get() { return value_; }
+  std::string Get() const { return value_; }
+
+  friend std::ostream& operator <<(std::ostream& s, const Prefix& v) {
+    return s << v.value_; 
+  }
 };  // struct Prefix
 
 struct Integer {
@@ -471,13 +479,20 @@ struct Integer {
   bool is_set_ = false;
 
  public:
-  Integer() {}
-  Integer(int value) {
-    this->value_ = value;
-    this->is_set_ = true;
-  }
+  Integer() = default;
+
+  Integer(int value)
+    : value_(value)
+    , is_set_(true) {} // PWTODO: get rid of converting constructors
+
+  ~Integer() = default;
+
   explicit operator bool() const { return is_set_; }
-  int Get() { return value_; }
+  int Get() const { return value_; }
+
+  friend std::ostream& operator <<(std::ostream& s, const Integer& v) {
+    return s << v.value_; 
+  }
 };  // struct Integer
 
 struct Boolean {
@@ -486,14 +501,22 @@ struct Boolean {
   bool is_set_ = false;
 
  public:
-  Boolean() {}
-  Boolean(bool value) {
-    this->value_ = value;
-    this->is_set_ = true;
-  }
+  Boolean() = default;
+
+  Boolean(bool value)
+    : value_(value)
+    , is_set_(true) {} // PWTODO: get rid of converting constructors
+
+  ~Boolean() = default;
+
   explicit operator bool() const { return is_set_; }
-  bool Get() { return value_; }
+  bool Get() const { return value_; }
+
+  friend std::ostream& operator <<(std::ostream& s, const Boolean& v) {
+    return s << utils::BoolToString(v.value_); 
+  }
 };  // struct Boolean
+
 
 struct AndOperator {
   Prefix prefix;
