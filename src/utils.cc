@@ -60,7 +60,7 @@ std::string minio::utils::GetHomeDir() {
 #endif
 }
 
-std::string minio::utils::Printable(std::string s) {
+std::string minio::utils::Printable(const std::string& s) {
   std::stringstream ss;
   for (auto& ch : s) {
     if (ch < 33 || ch > 126) {
@@ -83,7 +83,7 @@ unsigned int minio::utils::Int(std::string_view str) {
   return data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3];
 }
 
-bool minio::utils::StringToBool(std::string str) {
+bool minio::utils::StringToBool(const std::string& str) {
   std::string s = ToLower(str);
   if (s == "false") return false;
   if (s == "true") return true;
@@ -108,8 +108,9 @@ bool minio::utils::CheckNonEmptyString(std::string_view str) {
   return !str.empty() && Trim(str) == str;
 }
 
-std::string minio::utils::ToLower(std::string str) {
-  std::string s = str;
+std::string minio::utils::ToLower(const std::string& str) {
+  std::string s;
+  s.reserve(str.length());
   std::transform(s.begin(), s.end(), s.begin(), ::tolower);
   return s;
 }
@@ -132,8 +133,8 @@ bool minio::utils::Contains(std::string_view str, std::string_view substr) {
   return str.find(substr) != std::string::npos;
 }
 
-std::string minio::utils::Join(std::list<std::string> values,
-                               std::string delimiter) {
+std::string minio::utils::Join(const std::list<std::string>& values,
+                               const std::string& delimiter) {
   std::string result;
   for (const auto& value : values) {
     if (!result.empty()) result += delimiter;
@@ -142,8 +143,8 @@ std::string minio::utils::Join(std::list<std::string> values,
   return result;
 }
 
-std::string minio::utils::Join(std::vector<std::string> values,
-                               std::string delimiter) {
+std::string minio::utils::Join(const std::vector<std::string>& values,
+                               const std::string& delimiter) {
   std::string result;
   for (const auto& value : values) {
     if (!result.empty()) result += delimiter;
@@ -152,7 +153,7 @@ std::string minio::utils::Join(std::vector<std::string> values,
   return result;
 }
 
-std::string minio::utils::EncodePath(std::string& path) {
+std::string minio::utils::EncodePath(const std::string& path) {
   std::stringstream str_stream(path);
   std::string token;
   std::string out;

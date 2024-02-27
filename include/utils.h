@@ -48,11 +48,12 @@ inline constexpr unsigned long long kMaxObjectSize = 5497558138880ULL;  // 5TiB
 inline constexpr unsigned long long kMaxPartSize = 5368709120UL;        // 5GiB
 inline constexpr unsigned int kMinPartSize = 5 * 1024 * 1024;           // 5MiB
 
+// GetEnv copies the environment variable name into var
 bool GetEnv(std::string& var, const char* name);
 
 std::string GetHomeDir();
 
-std::string Printable(std::string s);
+std::string Printable(const std::string& s);
 
 unsigned long CRC32(std::string_view str);
 
@@ -62,7 +63,7 @@ unsigned int Int(std::string_view str);
 std::string FormatTime(const std::tm* time, const char* format);
 
 // StringToBool converts string to bool.
-bool StringToBool(std::string str);
+bool StringToBool(const std::string& str);
 
 // BoolToString converts bool to string.
 inline const char* const BoolToString(bool b) { return b ? "true" : "false"; }
@@ -75,7 +76,7 @@ std::string Trim(std::string_view str, char ch = ' ');
 bool CheckNonEmptyString(std::string_view str);
 
 // ToLower converts string to lower case.
-std::string ToLower(std::string str);
+std::string ToLower(const std::string& str);
 
 // StartsWith returns whether str starts with prefix or not.
 bool StartsWith(std::string_view str, std::string_view prefix);
@@ -90,13 +91,13 @@ bool Contains(std::string_view str, char ch);
 bool Contains(std::string_view str, std::string_view substr);
 
 // Join returns a string of joined values by delimiter.
-std::string Join(std::list<std::string> values, std::string delimiter);
+std::string Join(const std::list<std::string>& values, const std::string& delimiter);
 
 // Join returns a string of joined values by delimiter.
-std::string Join(std::vector<std::string> values, std::string delimiter);
+std::string Join(const std::vector<std::string>& values, const std::string& delimiter);
 
 // EncodePath does URL encoding of path. It also normalizes multiple slashes.
-std::string EncodePath(std::string& path);
+std::string EncodePath(const std::string& path);
 
 // Sha256hash computes SHA-256 of data and return hash as hex encoded value.
 std::string Sha256Hash(std::string_view str);
