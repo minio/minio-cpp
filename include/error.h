@@ -17,6 +17,7 @@
 #define _MINIO_ERROR_H
 
 #include <string>
+#include <ostream>
 
 namespace minio {
 namespace error {
@@ -27,8 +28,12 @@ class Error {
  public:
   Error() {}
   Error(std::string_view msg) { this->msg_ = std::string(msg); }
-  std::string String() { return msg_; }
+  std::string String() const { return msg_; }
   explicit operator bool() const { return !msg_.empty(); }
+
+  friend std::ostream& operator <<(std::ostream& s, const Error& e) {
+    return s << e.msg_;
+  }
 };  // class Error
 
 const static Error SUCCESS;
