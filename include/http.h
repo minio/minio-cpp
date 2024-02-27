@@ -58,11 +58,14 @@ constexpr const char* MethodToString(const Method& method) throw() {
  * Url represents HTTP URL and it's components.
  */
 struct Url {
-  bool https;
+  bool https; // PWTODO: assign default value
   std::string host;
   unsigned int port = 0;
   std::string path;
   std::string query_string;
+
+  Url() = default;
+  ~Url() = default;
 
   explicit operator bool() const { return !host.empty(); }
 
@@ -86,16 +89,22 @@ struct DataFunctionArgs {
   Response* response = NULL;
   std::string datachunk;
   void* userdata = NULL;
+
+  DataFunctionArgs() = default;
+  ~DataFunctionArgs() = default;
 };  // struct DataFunctionArgs
 
 struct ProgressFunctionArgs {
-  double download_total_bytes = 0;
-  double downloaded_bytes = 0;
-  double upload_total_bytes = 0;
-  double uploaded_bytes = 0;
-  double download_speed = 0;
-  double upload_speed = 0;
+  double download_total_bytes = 0.0;
+  double downloaded_bytes = 0.0;
+  double upload_total_bytes = 0.0;
+  double uploaded_bytes = 0.0;
+  double download_speed = 0.0;
+  double upload_speed = 0.0;
   void* userdata = NULL;
+
+  ProgressFunctionArgs() = default;
+  ~ProgressFunctionArgs() = default;
 };  // struct ProgressFunctionArgs
 
 struct Request {
@@ -114,7 +123,10 @@ struct Request {
   std::string cert_file;
 
   Request(Method method, Url url);
+  ~Request() = default;
+
   Response Execute();
+
   explicit operator bool() const {
     if (method < Method::kGet || method > Method::kDelete) return false;
     return static_cast<bool>(url);
@@ -132,12 +144,17 @@ struct Response {
   utils::Multimap headers;
   std::string body;
 
+  Response() = default;
+  ~Response() = default;
+
   size_t ResponseCallback(curlpp::Multi* requests, curlpp::Easy* request,
                           char* buffer, size_t size, size_t length);
+
   explicit operator bool() const {
     return error.empty() && status_code >= 200 && status_code <= 299;
   }
-  error::Error Error() {
+
+  error::Error Error() const {
     if (!error.empty()) return error::Error(error);
     if (status_code && (status_code < 200 || status_code > 299)) {
       return error::Error("failed with HTTP status code " +
