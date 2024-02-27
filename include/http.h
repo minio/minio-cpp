@@ -33,7 +33,7 @@ namespace http {
 enum class Method { kGet, kHead, kPost, kPut, kDelete };
 
 // MethodToString converts http Method enum to string.
-constexpr const char* MethodToString(Method& method) throw() {
+constexpr const char* MethodToString(const Method& method) throw() {
   switch (method) {
     case Method::kGet:
       return "GET";
@@ -66,94 +66,9 @@ struct Url {
 
   explicit operator bool() const { return !host.empty(); }
 
-  std::string String() {
-    if (host.empty()) return "";
-
-    std::string url = (https ? "https://" : "http://") + host;
-    if (port) url += ":" + std::to_string(port);
-    if (!path.empty()) {
-      if (path.front() != '/') url += '/';
-      url += path;
-    }
-    if (!query_string.empty()) url += "?" + query_string;
-
-    return url;
-  }
-
-  std::string HostHeaderValue() {
-    if (!port) return host;
-    return host + ":" + std::to_string(port);
-  }
-
-  static Url Parse(std::string value) {
-    std::string scheme;
-    size_t pos = value.find("://");
-    if (pos != std::string::npos) {
-      scheme = value.substr(0, pos);
-      value.erase(0, pos + 3);
-    }
-    scheme = utils::ToLower(scheme);
-
-    if (!scheme.empty() && scheme != "http" && scheme != "https") return Url{};
-
-    bool https = (scheme.empty() || scheme == "https");
-
-    std::string host;
-    std::string path;
-    std::string query_string;
-    pos = value.find("/");
-    if (pos != std::string::npos) {
-      host = value.substr(0, pos);
-      value.erase(0, pos + 1);
-
-      pos = value.find("?");
-      if (pos != std::string::npos) {
-        path = value.substr(0, pos);
-        value.erase(0, pos + 1);
-        query_string = value;
-      } else {
-        path = value;
-      }
-    } else {
-      pos = value.find("?");
-      if (pos != std::string::npos) {
-        host = value.substr(0, pos);
-        value.erase(0, pos + 1);
-        query_string = value;
-      } else {
-        host = value;
-      }
-    }
-
-    if (host.empty()) return Url{};
-
-    unsigned int port = 0;
-    struct sockaddr_in6 dst;
-    if (inet_pton(AF_INET6, host.c_str(), &(dst.sin6_addr)) <= 0) {
-      if (host.front() != '[' || host.back() != ']') {
-        std::stringstream ss(host);
-        std::string portstr;
-        while (std::getline(ss, portstr, ':')) {
-        }
-
-        if (!portstr.empty()) {
-          try {
-            port = std::stoi(portstr);
-            host = host.substr(0, host.rfind(":" + portstr));
-          } catch (std::invalid_argument) {
-            port = 0;
-          }
-        }
-      }
-    } else {
-      host = "[" + host + "]";
-    }
-
-    if (!https && port == 80) port = 0;
-    if (https && port == 443) port = 0;
-
-    return Url{https, host, port, path, query_string};
-  }
+  std::string String() const;
+  std::string HostHeaderValue() const;
+  static Url Parse(std::string value);
 };  // struct Url
 
 struct DataFunctionArgs;
