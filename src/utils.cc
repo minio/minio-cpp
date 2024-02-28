@@ -289,11 +289,6 @@ minio::utils::Time minio::utils::Time::Now() {
   return Time(static_cast<long>(usec / 1000000), static_cast<long>(usec % 1000000), false);
 }
 
-std::ostream& operator <<(std::ostream& s, const minio::utils::Time& v) {
-  // PWTODO: which variant should be selected?
-  return s << v.ToAmzDate();
-}
-
 std::string minio::utils::Time::ToSignerDate() const {
   std::unique_ptr<std::tm> utc(ToUTC());
   std::string result = FormatTime(utc.get(), "%Y%m%d");

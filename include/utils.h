@@ -189,7 +189,10 @@ class Time {
   }
   */
 
-  friend std::ostream& operator <<(std::ostream& s, const Time& v);
+  friend std::ostream& operator <<(std::ostream& s, const Time& v) {
+    // PWTODO: which variant should be selected?
+    return s << v.ToAmzDate();
+  }
 };  // class Time
 
 /**
