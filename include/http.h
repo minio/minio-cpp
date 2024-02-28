@@ -58,7 +58,7 @@ constexpr const char* MethodToString(const Method& method) throw() {
  * Url represents HTTP URL and it's components.
  */
 struct Url {
-  bool https; // PWTODO: assign default value
+  bool https = false;
   std::string host;
   unsigned int port = 0;
   std::string path;
