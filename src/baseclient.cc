@@ -223,8 +223,9 @@ minio::s3::GetRegionResponse minio::s3::BaseClient::GetRegion(
 
   if (!base_region.empty()) return base_region;
 
-  if (bucket_name.empty() || provider_ == nullptr)
+  if (bucket_name.empty() || provider_ == nullptr) {
     return std::string("us-east-1");
+  }
 
   std::string stored_region = region_map_[bucket_name];
   if (!stored_region.empty()) return stored_region;

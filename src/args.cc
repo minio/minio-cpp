@@ -117,7 +117,6 @@ minio::utils::Multimap minio::s3::ObjectConditionalReadArgs::CopyHeaders()
   }
 
   result_headers.Add("x-amz-copy-source", copy_source);
-
   if (ssec != nullptr) {
     result_headers.AddAll(ssec->CopyHeaders());
   }
