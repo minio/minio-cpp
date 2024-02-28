@@ -127,7 +127,7 @@ class Time {
   Time() = default;
 
   Time(std::time_t tv_sec, suseconds_t tv_usec, bool utc)
-    : tv_{ .tv_sec = std::move(tv_sec), .tv_usec = std::move(tv_usec) } // PWTODO: validate if .x is supported in C++11
+    : tv_{ .tv_sec = std::move(tv_sec), .tv_usec = std::move(tv_usec) }
     , utc_(utc) {}
 
   ~Time() = default;

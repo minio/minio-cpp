@@ -365,6 +365,17 @@ minio::utils::Time minio::utils::Time::FromISO8601UTC(const char* value) {
   return Time(time, tv_usec, true);
 }
 
+int minio::utils::Time::Compare(const Time& rhs) const {
+  // PWTODO: what to do with the utc field?  
+  if (tv_.tv_sec != rhs.tv_.tv_sec) {
+    return (tv_.tv_sec < rhs.tv_.tv_sec) ? -1 : 1;
+  }
+  if (tv_.tv_usec != rhs.tv_.tv_usec) {
+    return (tv_.tv_usec < rhs.tv_.tv_usec) ? -1 : 1;
+  }
+  return 0;
+}
+
 minio::utils::Multimap::Multimap(const Multimap& headers) {
   this->AddAll(headers); // PWTODO: why isn't a default copy constructor sufficient?
 }
