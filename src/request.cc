@@ -18,7 +18,7 @@
 #define EMPTY_SHA256 \
   "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
-bool minio::s3::awsRegexMatch(std::string_view value, std::regex regex) {
+bool minio::s3::awsRegexMatch(std::string_view value, const std::regex& regex) {
   if (!std::regex_search(value.data(), regex)) return false;
 
   std::stringstream str_stream(value.data());
@@ -30,7 +30,7 @@ bool minio::s3::awsRegexMatch(std::string_view value, std::regex regex) {
   return true;
 }
 
-minio::error::Error minio::s3::getAwsInfo(std::string host, bool https,
+minio::error::Error minio::s3::getAwsInfo(const std::string& host, bool https,
                                           std::string& region,
                                           std::string& aws_s3_prefix,
                                           std::string& aws_domain_suffix,
@@ -89,24 +89,41 @@ minio::error::Error minio::s3::getAwsInfo(std::string host, bool https,
   return error::SUCCESS;
 }
 
-minio::s3::BaseUrl::BaseUrl(std::string host, bool https, std::string region) {
-  http::Url url = http::Url::Parse(host);
+std::string minio::s3::extractRegion(const std::string& host) {
+  std::stringstream str_stream(host);
+  std::string token;
+  std::vector<std::string> tokens;
+  while (std::getline(str_stream, token, '.')) tokens.push_back(token);
+
+  token = tokens[1];
+
+  // If token is "dualstack", then region might be in next token.
+  if (token == "dualstack") token = tokens[2];
+
+  // If token is equal to "amazonaws", region is not passed in the host.
+  if (token == "amazonaws") return "";
+
+  // Return token as region.
+  return token;
+}
+
+minio::s3::BaseUrl::BaseUrl(std::string host, bool https, std::string region)
+  : https(https)
+  , region(std::move(region)) {
+  const http::Url url = http::Url::Parse(host);
   if (!url.path.empty() || !url.query_string.empty()) {
     this->err_ = error::Error(
         "host value must contain only hostname and optional port number");
     return;
   }
 
-  this->https = https;
   this->host = url.host;
   this->port = url.port;
 
-  if (!region.empty() && !awsRegexMatch(region, REGION_REGEX)) {
-    this->err_ = error::Error("invalid region " + region);
+  if (!this->region.empty() && !awsRegexMatch(this->region, REGION_REGEX)) {
+    this->err_ = error::Error("invalid region " + this->region);
     return;
   }
-
-  this->region = region;
 
   if (error::Error err =
           getAwsInfo(this->host, this->https, this->region, this->aws_s3_prefix,
@@ -119,9 +136,9 @@ minio::s3::BaseUrl::BaseUrl(std::string host, bool https, std::string region) {
 }
 
 minio::error::Error minio::s3::BaseUrl::BuildAwsUrl(http::Url& url,
-                                                    std::string bucket_name,
+                                                    const std::string& bucket_name,
                                                     bool enforce_path_style,
-                                                    std::string region) {
+                                                    const std::string& region) {
   std::string host = this->aws_s3_prefix + this->aws_domain_suffix;
   if (host == "s3-external-1.amazonaws.com" ||
       host == "s3-us-gov-west-1.amazonaws.com" ||
@@ -152,7 +169,7 @@ minio::error::Error minio::s3::BaseUrl::BuildAwsUrl(http::Url& url,
 }
 
 void minio::s3::BaseUrl::BuildListBucketsUrl(http::Url& url,
-                                             std::string region) {
+                                             const std::string& region) {
   if (this->aws_domain_suffix.empty()) return;
 
   std::string host = this->aws_s3_prefix + this->aws_domain_suffix;
@@ -176,10 +193,10 @@ void minio::s3::BaseUrl::BuildListBucketsUrl(http::Url& url,
 
 minio::error::Error minio::s3::BaseUrl::BuildUrl(http::Url& url,
                                                  http::Method method,
-                                                 std::string region,
-                                                 utils::Multimap query_params,
-                                                 std::string bucket_name,
-                                                 std::string object_name) {
+                                                 const std::string& region,
+                                                 const utils::Multimap& query_params,
+                                                 const std::string& bucket_name,
+                                                 const std::string& object_name) {
   if (err_) return err_;
 
   if (bucket_name.empty() && !object_name.empty()) {
@@ -234,12 +251,11 @@ minio::error::Error minio::s3::BaseUrl::BuildUrl(http::Url& url,
 minio::s3::Request::Request(http::Method method, std::string region,
                             BaseUrl& baseurl, utils::Multimap extra_headers,
                             utils::Multimap extra_query_params)
-    : base_url(baseurl) {
-  this->method = method;
-  this->region = region;
-  this->headers = extra_headers;
-  this->query_params = extra_query_params;
-}
+  : base_url(baseurl)
+  , method(method)
+  , region(std::move(region))
+  , headers(std::move(extra_headers))
+  , query_params(std::move(extra_query_params)) {}
 
 void minio::s3::Request::BuildHeaders(http::Url& url,
                                       creds::Provider* provider) {
@@ -284,7 +300,7 @@ void minio::s3::Request::BuildHeaders(http::Url& url,
 }
 
 minio::http::Request minio::s3::Request::ToHttpRequest(
-    creds::Provider* provider) {
+    creds::Provider* const provider) {
   http::Url url;
   if (error::Error err = base_url.BuildUrl(url, method, region, query_params,
                                            bucket_name, object_name)) {

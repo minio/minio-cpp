@@ -48,29 +48,13 @@ const std::regex AWS_S3_PREFIX_REGEX(AWS_S3_PREFIX,
 const std::regex REGION_REGEX("^((?!_)(?!-)[a-z_\\d-]{1,63})$",
                               std::regex_constants::icase);
 
-bool awsRegexMatch(std::string_view value, std::regex regex);
+bool awsRegexMatch(std::string_view value, const std::regex& regex);
 
-error::Error getAwsInfo(std::string host, bool https, std::string& region,
+error::Error getAwsInfo(const std::string& host, bool https, std::string& region,
                         std::string& aws_s3_prefix,
                         std::string& aws_domain_suffix, bool& dualstack);
 
-static std::string extractRegion(std::string& host) {
-  std::stringstream str_stream(host);
-  std::string token;
-  std::vector<std::string> tokens;
-  while (std::getline(str_stream, token, '.')) tokens.push_back(token);
-
-  token = tokens[1];
-
-  // If token is "dualstack", then region might be in next token.
-  if (token == "dualstack") token = tokens[2];
-
-  // If token is equal to "amazonaws", region is not passed in the host.
-  if (token == "amazonaws") return "";
-
-  // Return token as region.
-  return token;
-}
+std::string extractRegion(const std::string& host);
 
 struct BaseUrl {
   bool https = true;
@@ -82,14 +66,18 @@ struct BaseUrl {
   bool dualstack = false;
   bool virtual_style = false;
 
-  BaseUrl() {}
-  BaseUrl(std::string host, bool https = true, std::string region = "");
-  error::Error BuildUrl(http::Url& url, http::Method method, std::string region,
-                        utils::Multimap query_params,
-                        std::string bucket_name = "",
-                        std::string object_name = "");
+  BaseUrl() = default;
+  BaseUrl(std::string host, bool https = true, std::string region = ""); // PWTODO: make it explicit
+  ~BaseUrl() = default;
+
+  error::Error BuildUrl(http::Url& url, http::Method method, const std::string& region,
+                        const utils::Multimap& query_params,
+                        const std::string& bucket_name,
+                        const std::string& object_name);
+
   explicit operator bool() const { return !err_ && !host.empty(); }
-  error::Error Error() {
+
+  error::Error Error() const {
     if (host.empty() && !err_) return error::Error("empty host");
     return err_;
   }
@@ -97,9 +85,9 @@ struct BaseUrl {
  private:
   error::Error err_;
 
-  error::Error BuildAwsUrl(http::Url& url, std::string bucket_name,
-                           bool enforce_path_style, std::string region);
-  void BuildListBucketsUrl(http::Url& url, std::string region);
+  error::Error BuildAwsUrl(http::Url& url, const std::string& bucket_name,
+                           bool enforce_path_style, const std::string& region);
+  void BuildListBucketsUrl(http::Url& url, const std::string& region);
 };  // struct Url
 
 struct Request {
@@ -132,7 +120,10 @@ struct Request {
 
   Request(http::Method method, std::string region, BaseUrl& baseurl,
           utils::Multimap extra_headers, utils::Multimap extra_query_params);
-  http::Request ToHttpRequest(creds::Provider* provider = NULL);
+
+  ~Request() = default;
+
+  http::Request ToHttpRequest(creds::Provider* const provider = NULL);
 
  private:
   void BuildHeaders(http::Url& url, creds::Provider* provider);
