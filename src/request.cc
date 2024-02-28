@@ -251,9 +251,9 @@ minio::error::Error minio::s3::BaseUrl::BuildUrl(http::Url& url,
 minio::s3::Request::Request(http::Method method, std::string region,
                             BaseUrl& baseurl, utils::Multimap extra_headers,
                             utils::Multimap extra_query_params)
-  : base_url(baseurl)
-  , method(method)
+  : method(method)
   , region(std::move(region))
+  , base_url(baseurl)
   , headers(std::move(extra_headers))
   , query_params(std::move(extra_query_params)) {}
 

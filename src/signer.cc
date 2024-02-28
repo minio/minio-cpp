@@ -74,7 +74,7 @@ std::string minio::signer::GetSignature(std::string_view signing_key,
   std::string hash = HmacHash(signing_key, string_to_sign);
   std::string signature;
   char buf[3];
-  for (int i = 0; i < hash.size(); ++i) {
+  for (std::size_t i = 0, n_size = hash.size(); i < n_size; ++i) {
     snprintf(buf, 3, "%02x", (unsigned char)hash[i]);
     signature += buf;
   }

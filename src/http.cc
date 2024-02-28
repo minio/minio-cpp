@@ -94,7 +94,7 @@ minio::http::Url minio::http::Url::Parse(std::string value) {
         try {
           port = std::stoi(portstr);
           host = host.substr(0, host.rfind(":" + portstr));
-        } catch (std::invalid_argument) {
+        } catch (const std::invalid_argument&) {
           port = 0;
         }
       }

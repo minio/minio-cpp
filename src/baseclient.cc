@@ -819,7 +819,6 @@ minio::s3::BaseClient::GetObjectLockConfig(GetObjectLockConfigArgs args) {
   if (!rule) return config;
 
   auto text = rule.node().select_node("DefaultRetention/Mode/text()");
-  RetentionMode* mode = new RetentionMode;
   config.retention_mode = StringToRetentionMode(text.node().value());
 
   if (rule.node().select_node("DefaultRetention/Days")) {

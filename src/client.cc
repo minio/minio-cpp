@@ -113,7 +113,7 @@ minio::s3::Client::Client(BaseUrl& base_url, creds::Provider* provider)
 minio::s3::StatObjectResponse minio::s3::Client::CalculatePartCount(
     size_t& part_count, std::list<ComposeSource> sources) {
   size_t object_size = 0;
-  int i = 0;
+  size_t i = 0;
   for (auto& source : sources) {
     if (source.ssec != nullptr && !base_url_.https) {
       std::string msg = "source " + source.bucket + "/" + source.object;
@@ -634,6 +634,7 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
     etag = resp.etag;
     size = resp.size;
   }
+  (void) size; // PWTODO: should this be removed?
 
   std::string temp_filename =
       args.filename + "." + curlpp::escape(etag) + ".part.minio";

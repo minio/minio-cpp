@@ -56,7 +56,7 @@ struct Response {
 
   explicit operator bool() const {
     return !err_ && code.empty() && message.empty() &&
-           (status_code == 0 || status_code >= 200 && status_code <= 299);
+           (status_code == 0 || (status_code >= 200 && status_code <= 299));
   }
 
   error::Error Error() {

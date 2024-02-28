@@ -244,7 +244,7 @@ struct SelectRequest {
     , csv_output(csv_output) {}
 
   SelectRequest(std::string expression, CsvInputSerialization* csv_input,
-                JsonOutputSerialization* json_output) 
+                JsonOutputSerialization* json_output)
     : expr(std::move(expression))
     , csv_input(csv_input)
     , json_output(json_output) {}
@@ -252,14 +252,14 @@ struct SelectRequest {
   SelectRequest(std::string expression, JsonInputSerialization* json_input,
                 CsvOutputSerialization* csv_output)
     : expr(std::move(expression))
-    , csv_input(csv_input)
+    , json_input(json_input)
     , csv_output(csv_output) {}
 
   SelectRequest(std::string expression, JsonInputSerialization* json_input,
                 JsonOutputSerialization* json_output)
     : expr(std::move(expression))
-    , csv_input(csv_input)
-    , csv_output(csv_output) {}
+    , json_input(json_input)
+    , json_output(json_output) {}
 
   SelectRequest(std::string expression,
                 ParquetInputSerialization* parquet_input,
