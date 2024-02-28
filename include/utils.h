@@ -182,12 +182,11 @@ class Time {
     return !operator <(rhs);
   }
 
-  /* PWTODO: add the spaceship operator
-
+#if __cplusplus >= 202002L
   auto operator <=>(const Time& rhs) const {
     return Compare(rhs);
   }
-  */
+#endif
 
   friend std::ostream& operator <<(std::ostream& s, const Time& v) {
     // PWTODO: which variant should be selected?
