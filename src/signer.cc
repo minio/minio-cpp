@@ -90,7 +90,7 @@ std::string minio::signer::GetAuthorization(const std::string& access_key,
 }
 
 minio::utils::Multimap minio::signer::SignV4(
-    const std::string& service_name, const http::Method& method, const std::string& uri,
+    const std::string& service_name, http::Method method, const std::string& uri,
     const std::string& region, utils::Multimap& headers,
     utils::Multimap query_params, const std::string& access_key,
     const std::string& secret_key, const std::string& content_sha256, const utils::Time& date) {
@@ -123,7 +123,7 @@ minio::utils::Multimap minio::signer::SignV4(
 }
 
 minio::utils::Multimap minio::signer::SignV4S3(
-    const http::Method& method, const std::string& uri, const std::string& region,
+    http::Method method, const std::string& uri, const std::string& region,
     utils::Multimap& headers, utils::Multimap query_params,
     const std::string& access_key, const std::string& secret_key,
     const std::string& content_sha256, const utils::Time& date) {
@@ -133,7 +133,7 @@ minio::utils::Multimap minio::signer::SignV4S3(
 }
 
 minio::utils::Multimap minio::signer::SignV4STS(
-    const http::Method& method, const std::string& uri, const std::string& region,
+    http::Method method, const std::string& uri, const std::string& region,
     utils::Multimap& headers, utils::Multimap query_params,
     const std::string& access_key, const std::string& secret_key,
     const std::string& content_sha256, const utils::Time& date) {
@@ -143,7 +143,7 @@ minio::utils::Multimap minio::signer::SignV4STS(
 }
 
 minio::utils::Multimap minio::signer::PresignV4(
-    const http::Method& method, const std::string& host, const std::string& uri,
+    http::Method method, const std::string& host, const std::string& uri,
     const std::string& region, utils::Multimap query_params, const std::string& access_key,
     const std::string& secret_key, const utils::Time& date, unsigned int expires) {
   std::string service_name = "s3";
