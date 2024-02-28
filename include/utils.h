@@ -38,6 +38,7 @@
 #include <regex>
 #include <set>
 #include <sstream>
+#include <ostream>
 
 #include "error.h"
 
@@ -147,14 +148,7 @@ class Time {
 
   static Time FromISO8601UTC(const char* value);
 
-  static Time Now() {
-    Time t;
-    auto usec = std::chrono::system_clock::now().time_since_epoch() /
-                std::chrono::microseconds(1);
-    t.tv_.tv_sec = static_cast<long>(usec / 1000000);
-    t.tv_.tv_usec = static_cast<long>(usec % 1000000);
-    return t;
-  }
+  static Time Now();
 
   explicit operator bool() const { return tv_.tv_sec != 0 && tv_.tv_usec != 0; }
 
@@ -194,6 +188,8 @@ class Time {
     return Compare(rhs);
   }
   */
+
+  friend std::ostream& operator <<(std::ostream& s, const Time& v);
 };  // class Time
 
 /**

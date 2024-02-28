@@ -283,6 +283,17 @@ std::tm* minio::utils::Time::ToUTC() const {
   return t;
 }
 
+minio::utils::Time minio::utils::Time::Now() {
+  auto usec = std::chrono::system_clock::now().time_since_epoch() /
+              std::chrono::microseconds(1);
+  return Time(static_cast<long>(usec / 1000000), static_cast<long>(usec % 1000000), false);
+}
+
+std::ostream& operator <<(std::ostream& s, const minio::utils::Time& v) {
+  // PWTODO: which variant should be selected?
+  return s << v.ToAmzDate();
+}
+
 std::string minio::utils::Time::ToSignerDate() const {
   std::unique_ptr<std::tm> utc(ToUTC());
   std::string result = FormatTime(utc.get(), "%Y%m%d");
