@@ -51,7 +51,7 @@ constexpr const char* RetentionModeToString(RetentionMode retention) throw() {
       std::terminate();
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 enum class LegalHold { kOn, kOff };
@@ -81,7 +81,7 @@ constexpr const char* LegalHoldToString(LegalHold legal_hold) throw() {
       std::terminate();
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 enum class Directive { kCopy, kReplace };
@@ -102,7 +102,7 @@ constexpr const char* DirectiveToString(Directive directive) throw() {
       std::terminate();
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 enum class CompressionType { kNone, kGZip, kBZip2 };
@@ -122,7 +122,7 @@ constexpr const char* CompressionTypeToString(CompressionType ctype) throw() {
       std::terminate();
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 enum class FileHeaderInfo { kUse, kIgnore, kNone };
@@ -142,7 +142,7 @@ constexpr const char* FileHeaderInfoToString(FileHeaderInfo info) throw() {
       std::terminate();
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 enum class JsonType { kDocument, kLines };
@@ -160,7 +160,7 @@ constexpr const char* JsonTypeToString(JsonType jtype) throw() {
       std::terminate();
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 enum class QuoteFields { kAlways, kAsNeeded };
@@ -178,15 +178,15 @@ constexpr const char* QuoteFieldsToString(QuoteFields qtype) throw() {
       std::terminate();
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 struct CsvInputSerialization {
-  CompressionType* compression_type = NULL;
+  CompressionType* compression_type = nullptr;
   bool allow_quoted_record_delimiter = false;
   char comments = 0;
   char field_delimiter = 0;
-  FileHeaderInfo* file_header_info = NULL;
+  FileHeaderInfo* file_header_info = nullptr;
   char quote_character = 0;
   char quote_escape_character = 0;
   char record_delimiter = 0;
@@ -196,8 +196,8 @@ struct CsvInputSerialization {
 };  // struct CsvInputSerialization
 
 struct JsonInputSerialization {
-  CompressionType* compression_type = NULL;
-  JsonType* json_type = NULL;
+  CompressionType* compression_type = nullptr;
+  JsonType* json_type = nullptr;
 
   JsonInputSerialization() = default;
   ~JsonInputSerialization() = default;
@@ -212,7 +212,7 @@ struct CsvOutputSerialization {
   char field_delimiter = 0;
   char quote_character = 0;
   char quote_escape_character = 0;
-  QuoteFields* quote_fields = NULL;
+  QuoteFields* quote_fields = nullptr;
   char record_delimiter = 0;
 
   CsvOutputSerialization() = default;
@@ -228,14 +228,14 @@ struct JsonOutputSerialization {
 
 struct SelectRequest {
   std::string expr;
-  CsvInputSerialization* csv_input = NULL;
-  JsonInputSerialization* json_input = NULL;
-  ParquetInputSerialization* parquet_input = NULL;
-  CsvOutputSerialization* csv_output = NULL;
-  JsonOutputSerialization* json_output = NULL;
+  CsvInputSerialization* csv_input = nullptr;
+  JsonInputSerialization* json_input = nullptr;
+  ParquetInputSerialization* parquet_input = nullptr;
+  CsvOutputSerialization* csv_output = nullptr;
+  JsonOutputSerialization* json_output = nullptr;
   bool request_progress = false;
-  size_t* scan_start_range = NULL;
-  size_t* scan_end_range = NULL;
+  size_t* scan_start_range = nullptr;
+  size_t* scan_end_range = nullptr;
 
   SelectRequest(std::string expression, CsvInputSerialization* csv_input,
                 CsvOutputSerialization* csv_output)

@@ -56,12 +56,12 @@ static error::Error checkLoopbackHost(std::string host) {
   hints.ai_socktype = SOCK_STREAM;
 
   int status;
-  struct addrinfo* res = NULL;
-  if ((status = getaddrinfo(host.c_str(), NULL, &hints, &res)) != 0) {
+  struct addrinfo* res = nullptr;
+  if ((status = getaddrinfo(host.c_str(), nullptr, &hints, &res)) != 0) {
     return error::Error(std::string("getaddrinfo: ") + gai_strerror(status));
   }
 
-  for (struct addrinfo* ai = res; ai != NULL; ai = ai->ai_next) {
+  for (struct addrinfo* ai = res; ai != nullptr; ai = ai->ai_next) {
     std::string ip(inet_ntoa(((struct sockaddr_in*)ai->ai_addr)->sin_addr));
     if (!utils::StartsWith(ip, "127.")) {
       return error::Error(host + " is not loopback only host");
@@ -94,7 +94,7 @@ class Provider {
 class ChainedProvider : public Provider {
  private:
   std::list<Provider*> providers_;
-  Provider* provider_ = NULL;
+  Provider* provider_ = nullptr;
 
  public:
   ChainedProvider(std::list<Provider*> providers) {
@@ -106,7 +106,7 @@ class ChainedProvider : public Provider {
 
     if (creds_) return creds_;
 
-    if (provider_ != NULL) {
+    if (provider_ != nullptr) {
       creds_ = provider_->Fetch();
       if (creds_) return creds_;
     }
@@ -308,7 +308,7 @@ class AssumeRoleProvider : public Provider {
 
 class WebIdentityClientGrantsProvider : public Provider {
  private:
-  JwtFunction jwtfunc_ = NULL;
+  JwtFunction jwtfunc_ = nullptr;
   http::Url sts_endpoint_;
   unsigned int duration_seconds_ = 0;
   std::string policy_;

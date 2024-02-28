@@ -224,7 +224,7 @@ minio::s3::GetRegionResponse minio::s3::BaseClient::GetRegion(
 
   if (!base_region.empty()) return base_region;
 
-  if (bucket_name.empty() || provider_ == NULL) return std::string("us-east-1");
+  if (bucket_name.empty() || provider_ == nullptr) return std::string("us-east-1");
 
   std::string stored_region = region_map_[bucket_name];
   if (!stored_region.empty()) return stored_region;
@@ -762,7 +762,7 @@ minio::s3::GetObjectResponse minio::s3::BaseClient::GetObject(
     GetObjectArgs args) {
   if (error::Error err = args.Validate()) return err;
 
-  if (args.ssec != NULL && !base_url_.https) {
+  if (args.ssec != nullptr && !base_url_.https) {
     return error::Error(
         "SSE-C operation must be performed over a secure connection");
   }
@@ -785,7 +785,7 @@ minio::s3::GetObjectResponse minio::s3::BaseClient::GetObject(
   req.userdata = args.userdata;
   req.progressfunc = args.progressfunc;
   req.progress_userdata = args.progress_userdata;
-  if (args.ssec != NULL) req.headers.AddAll(args.ssec->Headers());
+  if (args.ssec != nullptr) req.headers.AddAll(args.ssec->Headers());
 
   return Execute(req);
 }
@@ -926,7 +926,7 @@ minio::s3::BaseClient::GetPresignedObjectUrl(GetPresignedObjectUrlArgs args) {
     std::terminate();
   }
 
-  if (provider_ != NULL) {
+  if (provider_ != nullptr) {
     creds::Credentials creds = provider_->Fetch();
     if (!creds.session_token.empty()) {
       query_params.Add("X-Amz-Security-Token", creds.session_token);
@@ -951,7 +951,7 @@ minio::s3::BaseClient::GetPresignedPostFormData(PostPolicy policy) {
     return error::Error("valid policy must be provided");
   }
 
-  if (provider_ == NULL) {
+  if (provider_ == nullptr) {
     return error::Error(
         "Anonymous access does not require presigned post form-data");
   }
@@ -1321,7 +1321,7 @@ minio::s3::SelectObjectContentResponse
 minio::s3::BaseClient::SelectObjectContent(SelectObjectContentArgs args) {
   if (error::Error err = args.Validate()) return err;
 
-  if (args.ssec != NULL && !base_url_.https) {
+  if (args.ssec != nullptr && !base_url_.https) {
     return error::Error(
         "SSE-C operation must be performed over a secure connection");
   }
@@ -1667,7 +1667,7 @@ minio::s3::StatObjectResponse minio::s3::BaseClient::StatObject(
     StatObjectArgs args) {
   if (error::Error err = args.Validate()) return err;
 
-  if (args.ssec != NULL && !base_url_.https) {
+  if (args.ssec != nullptr && !base_url_.https) {
     return error::Error(
         "SSE-C operation must be performed over a secure connection");
   }

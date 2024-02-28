@@ -173,12 +173,12 @@ std::string minio::utils::EncodePath(const std::string& path) {
 
 std::string minio::utils::Sha256Hash(std::string_view str) {
   EVP_MD_CTX* ctx = EVP_MD_CTX_create();
-  if (ctx == NULL) {
+  if (ctx == nullptr) {
     std::cerr << "failed to create EVP_MD_CTX" << std::endl;
     std::terminate();
   }
 
-  if (1 != EVP_DigestInit_ex(ctx, EVP_sha256(), NULL)) {
+  if (1 != EVP_DigestInit_ex(ctx, EVP_sha256(), nullptr)) {
     std::cerr << "failed to init SHA-256 digest" << std::endl;
     std::terminate();
   }
@@ -190,7 +190,7 @@ std::string minio::utils::Sha256Hash(std::string_view str) {
 
   unsigned int length = EVP_MD_size(EVP_sha256());
   unsigned char* digest = (unsigned char*)OPENSSL_malloc(length);
-  if (digest == NULL) {
+  if (digest == nullptr) {
     std::cerr << "failed to allocate memory for hash value" << std::endl;
     std::terminate();
   }
@@ -234,12 +234,12 @@ std::string minio::utils::Base64Encode(std::string_view str) {
 
 std::string minio::utils::Md5sumHash(std::string_view str) {
   EVP_MD_CTX* ctx = EVP_MD_CTX_create();
-  if (ctx == NULL) {
+  if (ctx == nullptr) {
     std::cerr << "failed to create EVP_MD_CTX" << std::endl;
     std::terminate();
   }
 
-  if (1 != EVP_DigestInit_ex(ctx, EVP_md5(), NULL)) {
+  if (1 != EVP_DigestInit_ex(ctx, EVP_md5(), nullptr)) {
     std::cerr << "failed to init MD5 digest" << std::endl;
     std::terminate();
   }
@@ -251,7 +251,7 @@ std::string minio::utils::Md5sumHash(std::string_view str) {
 
   unsigned int length = EVP_MD_size(EVP_md5());
   unsigned char* digest = (unsigned char*)OPENSSL_malloc(length);
-  if (digest == NULL) {
+  if (digest == nullptr) {
     std::cerr << "failed to allocate memory for hash value" << std::endl;
     std::terminate();
   }

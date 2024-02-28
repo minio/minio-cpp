@@ -115,7 +115,7 @@ minio::s3::StatObjectResponse minio::s3::Client::CalculatePartCount(
   size_t object_size = 0;
   int i = 0;
   for (auto& source : sources) {
-    if (source.ssec != NULL && !base_url_.https) {
+    if (source.ssec != nullptr && !base_url_.https) {
       std::string msg = "source " + source.bucket + "/" + source.object;
       if (!source.version_id.empty()) msg += "?versionId=" + source.version_id;
       msg += ": SSE-C operation must be performed over a secure connection";
@@ -133,9 +133,9 @@ minio::s3::StatObjectResponse minio::s3::Client::CalculatePartCount(
     size = resp.size;
     if (error::Error err = source.BuildHeaders(size, etag)) return err;
 
-    if (source.length != NULL) {
+    if (source.length != nullptr) {
       size = *source.length;
-    } else if (source.offset != NULL) {
+    } else if (source.offset != nullptr) {
       size -= *source.offset;
     }
 
@@ -200,7 +200,7 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
   }
 
   ComposeSource& source = args.sources.front();
-  if (part_count == 1 && source.offset == NULL && source.length == NULL) {
+  if (part_count == 1 && source.offset == nullptr && source.length == nullptr) {
     CopyObjectArgs coargs;
     coargs.extra_headers = args.extra_headers;
     coargs.extra_query_params = args.extra_query_params;
@@ -231,7 +231,7 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
 
   unsigned int part_number = 0;
   utils::Multimap ssecheaders;
-  if (args.sse != NULL) {
+  if (args.sse != nullptr) {
     if (SseCustomerKey* ssec = dynamic_cast<SseCustomerKey*>(args.sse)) {
       ssecheaders = ssec->Headers();
     }
@@ -240,14 +240,14 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
   std::list<Part> parts;
   for (auto& source : args.sources) {
     size_t size = source.ObjectSize();
-    if (source.length != NULL) {
+    if (source.length != nullptr) {
       size = *source.length;
-    } else if (source.offset != NULL) {
+    } else if (source.offset != nullptr) {
       size -= *source.offset;
     }
 
     size_t offset = 0;
-    if (source.offset != NULL) offset = *source.offset;
+    if (source.offset != nullptr) offset = *source.offset;
 
     utils::Multimap headers;
     headers.AddAll(source.Headers());
@@ -255,11 +255,11 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
 
     if (size <= utils::kMaxPartSize) {
       part_number++;
-      if (source.length != NULL) {
+      if (source.length != nullptr) {
         headers.Add("x-amz-copy-source-range",
                     "bytes=" + std::to_string(offset) + "-" +
                         std::to_string(offset + *source.length - 1));
-      } else if (source.offset != NULL) {
+      } else if (source.offset != nullptr) {
         headers.Add("x-amz-copy-source-range",
                     "bytes=" + std::to_string(offset) + "-" +
                         std::to_string(offset + size - 1));
@@ -428,7 +428,7 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
     up_args.upload_id = upload_id;
     up_args.part_number = part_number;
     up_args.data = data;
-    if (args.progressfunc != NULL) {
+    if (args.progressfunc != nullptr) {
       up_args.progressfunc =
           [&object_size = object_size, &uploaded_bytes = uploaded_bytes,
            &upload_speed = upload_speed, &progressfunc = args.progressfunc,
@@ -450,14 +450,14 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
         progressfunc(actual_args);
       };
     }
-    if (args.sse != NULL) {
+    if (args.sse != nullptr) {
       if (SseCustomerKey* ssec = dynamic_cast<SseCustomerKey*>(args.sse)) {
         up_args.headers = ssec->Headers();
       }
     }
 
     if (UploadPartResponse resp = UploadPart(up_args)) {
-      if (args.progressfunc != NULL) {
+      if (args.progressfunc != nullptr) {
         uploaded_bytes += data.length();
         http::ProgressFunctionArgs actual_args;
         actual_args.upload_total_bytes = object_size;
@@ -478,7 +478,7 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
   cmu_args.upload_id = upload_id;
   cmu_args.parts = parts;
   CompleteMultipartUploadResponse resp = CompleteMultipartUpload(cmu_args);
-  if (resp && args.progressfunc != NULL) {
+  if (resp && args.progressfunc != nullptr) {
     http::ProgressFunctionArgs actual_args;
     actual_args.upload_speed = upload_speed;
     actual_args.userdata = args.progress_userdata;
@@ -491,7 +491,7 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
     ComposeObjectArgs args) {
   if (error::Error err = args.Validate()) return err;
 
-  if (args.sse != NULL && args.sse->TlsRequired() && !base_url_.https) {
+  if (args.sse != nullptr && args.sse->TlsRequired() && !base_url_.https) {
     return error::Error(
         "SSE operation must be performed over a secure connection");
   }
@@ -514,12 +514,12 @@ minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
     CopyObjectArgs args) {
   if (error::Error err = args.Validate()) return err;
 
-  if (args.sse != NULL && args.sse->TlsRequired() && !base_url_.https) {
+  if (args.sse != nullptr && args.sse->TlsRequired() && !base_url_.https) {
     return error::Error(
         "SSE operation must be performed over a secure connection");
   }
 
-  if (args.source.ssec != NULL && !base_url_.https) {
+  if (args.source.ssec != nullptr && !base_url_.https) {
     return error::Error(
         "SSE-C operation must be performed over a secure connection");
   }
@@ -533,16 +533,16 @@ minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
     size = resp.size;
   }
 
-  if (args.source.offset != NULL || args.source.length != NULL ||
+  if (args.source.offset != nullptr || args.source.length != nullptr ||
       size > utils::kMaxPartSize) {
-    if (args.metadata_directive != NULL &&
+    if (args.metadata_directive != nullptr &&
         *args.metadata_directive == Directive::kCopy) {
       return error::Error(
           "COPY metadata directive is not applicable to source object size "
           "greater than 5 GiB");
     }
 
-    if (args.tagging_directive != NULL &&
+    if (args.tagging_directive != nullptr &&
         *args.tagging_directive == Directive::kCopy) {
       return error::Error(
           "COPY tagging directive is not applicable to source object size "
@@ -578,11 +578,11 @@ minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
   utils::Multimap headers;
   headers.AddAll(args.extra_headers);
   headers.AddAll(args.Headers());
-  if (args.metadata_directive != NULL) {
+  if (args.metadata_directive != nullptr) {
     headers.Add("x-amz-metadata-directive",
                 DirectiveToString(*args.metadata_directive));
   }
-  if (args.tagging_directive != NULL) {
+  if (args.tagging_directive != nullptr) {
     headers.Add("x-amz-tagging-directive",
                 DirectiveToString(*args.tagging_directive));
   }
@@ -615,7 +615,7 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
     DownloadObjectArgs args) {
   if (error::Error err = args.Validate()) return err;
 
-  if (args.ssec != NULL && !base_url_.https) {
+  if (args.ssec != nullptr && !base_url_.https) {
     return error::Error(
         "SSE-C operation must be performed over a secure connection");
   }
@@ -678,7 +678,7 @@ minio::s3::ListObjectsResult minio::s3::Client::ListObjects(
 minio::s3::PutObjectResponse minio::s3::Client::PutObject(PutObjectArgs args) {
   if (error::Error err = args.Validate()) return err;
 
-  if (args.sse != NULL && args.sse->TlsRequired() && !base_url_.https) {
+  if (args.sse != nullptr && args.sse->TlsRequired() && !base_url_.https) {
     return error::Error(
         "SSE operation must be performed over a secure connection");
   }

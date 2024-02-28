@@ -248,7 +248,7 @@ size_t minio::http::Response::ResponseCallback(curlpp::Multi *requests,
     if (!headers_read_ || response_.empty()) return realsize;
 
     // If data function is set and the request is successful, send data.
-    if (datafunc != NULL && status_code >= 200 && status_code <= 299) {
+    if (datafunc != nullptr && status_code >= 200 && status_code <= 299) {
       DataFunctionArgs args{request, this, response_, userdata};
       if (!datafunc(args)) requests->remove(request);
     } else {
@@ -259,7 +259,7 @@ size_t minio::http::Response::ResponseCallback(curlpp::Multi *requests,
   }
 
   // If data function is set and the request is successful, send data.
-  if (datafunc != NULL && status_code >= 200 && status_code <= 299) {
+  if (datafunc != nullptr && status_code >= 200 && status_code <= 299) {
     DataFunctionArgs args{request, this, std::string(buffer, length), userdata};
     if (!datafunc(args)) requests->remove(request);
   } else {
@@ -356,7 +356,7 @@ minio::http::Response minio::http::Request::execute() {
     progressfunc(args);
     return CURL_PROGRESSFUNC_CONTINUE;
   };
-  if (progressfunc != NULL) {
+  if (progressfunc != nullptr) {
     request.setOpt(new curlpp::options::NoProgress(false));
     request.setOpt(new curlpp::options::ProgressFunction(progress));
   }
@@ -379,7 +379,7 @@ minio::http::Response minio::http::Request::execute() {
 
     requests.fdset(&fdread, &fdwrite, &fdexcep, &maxfd);
 
-    if (select(maxfd + 1, &fdread, &fdwrite, &fdexcep, NULL) < 0) {
+    if (select(maxfd + 1, &fdread, &fdwrite, &fdexcep, nullptr) < 0) {
       std::cerr << "select() failed; this should not happen" << std::endl;
       std::terminate();
     }
@@ -387,7 +387,7 @@ minio::http::Response minio::http::Request::execute() {
     }
   }
 
-  if (progressfunc != NULL) {
+  if (progressfunc != nullptr) {
     ProgressFunctionArgs args;
     args.userdata = progress_userdata;
     curlpp::infos::SpeedUpload::get(request, args.upload_speed);

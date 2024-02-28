@@ -105,11 +105,11 @@ struct Request {
 
   std::string_view body = "";
 
-  http::DataFunction datafunc = NULL;
-  void* userdata = NULL;
+  http::DataFunction datafunc = nullptr;
+  void* userdata = nullptr;
 
-  http::ProgressFunction progressfunc = NULL;
-  void* progress_userdata = NULL;
+  http::ProgressFunction progressfunc = nullptr;
+  void* progress_userdata = nullptr;
 
   std::string sha256;
   utils::Time date;
@@ -123,7 +123,7 @@ struct Request {
 
   ~Request() = default;
 
-  http::Request ToHttpRequest(creds::Provider* const provider = NULL);
+  http::Request ToHttpRequest(creds::Provider* const provider = nullptr);
 
  private:
   void BuildHeaders(http::Url& url, creds::Provider* provider);

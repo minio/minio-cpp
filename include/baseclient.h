@@ -35,7 +35,7 @@ utils::Multimap GetCommonListObjectsQueryParams(const std::string& delimiter,
 class BaseClient {
  protected:
   BaseUrl base_url_;
-  creds::Provider* const provider_ = NULL;
+  creds::Provider* const provider_ = nullptr;
   std::map<std::string, std::string> region_map_;
   bool debug_ = false;
   bool ignore_cert_check_ = false;
@@ -43,7 +43,7 @@ class BaseClient {
   std::string user_agent_ = DEFAULT_USER_AGENT;
 
  public:
-  explicit BaseClient(BaseUrl base_url, creds::Provider* const provider = NULL);
+  explicit BaseClient(BaseUrl base_url, creds::Provider* const provider = nullptr);
   virtual ~BaseClient() = default;
 
   void Debug(bool flag) { debug_ = flag; }

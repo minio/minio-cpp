@@ -25,7 +25,7 @@ namespace minio {
 namespace s3 {
 class SelectHandler {
  private:
-  SelectResultFunction result_func_ = NULL;
+  SelectResultFunction result_func_ = nullptr;
 
   bool done_ = false;
   std::string response_;

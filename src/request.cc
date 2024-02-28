@@ -272,14 +272,14 @@ void minio::s3::Request::BuildHeaders(http::Url& url,
       if (!headers.Contains("Content-Type")) {
         headers.Add("Content-Type", "application/octet-stream");
       }
-      if (provider != NULL) {
+      if (provider != nullptr) {
         sha256 = utils::Sha256Hash(body);
       } else if (!md5sum_added) {
         md5sum = utils::Md5sumHash(body);
       }
       break;
     default:
-      if (provider != NULL) sha256 = EMPTY_SHA256;
+      if (provider != nullptr) sha256 = EMPTY_SHA256;
   }
 
   if (!md5sum.empty()) headers.Add("Content-MD5", md5sum);
@@ -288,7 +288,7 @@ void minio::s3::Request::BuildHeaders(http::Url& url,
   date = utils::Time::Now();
   headers.Add("x-amz-date", date.ToAmzDate());
 
-  if (provider != NULL) {
+  if (provider != nullptr) {
     creds::Credentials creds = provider->Fetch();
     if (!creds.session_token.empty()) {
       headers.Add("X-Amz-Security-Token", creds.session_token);

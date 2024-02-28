@@ -36,7 +36,7 @@ minio::utils::Multimap minio::s3::ObjectWriteArgs::Headers() const {
   h.AddAll(headers);
   h.AddAll(user_metadata);
 
-  if (sse != NULL) h.AddAll(sse->Headers());
+  if (sse != nullptr) h.AddAll(sse->Headers());
 
   std::string tagging;
   for (auto& [key, value] : tags) {
@@ -46,7 +46,7 @@ minio::utils::Multimap minio::s3::ObjectWriteArgs::Headers() const {
   }
   if (!tagging.empty()) h.Add("x-amz-tagging", tagging);
 
-  if (retention != NULL) {
+  if (retention != nullptr) {
     h.Add("x-amz-object-lock-mode",
                 RetentionModeToString(retention->mode));
     h.Add("x-amz-object-lock-retain-until-date",
@@ -63,14 +63,14 @@ minio::utils::Multimap minio::s3::ObjectConditionalReadArgs::Headers() const {
   size_t* len = length;
 
   size_t zero = 0;
-  if (len != NULL && off == NULL) {
+  if (len != nullptr && off == nullptr) {
     off = &zero;
   }
 
   std::string range;
-  if (off != NULL) {
+  if (off != nullptr) {
     range = "bytes=" + std::to_string(*off) + "-";
-    if (len != NULL) {
+    if (len != nullptr) {
       range += std::to_string(*off + *len - 1);
     }
   }
@@ -85,7 +85,7 @@ minio::utils::Multimap minio::s3::ObjectConditionalReadArgs::Headers() const {
   if (unmodified_since) {
     h.Add("if-unmodified-since", unmodified_since.ToHttpHeaderValue());
   }
-  if (ssec != NULL) h.AddAll(ssec->Headers());
+  if (ssec != nullptr) h.AddAll(ssec->Headers());
 
   return h;
 }
@@ -100,7 +100,7 @@ minio::utils::Multimap minio::s3::ObjectConditionalReadArgs::CopyHeaders() const
 
   h.Add("x-amz-copy-source", copy_source);
 
-  if (ssec != NULL) h.AddAll(ssec->CopyHeaders());
+  if (ssec != nullptr) h.AddAll(ssec->CopyHeaders());
   if (!match_etag.empty()) {
     h.Add("x-amz-copy-source-if-match", match_etag);
   }
@@ -180,7 +180,7 @@ minio::error::Error minio::s3::DownloadObjectArgs::Validate() const {
 
 minio::error::Error minio::s3::GetObjectArgs::Validate() const {
   if (error::Error err = ObjectConditionalReadArgs::Validate()) return err;
-  if (datafunc == NULL) {
+  if (datafunc == nullptr) {
     return error::Error("data callback must be set");
   }
 
@@ -250,14 +250,14 @@ minio::error::Error minio::s3::CopyObjectArgs::Validate() const {
   if (error::Error err = ObjectArgs::Validate()) return err;
   if (error::Error err = source.Validate()) return err;
 
-  if (source.offset != NULL || source.length != NULL) {
-    if (metadata_directive != NULL && *metadata_directive == Directive::kCopy) {
+  if (source.offset != nullptr || source.length != nullptr) {
+    if (metadata_directive != nullptr && *metadata_directive == Directive::kCopy) {
       return error::Error(
           "COPY metadata directive is not applicable to source object with "
           "range");
     }
 
-    if (tagging_directive != NULL && *tagging_directive == Directive::kCopy) {
+    if (tagging_directive != nullptr && *tagging_directive == Directive::kCopy) {
       return error::Error(
           "COPY tagging directive is not applicable to source object with "
           "range");
@@ -272,13 +272,13 @@ minio::error::Error minio::s3::ComposeSource::BuildHeaders(size_t object_size, s
   if (!version_id.empty()) msg += "?versionId=" + version_id;
   msg += ": ";
 
-  if (offset != NULL && *offset >= object_size) {
+  if (offset != nullptr && *offset >= object_size) {
     return error::Error(msg + "offset " + std::to_string(*offset) +
                         " is beyond object size " +
                         std::to_string(object_size));
   }
 
-  if (length != NULL) {
+  if (length != nullptr) {
     if (*length > object_size) {
       return error::Error(msg + "length " + std::to_string(*length) +
                           " is beyond object size " +
@@ -286,7 +286,7 @@ minio::error::Error minio::s3::ComposeSource::BuildHeaders(size_t object_size, s
     }
 
     size_t off = 0;
-    if (offset != NULL) off = *offset;
+    if (offset != nullptr) off = *offset;
     if ((off + *length) > object_size) {
       return error::Error(
           msg + "compose size " + std::to_string(off + *length) +
@@ -359,7 +359,7 @@ minio::error::Error minio::s3::UploadObjectArgs::Validate() {
 
 minio::error::Error minio::s3::RemoveObjectsArgs::Validate() const {
   if (error::Error err = BucketArgs::Validate()) return err;
-  if (func == NULL) {
+  if (func == nullptr) {
     return error::Error("delete object function must be set");
   }
 
@@ -373,24 +373,24 @@ minio::error::Error minio::s3::SelectObjectContentArgs::Validate() const {
     return error::Error("SQL expression must not be empty");
   }
 
-  if (!((request.csv_input != NULL) ^ (request.json_input != NULL) ^
-        (request.parquet_input != NULL))) {
+  if (!((request.csv_input != nullptr) ^ (request.json_input != nullptr) ^
+        (request.parquet_input != nullptr))) {
     return error::Error(
         "One of CSV, JSON or Parquet input serialization must be set");
   }
 
-  if (!((request.csv_output != NULL) ^ (request.json_output != NULL))) {
+  if (!((request.csv_output != nullptr) ^ (request.json_output != nullptr))) {
     return error::Error("One of CSV or JSON output serialization must be set");
   }
 
-  if (resultfunc == NULL) return error::Error("result function must be set");
+  if (resultfunc == nullptr) return error::Error("result function must be set");
 
   return error::SUCCESS;
 }
 
 minio::error::Error minio::s3::ListenBucketNotificationArgs::Validate() const {
   if (error::Error err = BucketArgs::Validate()) return err;
-  if (func == NULL) error::Error("notification records function must be set");
+  if (func == nullptr) error::Error("notification records function must be set");
 
   return error::SUCCESS;
 }

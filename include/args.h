@@ -53,9 +53,9 @@ struct ObjectArgs : public BucketArgs {
 struct ObjectWriteArgs : public ObjectArgs {
   utils::Multimap headers;
   utils::Multimap user_metadata;
-  Sse *sse = NULL;
+  Sse *sse = nullptr;
   std::map<std::string, std::string> tags;
-  Retention *retention = NULL;
+  Retention *retention = nullptr;
   bool legal_hold = false;
 
   ObjectWriteArgs() = default;
@@ -72,15 +72,15 @@ struct ObjectVersionArgs : public ObjectArgs {
 };  // struct ObjectVersionArgs
 
 struct ObjectReadArgs : public ObjectVersionArgs {
-  SseCustomerKey *ssec = NULL;
+  SseCustomerKey *ssec = nullptr;
 
   ObjectReadArgs() = default;
   ~ObjectReadArgs() = default;
 };  // struct ObjectReadArgs
 
 struct ObjectConditionalReadArgs : public ObjectReadArgs {
-  size_t *offset = NULL;
-  size_t *length = NULL;
+  size_t *offset = nullptr;
+  size_t *length = nullptr;
   std::string match_etag;
   std::string not_match_etag;
   utils::Time modified_since;
@@ -147,8 +147,8 @@ struct PutObjectBaseArgs : public ObjectWriteArgs {
 struct PutObjectApiArgs : public PutObjectBaseArgs {
   std::string_view data;
   utils::Multimap query_params;
-  http::ProgressFunction progressfunc = NULL;
-  void *progress_userdata = NULL;
+  http::ProgressFunction progressfunc = nullptr;
+  void *progress_userdata = nullptr;
 
   PutObjectApiArgs() = default;
   ~PutObjectApiArgs() = default;
@@ -158,8 +158,8 @@ struct UploadPartArgs : public ObjectWriteArgs {
   std::string upload_id;
   unsigned int part_number;
   std::string_view data;
-  http::ProgressFunction progressfunc = NULL;
-  void *progress_userdata = NULL;
+  http::ProgressFunction progressfunc = nullptr;
+  void *progress_userdata = nullptr;
 
   UploadPartArgs() = default;
   ~UploadPartArgs() = default;
@@ -185,8 +185,8 @@ using RemoveObjectArgs = ObjectVersionArgs;
 struct DownloadObjectArgs : public ObjectReadArgs {
   std::string filename;
   bool overwrite;
-  http::ProgressFunction progressfunc = NULL;
-  void *progress_userdata = NULL;
+  http::ProgressFunction progressfunc = nullptr;
+  void *progress_userdata = nullptr;
 
   DownloadObjectArgs() = default;
   ~DownloadObjectArgs() = default;
@@ -196,9 +196,9 @@ struct DownloadObjectArgs : public ObjectReadArgs {
 
 struct GetObjectArgs : public ObjectConditionalReadArgs {
   http::DataFunction datafunc;
-  void *userdata = NULL;
-  http::ProgressFunction progressfunc = NULL;
-  void *progress_userdata = NULL;
+  void *userdata = nullptr;
+  http::ProgressFunction progressfunc = nullptr;
+  void *progress_userdata = nullptr;
 
   GetObjectArgs() = default;
   ~GetObjectArgs() = default;
@@ -266,8 +266,8 @@ struct ListObjectVersionsArgs : public ListObjectsCommonArgs {
 
 struct PutObjectArgs : public PutObjectBaseArgs {
   std::istream &stream;
-  http::ProgressFunction progressfunc = NULL;
-  void *progress_userdata = NULL;
+  http::ProgressFunction progressfunc = nullptr;
+  void *progress_userdata = nullptr;
 
   PutObjectArgs(std::istream &stream, long object_size, long part_size);
   ~PutObjectArgs() = default;
@@ -279,8 +279,8 @@ using CopySource = ObjectConditionalReadArgs;
 
 struct CopyObjectArgs : public ObjectWriteArgs {
   CopySource source;
-  Directive *metadata_directive = NULL;
-  Directive *tagging_directive = NULL;
+  Directive *metadata_directive = nullptr;
+  Directive *tagging_directive = nullptr;
 
   CopyObjectArgs() = default;
   ~CopyObjectArgs() = default;
@@ -313,8 +313,8 @@ struct ComposeObjectArgs : public ObjectWriteArgs {
 
 struct UploadObjectArgs : public PutObjectBaseArgs {
   std::string filename;
-  http::ProgressFunction progressfunc = NULL;
-  void *progress_userdata = NULL;
+  http::ProgressFunction progressfunc = nullptr;
+  void *progress_userdata = nullptr;
 
   UploadObjectArgs() = default;
   ~UploadObjectArgs() = default;
@@ -335,7 +335,7 @@ using DeleteObjectFunction = std::function<bool(DeleteObject &)>;
 
 struct RemoveObjectsArgs : public BucketArgs {
   bool bypass_governance_mode = false;
-  DeleteObjectFunction func = NULL; // PWTODO: nullptr
+  DeleteObjectFunction func = nullptr; // PWTODO: nullptr
 
   RemoveObjectsArgs() = default;
   ~RemoveObjectsArgs() = default;
@@ -345,7 +345,7 @@ struct RemoveObjectsArgs : public BucketArgs {
 
 struct SelectObjectContentArgs : public ObjectReadArgs {
   SelectRequest &request;
-  SelectResultFunction resultfunc = NULL;
+  SelectResultFunction resultfunc = nullptr;
 
   SelectObjectContentArgs(SelectRequest &req, SelectResultFunction func)
       : request(req), resultfunc(func) {}
@@ -359,7 +359,7 @@ struct ListenBucketNotificationArgs : public BucketArgs {
   std::string prefix;
   std::string suffix;
   std::list<std::string> events;
-  NotificationRecordsFunction func = NULL;
+  NotificationRecordsFunction func = nullptr;
 
   ListenBucketNotificationArgs() = default;
   ~ListenBucketNotificationArgs() = default;

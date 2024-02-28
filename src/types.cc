@@ -59,8 +59,8 @@ std::string minio::s3::SelectRequest::ToXML() const {
 
   ss << "<InputSerialization>";
 
-  if (csv_input != NULL) {
-    if (csv_input->compression_type != NULL) {
+  if (csv_input != nullptr) {
+    if (csv_input->compression_type != nullptr) {
       ss << "<CompressionType>"
          << CompressionTypeToString(*csv_input->compression_type)
          << "</CompressionType>";
@@ -77,7 +77,7 @@ std::string minio::s3::SelectRequest::ToXML() const {
       ss << "<FieldDelimiter>" << csv_input->field_delimiter
          << "</FieldDelimiter>";
     }
-    if (csv_input->file_header_info != NULL) {
+    if (csv_input->file_header_info != nullptr) {
       ss << "<FileHeaderInfo>"
          << FileHeaderInfoToString(*csv_input->file_header_info)
          << "</FileHeaderInfo>";
@@ -93,27 +93,27 @@ std::string minio::s3::SelectRequest::ToXML() const {
     ss << "</CSV>";
   }
 
-  if (json_input != NULL) {
-    if (json_input->compression_type != NULL) {
+  if (json_input != nullptr) {
+    if (json_input->compression_type != nullptr) {
       ss << "<CompressionType>"
          << CompressionTypeToString(*json_input->compression_type)
          << "</CompressionType>";
     }
 
     ss << "<JSON>";
-    if (json_input->json_type != NULL) {
+    if (json_input->json_type != nullptr) {
       ss << "<Type>" << JsonTypeToString(*json_input->json_type) << "</Type>";
     }
     ss << "</JSON>";
   }
 
-  if (parquet_input != NULL) ss << "<Parquet></Parquet>";
+  if (parquet_input != nullptr) ss << "<Parquet></Parquet>";
 
   ss << "</InputSerialization>";
 
   ss << "<OutputSerialization>";
 
-  if (csv_output != NULL) {
+  if (csv_output != nullptr) {
     ss << "<CSV>";
     if (csv_output->field_delimiter) {
       ss << "<FieldDelimiter>" << csv_output->field_delimiter
@@ -127,7 +127,7 @@ std::string minio::s3::SelectRequest::ToXML() const {
       ss << "<QuoteEscapeCharacter>" << csv_output->quote_escape_character
          << "</QuoteEscapeCharacter>";
     }
-    if (csv_output->quote_fields != NULL) {
+    if (csv_output->quote_fields != nullptr) {
       ss << "<QuoteFields>" << QuoteFieldsToString(*csv_output->quote_fields)
          << "</QuoteFields>";
     }
@@ -138,7 +138,7 @@ std::string minio::s3::SelectRequest::ToXML() const {
     ss << "</CSV>";
   }
 
-  if (json_output != NULL) {
+  if (json_output != nullptr) {
     ss << "<JSON>";
     if (json_output->record_delimiter) {
       ss << "<RecordDelimiter>" << json_output->record_delimiter
@@ -152,12 +152,12 @@ std::string minio::s3::SelectRequest::ToXML() const {
   if (request_progress) {
     ss << "<RequestProgress><Enabled>true</Enabled></RequestProgress>";
   }
-  if (scan_start_range != NULL || scan_end_range != NULL) {
+  if (scan_start_range != nullptr || scan_end_range != nullptr) {
     ss << "<ScanRange>";
-    if (scan_start_range != NULL) {
+    if (scan_start_range != nullptr) {
       ss << "<Start>" << *scan_start_range << "</Start>";
     }
-    if (scan_end_range != NULL) {
+    if (scan_end_range != nullptr) {
       ss << "<End>" << *scan_end_range << "</End>";
     }
     ss << "</ScanRange>";

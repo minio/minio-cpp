@@ -30,7 +30,7 @@ class Client;
 
 class ListObjectsResult {
  private:
-  Client* client_ = NULL;
+  Client* client_ = nullptr;
   ListObjectsArgs args_;
   bool failed_ = false;
   ListObjectsResponse resp_;
@@ -59,7 +59,7 @@ class ListObjectsResult {
 
 class RemoveObjectsResult {
  private:
-  Client* client_ = NULL;
+  Client* client_ = nullptr;
   RemoveObjectsArgs args_;
   bool done_ = false;
   RemoveObjectsResponse resp_;
@@ -100,7 +100,7 @@ class Client : public BaseClient {
                               char* buf);
 
  public:
-  Client(BaseUrl& base_url, creds::Provider* provider = NULL);
+  Client(BaseUrl& base_url, creds::Provider* provider = nullptr);
   ComposeObjectResponse ComposeObject(ComposeObjectArgs args);
   CopyObjectResponse CopyObject(CopyObjectArgs args);
   DownloadObjectResponse DownloadObject(DownloadObjectArgs args);

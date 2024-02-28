@@ -51,7 +51,7 @@ constexpr const char* MethodToString(const Method& method) throw() {
       std::terminate();
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 /**
@@ -85,10 +85,10 @@ using ProgressFunction = std::function<void(ProgressFunctionArgs)>;
 struct Response;
 
 struct DataFunctionArgs {
-  curlpp::Easy* handle = NULL;
-  Response* response = NULL;
+  curlpp::Easy* handle = nullptr;
+  Response* response = nullptr;
   std::string datachunk;
-  void* userdata = NULL;
+  void* userdata = nullptr;
 
   DataFunctionArgs() = default;
   ~DataFunctionArgs() = default;
@@ -101,7 +101,7 @@ struct ProgressFunctionArgs {
   double uploaded_bytes = 0.0;
   double download_speed = 0.0;
   double upload_speed = 0.0;
-  void* userdata = NULL;
+  void* userdata = nullptr;
 
   ProgressFunctionArgs() = default;
   ~ProgressFunctionArgs() = default;
@@ -112,10 +112,10 @@ struct Request {
   http::Url url;
   utils::Multimap headers;
   std::string_view body = "";
-  DataFunction datafunc = NULL;
-  void* userdata = NULL;
-  ProgressFunction progressfunc = NULL;
-  void* progress_userdata = NULL;
+  DataFunction datafunc = nullptr;
+  void* userdata = nullptr;
+  ProgressFunction progressfunc = nullptr;
+  void* progress_userdata = nullptr;
   bool debug = false;
   bool ignore_cert_check = false;
   std::string ssl_cert_file;
@@ -138,8 +138,8 @@ struct Request {
 
 struct Response {
   std::string error;
-  DataFunction datafunc = NULL;
-  void* userdata = NULL;
+  DataFunction datafunc = nullptr;
+  void* userdata = nullptr;
   int status_code = 0;
   utils::Multimap headers;
   std::string body;
