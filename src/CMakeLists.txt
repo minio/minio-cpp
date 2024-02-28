@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-list(APPEND SRCS args.cc baseclient.cc client.cc http.cc request.cc response.cc select.cc signer.cc sse.cc types.cc utils.cc)
+list(APPEND SRCS args.cc baseclient.cc client.cc credentials.cc http.cc request.cc response.cc select.cc signer.cc sse.cc types.cc utils.cc)
 
 add_library(miniocpp STATIC ${SRCS})
 target_link_libraries(miniocpp ${requiredlibs})

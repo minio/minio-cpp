@@ -16,18 +16,12 @@
 #ifndef _MINIO_CREDS_CREDENTIALS_H
 #define _MINIO_CREDS_CREDENTIALS_H
 
-#include <pugixml.hpp>
-
 #include "utils.h"
 
 namespace minio {
 namespace creds {
-static bool expired(utils::Time expiration) {
-  if (!expiration) return false;
-  utils::Time now = utils::Time::Now();
-  now.Add(10);
-  return expiration < now;
-}
+  bool expired(const utils::Time& expiration);
+
 
 /**
  * Credentials contains access key and secret key with optional session token
@@ -40,34 +34,16 @@ struct Credentials {
   std::string session_token;
   utils::Time expiration;
 
-  bool IsExpired() { return expired(expiration); }
+  Credentials() = default;
+  ~Credentials() = default;
+
+  bool IsExpired() const { return expired(expiration); }
 
   explicit operator bool() const {
     return !err && !access_key.empty() && expired(expiration);
   }
 
-  static Credentials ParseXML(std::string_view data, std::string root) {
-    pugi::xml_document xdoc;
-    pugi::xml_parse_result result = xdoc.load_string(data.data());
-    if (!result) return Credentials{error::Error("unable to parse XML")};
-
-    auto credentials = xdoc.select_node((root + "/Credentials").c_str());
-
-    auto text = credentials.node().select_node("AccessKeyId/text()");
-    std::string access_key = text.node().value();
-
-    text = credentials.node().select_node("SecretAccessKey/text()");
-    std::string secret_key = text.node().value();
-
-    text = credentials.node().select_node("SessionToken/text()");
-    std::string session_token = text.node().value();
-
-    text = credentials.node().select_node("Expiration/text()");
-    auto expiration = utils::Time::FromISO8601UTC(text.node().value());
-
-    return Credentials{error::SUCCESS, access_key, secret_key, session_token,
-                       expiration};
-  }
+  static Credentials ParseXML(std::string_view data, const std::string& root);
 };  // class Credentials
 }  // namespace creds
 }  // namespace minio
