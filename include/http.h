@@ -154,14 +154,7 @@ struct Response {
     return error.empty() && status_code >= 200 && status_code <= 299;
   }
 
-  error::Error Error() const {
-    if (!error.empty()) return error::Error(error);
-    if (status_code && (status_code < 200 || status_code > 299)) {
-      return error::Error("failed with HTTP status code " +
-                          std::to_string(status_code));
-    }
-    return error::SUCCESS;
-  }
+  error::Error Error() const;
 
  private:
   std::string response_;

@@ -168,6 +168,15 @@ minio::error::Error minio::http::Response::ReadStatusCode() {
   return error::SUCCESS;
 }
 
+minio::error::Error minio::http::Response::Error() const {
+  if (!error.empty()) return error::Error(error);
+  if (status_code && (status_code < 200 || status_code > 299)) {
+    return error::Error("failed with HTTP status code " +
+                        std::to_string(status_code));
+  }
+  return error::SUCCESS;
+}
+
 minio::error::Error minio::http::Response::ReadHeaders() {
   size_t pos = response_.find("\r\n\r\n");
   if (pos == std::string::npos) {
