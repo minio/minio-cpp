@@ -359,6 +359,10 @@ minio::utils::Time minio::utils::Time::FromISO8601UTC(const char* value) {
   return Time(time, tv_usec, true);
 }
 
+minio::utils::Multimap::Multimap(const Multimap& headers) {
+  this->AddAll(headers); // PWTODO: why isn't a default copy constructor sufficient?
+}
+
 void minio::utils::Multimap::Add(std::string key, std::string value) {
   map_[key].insert(value); // PWTODO: move construction
   keys_[ToLower(key)].insert(key);
@@ -567,4 +571,10 @@ minio::error::Error minio::utils::CalcPartInfo(long object_size,
   }
 
   return error::SUCCESS;
+}
+
+minio::utils::CharBuffer::~CharBuffer() {}
+
+std::streambuf::pos_type minio::utils::CharBuffer::seekpos(pos_type sp, std::ios_base::openmode which) {
+  return seekoff(sp - pos_type(off_type(0)), std::ios_base::beg, which);
 }

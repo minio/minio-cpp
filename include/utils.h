@@ -206,9 +206,7 @@ class Multimap {
 
  public:
   Multimap() = default;
-
-  Multimap(const Multimap& headers) { this->AddAll(headers); }
-
+  Multimap(const Multimap& headers);
   ~Multimap() = default;
 
   void Add(std::string key, std::string value);
@@ -252,11 +250,9 @@ struct CharBuffer : std::streambuf {
     return gptr() - eback();
   }
 
-  virtual ~CharBuffer() = default;
+  virtual ~CharBuffer();
 
-  virtual pos_type seekpos(pos_type sp, std::ios_base::openmode which) override {
-    return seekoff(sp - pos_type(off_type(0)), std::ios_base::beg, which);
-  }
+  virtual pos_type seekpos(pos_type sp, std::ios_base::openmode which) override;
 };  // struct CharBuffer
 }  // namespace utils
 }  // namespace minio
