@@ -29,7 +29,7 @@ enum class RetentionMode { kGovernance, kCompliance };
 // StringToRetentionMode converts string to retention mode enum.
 RetentionMode StringToRetentionMode(std::string_view str) throw();
 
-constexpr bool IsRetentionModeValid(RetentionMode& retention) {
+constexpr bool IsRetentionModeValid(RetentionMode retention) {
   switch (retention) {
     case RetentionMode::kGovernance:
     case RetentionMode::kCompliance:
@@ -39,7 +39,7 @@ constexpr bool IsRetentionModeValid(RetentionMode& retention) {
 }
 
 // RetentionModeToString converts retention mode enum to string.
-constexpr const char* RetentionModeToString(RetentionMode& retention) throw() {
+constexpr const char* RetentionModeToString(RetentionMode retention) throw() {
   switch (retention) {
     case RetentionMode::kGovernance:
       return "GOVERNANCE";
@@ -59,7 +59,7 @@ enum class LegalHold { kOn, kOff };
 // StringToLegalHold converts string to legal hold enum.
 LegalHold StringToLegalHold(std::string_view str) throw();
 
-constexpr bool IsLegalHoldValid(LegalHold& legal_hold) {
+constexpr bool IsLegalHoldValid(LegalHold legal_hold) {
   switch (legal_hold) {
     case LegalHold::kOn:
     case LegalHold::kOff:
@@ -69,7 +69,7 @@ constexpr bool IsLegalHoldValid(LegalHold& legal_hold) {
 }
 
 // LegalHoldToString converts legal hold enum to string.
-constexpr const char* LegalHoldToString(LegalHold& legal_hold) throw() {
+constexpr const char* LegalHoldToString(LegalHold legal_hold) throw() {
   switch (legal_hold) {
     case LegalHold::kOn:
       return "ON";
@@ -90,7 +90,7 @@ enum class Directive { kCopy, kReplace };
 Directive StringToDirective(std::string_view str) throw();
 
 // DirectiveToString converts directive enum to string.
-constexpr const char* DirectiveToString(Directive& directive) throw() {
+constexpr const char* DirectiveToString(Directive directive) throw() {
   switch (directive) {
     case Directive::kCopy:
       return "COPY";
@@ -108,7 +108,7 @@ constexpr const char* DirectiveToString(Directive& directive) throw() {
 enum class CompressionType { kNone, kGZip, kBZip2 };
 
 // CompressionTypeToString converts compression type enum to string.
-constexpr const char* CompressionTypeToString(CompressionType& ctype) throw() {
+constexpr const char* CompressionTypeToString(CompressionType ctype) throw() {
   switch (ctype) {
     case CompressionType::kNone:
       return "NONE";
@@ -128,7 +128,7 @@ constexpr const char* CompressionTypeToString(CompressionType& ctype) throw() {
 enum class FileHeaderInfo { kUse, kIgnore, kNone };
 
 // FileHeaderInfoToString converts file header info enum to string.
-constexpr const char* FileHeaderInfoToString(FileHeaderInfo& info) throw() {
+constexpr const char* FileHeaderInfoToString(FileHeaderInfo info) throw() {
   switch (info) {
     case FileHeaderInfo::kUse:
       return "USE";
@@ -148,7 +148,7 @@ constexpr const char* FileHeaderInfoToString(FileHeaderInfo& info) throw() {
 enum class JsonType { kDocument, kLines };
 
 // JsonTypeToString converts JSON type enum to string.
-constexpr const char* JsonTypeToString(JsonType& jtype) throw() {
+constexpr const char* JsonTypeToString(JsonType jtype) throw() {
   switch (jtype) {
     case JsonType::kDocument:
       return "DOCUMENT";
@@ -166,7 +166,7 @@ constexpr const char* JsonTypeToString(JsonType& jtype) throw() {
 enum class QuoteFields { kAlways, kAsNeeded };
 
 // QuoteFieldsToString converts quote fields enum to string.
-constexpr const char* QuoteFieldsToString(QuoteFields& qtype) throw() {
+constexpr const char* QuoteFieldsToString(QuoteFields qtype) throw() {
   switch (qtype) {
     case QuoteFields::kAlways:
       return "ALWAYS";
@@ -190,14 +190,23 @@ struct CsvInputSerialization {
   char quote_character = 0;
   char quote_escape_character = 0;
   char record_delimiter = 0;
+
+  CsvInputSerialization() = default;
+  ~CsvInputSerialization() = default;
 };  // struct CsvInputSerialization
 
 struct JsonInputSerialization {
   CompressionType* compression_type = NULL;
   JsonType* json_type = NULL;
+
+  JsonInputSerialization() = default;
+  ~JsonInputSerialization() = default;
 };  // struct JsonInputSerialization
 
-struct ParquetInputSerialization {};  // struct ParquetInputSerialization
+struct ParquetInputSerialization {
+  ParquetInputSerialization() = default;
+  ~ParquetInputSerialization() = default;
+};  // struct ParquetInputSerialization
 
 struct CsvOutputSerialization {
   char field_delimiter = 0;
@@ -205,10 +214,16 @@ struct CsvOutputSerialization {
   char quote_escape_character = 0;
   QuoteFields* quote_fields = NULL;
   char record_delimiter = 0;
+
+  CsvOutputSerialization() = default;
+  ~CsvOutputSerialization() = default;
 };  // struct CsvOutputSerialization
 
 struct JsonOutputSerialization {
   char record_delimiter = 0;
+
+  JsonOutputSerialization() = default;
+  ~JsonOutputSerialization() = default;
 };  // struct JsonOutputSerialization
 
 struct SelectRequest {
@@ -223,50 +238,46 @@ struct SelectRequest {
   size_t* scan_end_range = NULL;
 
   SelectRequest(std::string expression, CsvInputSerialization* csv_input,
-                CsvOutputSerialization* csv_output) {
-    this->expr = expression;
-    this->csv_input = csv_input;
-    this->csv_output = csv_output;
-  }
+                CsvOutputSerialization* csv_output)
+    : expr(std::move(expression))
+    , csv_input(csv_input)
+    , csv_output(csv_output) {}
 
   SelectRequest(std::string expression, CsvInputSerialization* csv_input,
-                JsonOutputSerialization* json_output) {
-    this->expr = expression;
-    this->csv_input = csv_input;
-    this->json_output = json_output;
-  }
+                JsonOutputSerialization* json_output) 
+    : expr(std::move(expression))
+    , csv_input(csv_input)
+    , json_output(json_output) {}
 
   SelectRequest(std::string expression, JsonInputSerialization* json_input,
-                CsvOutputSerialization* csv_output) {
-    this->expr = expression;
-    this->json_input = json_input;
-    this->csv_output = csv_output;
-  }
+                CsvOutputSerialization* csv_output)
+    : expr(std::move(expression))
+    , csv_input(csv_input)
+    , csv_output(csv_output) {}
 
   SelectRequest(std::string expression, JsonInputSerialization* json_input,
-                JsonOutputSerialization* json_output) {
-    this->expr = expression;
-    this->json_input = json_input;
-    this->json_output = json_output;
-  }
+                JsonOutputSerialization* json_output)
+    : expr(std::move(expression))
+    , csv_input(csv_input)
+    , csv_output(csv_output) {}
 
   SelectRequest(std::string expression,
                 ParquetInputSerialization* parquet_input,
-                CsvOutputSerialization* csv_output) {
-    this->expr = expression;
-    this->parquet_input = parquet_input;
-    this->csv_output = csv_output;
-  }
+                CsvOutputSerialization* csv_output)
+    : expr(std::move(expression))
+    , parquet_input(parquet_input)
+    , csv_output(csv_output) {}
 
   SelectRequest(std::string expression,
                 ParquetInputSerialization* parquet_input,
-                JsonOutputSerialization* json_output) {
-    this->expr = expression;
-    this->parquet_input = parquet_input;
-    this->json_output = json_output;
-  }
+                JsonOutputSerialization* json_output)
+    : expr(std::move(expression))
+    , parquet_input(parquet_input)
+    , json_output(json_output) {}
 
-  std::string ToXML();
+  ~SelectRequest() = default;
+
+  std::string ToXML() const;
 };  // struct SelectRequest
 
 struct SelectResult {
@@ -277,21 +288,22 @@ struct SelectResult {
   long int bytes_returned = -1;
   std::string records;
 
-  SelectResult() { this->ended = true; }
+  SelectResult() : ended(true) {}
 
-  SelectResult(error::Error err) {
-    this->err = err;
-    this->ended = true;
-  }
+  SelectResult(error::Error err)
+    : err(std::move(err))
+    , ended(true) {}
 
   SelectResult(long int bytes_scanned, long int bytes_processed,
-               long int bytes_returned) {
-    this->bytes_scanned = bytes_scanned;
-    this->bytes_processed = bytes_processed;
-    this->bytes_returned = bytes_returned;
-  }
+               long int bytes_returned)
+    : bytes_scanned(bytes_scanned)
+    , bytes_processed(bytes_processed)
+    , bytes_returned(bytes_returned) {}
 
-  SelectResult(std::string records) { this->records = records; }
+  SelectResult(std::string records)
+    : records(std::move(records)) {}
+
+  ~SelectResult() = default;
 };
 
 using SelectResultFunction = std::function<bool(SelectResult)>;
@@ -299,6 +311,9 @@ using SelectResultFunction = std::function<bool(SelectResult)>;
 struct Bucket {
   std::string name;
   utils::Time creation_date;
+
+  Bucket() = default;
+  ~Bucket() = default;
 };  // struct Bucket
 
 struct Part {
@@ -306,16 +321,25 @@ struct Part {
   std::string etag;
   utils::Time last_modified;
   size_t size;
+
+  Part() = default;
+  ~Part() = default;
 };  // struct Part
 
 struct Retention {
   RetentionMode mode;
   utils::Time retain_until_date;
+
+  Retention() = default;
+  ~Retention() = default;
 };  // struct Retention
 
 struct DeleteObject {
   std::string name;
   std::string version_id;
+
+  DeleteObject() = default;
+  ~DeleteObject() = default;
 };  // struct DeleteObject
 
 struct NotificationRecord {
@@ -363,6 +387,9 @@ struct NotificationRecord {
     std::string user_agent;
   } source;
 
+  NotificationRecord() = default;
+  ~NotificationRecord() = default;
+
   static NotificationRecord ParseJSON(nlohmann::json j_record);
 };  // struct NotificationRecord
 
@@ -375,27 +402,38 @@ struct FilterValue {
   bool is_value_set_ = false;
 
  public:
-  FilterValue() {}
-  FilterValue(std::string value) {
-    this->value_ = value;
-    this->is_value_set_ = true;
-  }
+  FilterValue() = default;
+
+  FilterValue(std::string value)
+    : value_(std::move(value))
+    , is_value_set_(true) {}
+
+  ~FilterValue() = default;
+
   explicit operator bool() const { return is_value_set_; }
-  std::string Value() { return value_; }
+  std::string Value() const { return value_; }
 };  // struct FilterValue
 
 struct PrefixFilterRule : public FilterValue {
   static constexpr const char* name = "prefix";
 
-  PrefixFilterRule() {}
-  PrefixFilterRule(std::string value) : FilterValue(value) {}
+  PrefixFilterRule() = default;
+
+  PrefixFilterRule(std::string value)
+    : FilterValue(std::move(value)) {}
+
+  ~PrefixFilterRule() = default;
 };  // struct PrefixFilterRule
 
 struct SuffixFilterRule : public FilterValue {
   static constexpr const char* name = "suffix";
 
-  SuffixFilterRule() {}
-  SuffixFilterRule(std::string value) : FilterValue(value) {}
+  SuffixFilterRule() = default;
+
+  SuffixFilterRule(std::string value)
+    : FilterValue(std::move(value)) {}
+
+  ~SuffixFilterRule() = default;
 };  // struct SuffixFilterRule
 
 struct NotificationCommonConfig {
@@ -403,18 +441,30 @@ struct NotificationCommonConfig {
   std::string id;
   PrefixFilterRule prefix_filter_rule;
   SuffixFilterRule suffix_filter_rule;
+
+  NotificationCommonConfig() = default;
+  ~NotificationCommonConfig() = default;
 };  // struct NotificationCommonConfig
 
 struct CloudFuncConfig : public NotificationCommonConfig {
   std::string cloud_func;
+  
+  CloudFuncConfig() = default;
+  ~CloudFuncConfig() = default;
 };  // struct CloudFuncConfig
 
 struct QueueConfig : public NotificationCommonConfig {
   std::string queue;
+
+  QueueConfig() = default;
+  ~QueueConfig() = default;
 };  // struct QueueConfig
 
 struct TopicConfig : public NotificationCommonConfig {
   std::string topic;
+
+  TopicConfig() = default;
+  ~TopicConfig() = default;
 };  // struct TopicConfig
 
 struct NotificationConfig {
@@ -422,31 +472,31 @@ struct NotificationConfig {
   std::list<QueueConfig> queue_config_list;
   std::list<TopicConfig> topic_config_list;
 
-  std::string ToXML();
+  NotificationConfig() = default;
+  ~NotificationConfig() = default;
+
+  std::string ToXML() const;
 };  // struct NotificationConfig
 
 struct SseConfig {
   std::string sse_algorithm;
   std::string kms_master_key_id;
 
-  SseConfig() {}
-  static SseConfig S3() {
-    SseConfig config;
-    config.sse_algorithm = "AES256";
-    return config;
-  }
-  static SseConfig Kms(std::string masterkeyid = "") {
-    SseConfig config;
-    config.sse_algorithm = "aws:kms";
-    config.kms_master_key_id = masterkeyid;
-    return config;
-  }
+  SseConfig() = default;
+  ~SseConfig() = default;
+
+  static SseConfig S3();
+  static SseConfig Kms(std::string masterkeyid = {});
+
   explicit operator bool() const { return !sse_algorithm.empty(); }
 };  //  struct SseConfig
 
 struct Tag {
   std::string key;
   std::string value;
+
+  Tag() = default;
+  ~Tag() = default;
 
   explicit operator bool() const { return !key.empty(); }
 };  // struct Tag
@@ -522,6 +572,9 @@ struct AndOperator {
   Prefix prefix;
   std::map<std::string, std::string> tags;
 
+  AndOperator() = default;
+  ~AndOperator() = default;
+
   explicit operator bool() const { return prefix || !tags.empty(); }
 };  // struct AndOperator
 
@@ -530,11 +583,17 @@ struct Filter {
   Prefix prefix;
   Tag tag;
 
+  Filter() = default;
+  ~Filter() = default;
+
   explicit operator bool() const { return static_cast<bool>(and_operator) ^ static_cast<bool>(prefix) ^ static_cast<bool>(tag); }
 };  // struct Filter
 
 struct AccessControlTranslation {
   std::string owner = "Destination";
+
+  AccessControlTranslation() = default;
+  ~AccessControlTranslation() = default;
 
   void Enable() { enabled_ = true; }
   explicit operator bool() const { return enabled_; }
@@ -545,6 +604,9 @@ struct AccessControlTranslation {
 
 struct EncryptionConfig {
   std::string replica_kms_key_id;
+
+  EncryptionConfig() = default;
+  ~EncryptionConfig() = default;
 
   void Enable() { enabled_ = true; }
   explicit operator bool() const { return enabled_; }
@@ -557,6 +619,9 @@ struct Metrics {
   unsigned int event_threshold_minutes = 15;
   bool status = false;
 
+  Metrics() = default;
+  ~Metrics() = default;
+
   void Enable() { enabled_ = true; }
   explicit operator bool() const { return enabled_; }
 
@@ -567,6 +632,9 @@ struct Metrics {
 struct ReplicationTime {
   unsigned int time_minutes = 15;
   bool status = false;
+
+  ReplicationTime() = default;
+  ~ReplicationTime() = default;
 
   void Enable() { enabled_ = true; }
   explicit operator bool() const { return enabled_; }
@@ -583,10 +651,16 @@ struct Destination {
   Metrics metrics;
   ReplicationTime replication_time;
   std::string storage_class;
+
+  Destination() = default;
+  ~Destination() = default;
 };  // struct Destination
 
 struct SourceSelectionCriteria {
   Boolean sse_kms_encrypted_objects_status;
+
+  SourceSelectionCriteria() = default;
+  ~SourceSelectionCriteria() = default;
 
   void Enable() { enabled_ = true; }
   explicit operator bool() const { return enabled_; }
@@ -606,13 +680,19 @@ struct ReplicationRule {
   SourceSelectionCriteria source_selection_criteria;
   Boolean delete_replication_status;
   bool status = false;
+
+  ReplicationRule() = default;
+  ~ReplicationRule() = default;
 };  // struct ReplicationRule
 
 struct ReplicationConfig {
   std::string role;
   std::list<ReplicationRule> rules;
 
-  std::string ToXML();
+  ReplicationConfig() = default;
+  ~ReplicationConfig() = default;
+
+  std::string ToXML() const;
 };  // status ReplicationConfig
 
 struct LifecycleRule {
@@ -630,13 +710,19 @@ struct LifecycleRule {
   Integer transition_days;
   std::string transition_storage_class;
 
-  error::Error Validate();
+  LifecycleRule() = default;
+  ~LifecycleRule() = default;
+
+  error::Error Validate() const;
 };  // struct LifecycleRule
 
 struct LifecycleConfig {
   std::list<LifecycleRule> rules;
 
-  std::string ToXML();
+  LifecycleConfig() = default;
+  ~LifecycleConfig() = default;
+
+  std::string ToXML() const;
 };  // struct LifecycleConfig
 
 struct ObjectLockConfig {
@@ -644,7 +730,10 @@ struct ObjectLockConfig {
   Integer retention_duration_days;
   Integer retention_duration_years;
 
-  error::Error Validate();
+  ObjectLockConfig() = default;
+  ~ObjectLockConfig() = default;
+
+  error::Error Validate() const;
 };  // struct ObjectLockConfig
 }  // namespace s3
 }  // namespace minio

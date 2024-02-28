@@ -50,7 +50,7 @@ minio::s3::Directive minio::s3::StringToDirective(
   return Directive::kCopy;  // never reaches here.
 }
 
-std::string minio::s3::SelectRequest::ToXML() {
+std::string minio::s3::SelectRequest::ToXML() const {
   std::stringstream ss;
   ss << "<SelectObjectContentRequest>";
 
@@ -234,7 +234,7 @@ minio::s3::NotificationRecord minio::s3::NotificationRecord::ParseJSON(
   return record;
 }
 
-std::string minio::s3::NotificationConfig::ToXML() {
+std::string minio::s3::NotificationConfig::ToXML() const {
   std::stringstream ss;
   ss << "<NotificationConfiguration>";
 
@@ -309,7 +309,7 @@ std::string minio::s3::NotificationConfig::ToXML() {
   return ss.str();
 }
 
-std::string minio::s3::ReplicationConfig::ToXML() {
+std::string minio::s3::ReplicationConfig::ToXML() const {
   auto status_xml = [](bool status) -> std::string {
     std::stringstream ss;
     ss << "<Status>" << (status ? "Enabled" : "Disabled") << "</Status>";
@@ -455,7 +455,7 @@ std::string minio::s3::ReplicationConfig::ToXML() {
   return ss.str();
 }
 
-minio::error::Error minio::s3::LifecycleRule::Validate() {
+minio::error::Error minio::s3::LifecycleRule::Validate() const {
   if (!abort_incomplete_multipart_upload_days_after_initiation &&
       !expiration_date && !expiration_days &&
       !expiration_expired_object_delete_marker &&
@@ -492,7 +492,7 @@ minio::error::Error minio::s3::LifecycleRule::Validate() {
   return error::SUCCESS;
 }
 
-std::string minio::s3::LifecycleConfig::ToXML() {
+std::string minio::s3::LifecycleConfig::ToXML() const {
   std::stringstream ss;
 
   ss << "<LifecycleConfiguration>";
@@ -600,7 +600,7 @@ std::string minio::s3::LifecycleConfig::ToXML() {
   return ss.str();
 }
 
-minio::error::Error minio::s3::ObjectLockConfig::Validate() {
+minio::error::Error minio::s3::ObjectLockConfig::Validate() const {
   if (IsRetentionModeValid(retention_mode)) {
     if (!(static_cast<bool>(retention_duration_days) ^ static_cast<bool>(retention_duration_years))) {
       return error::Error(
@@ -614,4 +614,17 @@ minio::error::Error minio::s3::ObjectLockConfig::Validate() {
   }
 
   return error::SUCCESS;
+}
+
+minio::s3::SseConfig minio::s3::SseConfig::S3() {
+  SseConfig config;
+  config.sse_algorithm = "AES256";
+  return config;
+}
+
+minio::s3::SseConfig minio::s3::SseConfig::Kms(std::string masterkeyid) {
+  SseConfig config;
+  config.sse_algorithm = "aws:kms";
+  config.kms_master_key_id = masterkeyid;
+  return config;
 }
