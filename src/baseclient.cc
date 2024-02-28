@@ -16,8 +16,8 @@
 #include "baseclient.h"
 
 minio::utils::Multimap minio::s3::GetCommonListObjectsQueryParams(
-    std::string& delimiter, std::string& encoding_type, unsigned int max_keys,
-    std::string& prefix) {
+    const std::string& delimiter, const std::string& encoding_type, unsigned int max_keys,
+    const std::string& prefix) {
   utils::Multimap query_params;
   query_params.Add("delimiter", delimiter);
   query_params.Add("max-keys", std::to_string(max_keys > 0 ? max_keys : 1000));
@@ -26,15 +26,14 @@ minio::utils::Multimap minio::s3::GetCommonListObjectsQueryParams(
   return query_params;
 }
 
-minio::s3::BaseClient::BaseClient(BaseUrl& base_url, creds::Provider* provider)
-    : base_url_(base_url) {
+minio::s3::BaseClient::BaseClient(BaseUrl base_url, creds::Provider* provider)
+    : base_url_(std::move(base_url))
+    , provider_(provider) {
   if (!base_url_) {
     std::cerr << "valid base url must be provided; "
-              << base_url_.Error().String() << std::endl;
+              << base_url_.Error() << std::endl;
     std::terminate();
   }
-
-  this->provider_ = provider;
 }
 
 minio::error::Error minio::s3::BaseClient::SetAppInfo(
@@ -50,7 +49,7 @@ minio::error::Error minio::s3::BaseClient::SetAppInfo(
 
 void minio::s3::BaseClient::HandleRedirectResponse(
     std::string& code, std::string& message, int status_code,
-    http::Method method, utils::Multimap headers, std::string& bucket_name,
+    http::Method method, const utils::Multimap& headers, const std::string& bucket_name,
     bool retry) {
   switch (status_code) {
     case 301:
@@ -71,7 +70,7 @@ void minio::s3::BaseClient::HandleRedirectResponse(
       break;
   }
 
-  std::string region = headers.GetFront("x-amz-bucket-region");
+  const std::string region = headers.GetFront("x-amz-bucket-region");
 
   if (!message.empty() && !region.empty()) {
     message += "; use region " + region;
@@ -86,7 +85,7 @@ void minio::s3::BaseClient::HandleRedirectResponse(
 
 minio::s3::Response minio::s3::BaseClient::GetErrorResponse(
     http::Response resp, std::string_view resource, http::Method method,
-    std::string& bucket_name, std::string& object_name) {
+    const std::string& bucket_name, const std::string& object_name) {
   if (!resp.error.empty()) return error::Error(resp.error);
 
   if (!resp.body.empty()) {
@@ -212,7 +211,7 @@ minio::s3::Response minio::s3::BaseClient::Execute(Request& req) {
 }
 
 minio::s3::GetRegionResponse minio::s3::BaseClient::GetRegion(
-    std::string& bucket_name, std::string& region) {
+    const std::string& bucket_name, const std::string& region) {
   std::string base_region = base_url_.region;
   if (!region.empty()) {
     if (!base_region.empty() && base_region != region) {

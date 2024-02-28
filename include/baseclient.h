@@ -24,18 +24,18 @@
 
 namespace minio {
 namespace s3 {
-utils::Multimap GetCommonListObjectsQueryParams(std::string& delimiter,
-                                                std::string& encoding_type,
+utils::Multimap GetCommonListObjectsQueryParams(const std::string& delimiter,
+                                                const std::string& encoding_type,
                                                 unsigned int max_keys,
-                                                std::string& prefix);
+                                                const std::string& prefix);
 
 /**
  * Base client to perform S3 APIs.
  */
 class BaseClient {
  protected:
-  BaseUrl& base_url_;
-  creds::Provider* provider_ = NULL;
+  BaseUrl base_url_;
+  creds::Provider* const provider_ = NULL;
   std::map<std::string, std::string> region_map_;
   bool debug_ = false;
   bool ignore_cert_check_ = false;
@@ -43,14 +43,15 @@ class BaseClient {
   std::string user_agent_ = DEFAULT_USER_AGENT;
 
  public:
-  BaseClient(BaseUrl& base_url, creds::Provider* provider = NULL);
+  explicit BaseClient(BaseUrl base_url, creds::Provider* const provider = NULL);
+  virtual ~BaseClient() = default;
 
   void Debug(bool flag) { debug_ = flag; }
 
   void IgnoreCertCheck(bool flag) { ignore_cert_check_ = flag; }
 
   void SetSslCertFile(std::string ssl_cert_file) {
-    ssl_cert_file_ = ssl_cert_file;
+    ssl_cert_file_ = std::move(ssl_cert_file);
   }
 
   error::Error SetAppInfo(std::string_view app_name,
@@ -58,14 +59,14 @@ class BaseClient {
 
   void HandleRedirectResponse(std::string& code, std::string& message,
                               int status_code, http::Method method,
-                              utils::Multimap headers, std::string& bucket_name,
+                              const utils::Multimap& headers, const std::string& bucket_name,
                               bool retry = false);
   Response GetErrorResponse(http::Response resp, std::string_view resource,
-                            http::Method method, std::string& bucket_name,
-                            std::string& object_name);
+                            http::Method method, const std::string& bucket_name,
+                            const std::string& object_name);
   Response execute(Request& req);
   Response Execute(Request& req);
-  GetRegionResponse GetRegion(std::string& bucket_name, std::string& region);
+  GetRegionResponse GetRegion(const std::string& bucket_name, const std::string& region);
 
   AbortMultipartUploadResponse AbortMultipartUpload(
       AbortMultipartUploadArgs args);
