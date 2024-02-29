@@ -29,10 +29,10 @@ namespace creds {
  */
 struct Credentials {
   error::Error err;
-  std::string access_key;
-  std::string secret_key;
-  std::string session_token;
-  utils::Time expiration;
+  std::string access_key = {};
+  std::string secret_key = {};
+  std::string session_token = {};
+  utils::Time expiration = {};
 
   Credentials() = default;
   ~Credentials() = default;
