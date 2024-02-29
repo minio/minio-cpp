@@ -95,7 +95,7 @@ minio::error::Error minio::s3::SelectHandler::DecodeHeader(
   return error::SUCCESS;
 }
 
-bool minio::s3::SelectHandler::process(const http::DataFunctionArgs& args,
+bool minio::s3::SelectHandler::process(const http::DataFunctionArgs& /* args */,
                                        bool& cont) {
   if (!prelude_read_ && !ReadPrelude()) return true;
 
