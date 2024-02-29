@@ -319,8 +319,8 @@ struct Bucket {
 struct Part {
   unsigned int number;
   std::string etag;
-  utils::Time last_modified;
-  size_t size;
+  utils::Time last_modified = {};
+  size_t size = 0;
 
   Part() = default;
   ~Part() = default;
