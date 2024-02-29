@@ -28,6 +28,20 @@ class Error {
  public:
   Error() = default;
   Error(std::string_view msg) : msg_(msg) {}
+
+  Error(const Error&) = default;
+  Error& operator =(const Error&) = default;
+
+  Error(Error&& v)
+    : msg_(std::move(v.msg_)) {}
+
+  Error& operator =(Error&& v) {
+    if (this != &v) {
+      msg_ = std::move(v.msg_);
+    }
+    return *this;
+  }
+
   ~Error() = default;
 
   std::string String() const { return msg_; }
