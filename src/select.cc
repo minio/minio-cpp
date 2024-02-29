@@ -16,16 +16,16 @@
 #include "select.h"
 
 void minio::s3::SelectHandler::Reset() {
-  prelude_ = "";
+  prelude_.clear();
   prelude_read_ = false;
 
-  prelude_crc_ = "";
+  prelude_crc_.clear();
   prelude_crc_read_ = false;
 
-  data_ = "";
+  data_.clear();
   data_read_ = false;
 
-  message_crc_ = "";
+  message_crc_.clear();
   message_crc_read_ = false;
 }
 
@@ -95,7 +95,7 @@ minio::error::Error minio::s3::SelectHandler::DecodeHeader(
   return error::SUCCESS;
 }
 
-bool minio::s3::SelectHandler::process(http::DataFunctionArgs args,
+bool minio::s3::SelectHandler::process(const http::DataFunctionArgs& args,
                                        bool& cont) {
   if (!prelude_read_ && !ReadPrelude()) return true;
 
@@ -213,7 +213,7 @@ bool minio::s3::SelectHandler::process(http::DataFunctionArgs args,
   return false;
 }
 
-bool minio::s3::SelectHandler::DataFunction(http::DataFunctionArgs args) {
+bool minio::s3::SelectHandler::DataFunction(const http::DataFunctionArgs& args) {
   if (done_) return false;
 
   response_ += args.datachunk;

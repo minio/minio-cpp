@@ -67,7 +67,7 @@ struct BaseUrl {
   bool virtual_style = false;
 
   BaseUrl() = default;
-  BaseUrl(std::string host, bool https = true, std::string region = ""); // PWTODO: make it explicit
+  BaseUrl(std::string host, bool https = true, std::string region = {}); // PWTODO: make it explicit
   ~BaseUrl() = default;
 
   error::Error BuildUrl(http::Url& url, http::Method method, const std::string& region,

@@ -51,14 +51,15 @@ class SelectHandler {
   bool ReadMessageCrc();
   error::Error DecodeHeader(std::map<std::string, std::string>& headers,
                             std::string data);
-  bool process(http::DataFunctionArgs args, bool& cont);
+  bool process(const http::DataFunctionArgs& args, bool& cont);
 
  public:
-  SelectHandler(SelectResultFunction result_func) {
-    this->result_func_ = result_func;
-  }
+  SelectHandler(SelectResultFunction result_func)
+    : result_func_(std::move(result_func)) {}
 
-  bool DataFunction(http::DataFunctionArgs args);
+  ~SelectHandler() = default;
+
+  bool DataFunction(const http::DataFunctionArgs& args);
 };  // struct SelectHandler
 }  // namespace s3
 }  // namespace minio
