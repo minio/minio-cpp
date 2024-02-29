@@ -346,7 +346,7 @@ struct GetBucketVersioningResponse : public Response {
     return status.Get() ? "Enabled" : "Suspended";
   }
   std::string MfaDelete() {
-    if (!mfa_delete) return "";
+    if (!mfa_delete) return {};
     return mfa_delete.Get() ? "Enabled" : "Disabled";
   }
 };  // struct GetBucketVersioningResponse

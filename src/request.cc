@@ -101,7 +101,7 @@ std::string minio::s3::extractRegion(const std::string& host) {
   if (token == "dualstack") token = tokens[2];
 
   // If token is equal to "amazonaws", region is not passed in the host.
-  if (token == "amazonaws") return "";
+  if (token == "amazonaws") return {};
 
   // Return token as region.
   return token;

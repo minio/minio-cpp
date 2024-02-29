@@ -19,7 +19,7 @@
 
 
 std::string minio::http::Url::String() const {
-  if (host.empty()) return "";
+  if (host.empty()) return {};
 
   std::string url = (https ? "https://" : "http://") + host;
   if (port) url += ":" + std::to_string(port);

@@ -434,7 +434,7 @@ std::list<std::string> minio::utils::Multimap::Get(std::string_view key) const {
 
 std::string minio::utils::Multimap::GetFront(std::string_view key) const {
   std::list<std::string> values = Get(key);
-  return (values.size() > 0) ? values.front() : "";
+  return (values.size() > 0) ? values.front() : std::string();
 }
 
 std::list<std::string> minio::utils::Multimap::Keys() const {

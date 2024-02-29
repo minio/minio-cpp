@@ -65,8 +65,8 @@ void minio::s3::BaseClient::HandleRedirectResponse(
       message = "Bad request";
       break;
     default:
-      code = "";
-      message = "";
+      code.clear();
+      message.clear();
       break;
   }
 
@@ -79,7 +79,7 @@ void minio::s3::BaseClient::HandleRedirectResponse(
   if (retry && !region.empty() && method == http::Method::kHead &&
       !bucket_name.empty() && !region_map_[bucket_name].empty()) {
     code = "RetryHead";
-    message = "";
+    message.clear();
   }
 }
 

@@ -103,7 +103,7 @@ struct Request {
   std::string bucket_name;
   std::string object_name;
 
-  std::string_view body = "";
+  std::string_view body;
 
   http::DataFunction datafunc = nullptr;
   void* userdata = nullptr;

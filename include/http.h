@@ -111,7 +111,7 @@ struct Request {
   Method method;
   http::Url url;
   utils::Multimap headers;
-  std::string_view body = "";
+  std::string_view body;
   DataFunction datafunc = nullptr;
   void* userdata = nullptr;
   ProgressFunction progressfunc = nullptr;
