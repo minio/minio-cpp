@@ -31,7 +31,7 @@
 #include "providers.h"
 
 minio::error::Error minio::creds::checkLoopbackHost(const std::string& host) {
-  struct addrinfo hints = {0};
+  struct addrinfo hints = {};
   hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
 
