@@ -35,39 +35,24 @@ struct Response {
   std::string bucket_name;
   std::string object_name;
 
-  Response() {}
+  Response();
+  Response(error::Error err)
+    : err_(std::move(err)) {}
 
-  Response(error::Error err) { this->err_ = err; }
+  Response(const Response& resp) = default;
+  Response& operator =(const Response& resp) = default;
 
-  Response(const Response& resp) {
-    this->err_ = resp.err_;
+  Response(Response&& resp) = default;
+  Response& operator =(Response&& resp) = default;
 
-    this->status_code = resp.status_code;
-    this->headers = resp.headers;
-    this->data = resp.data;
-    this->code = resp.code;
-    this->message = resp.message;
-    this->resource = resp.resource;
-    this->request_id = resp.request_id;
-    this->host_id = resp.host_id;
-    this->bucket_name = resp.bucket_name;
-    this->object_name = resp.object_name;
-  }
+  ~Response();
 
   explicit operator bool() const {
     return !err_ && code.empty() && message.empty() &&
            (status_code == 0 || (status_code >= 200 && status_code <= 299));
   }
 
-  error::Error Error() {
-    if (err_) return err_;
-    if (!code.empty()) return error::Error(code + ": " + message);
-    if (status_code && (status_code < 200 || status_code > 299)) {
-      return error::Error("failed with HTTP status code " +
-                          std::to_string(status_code));
-    }
-    return error::SUCCESS;
-  }
+  error::Error Error() const;
 
   static Response ParseXML(std::string_view data, int status_code,
                            utils::Multimap headers);
