@@ -293,7 +293,7 @@ struct ComposeSource : public ObjectConditionalReadArgs {
   ComposeSource() = default;
   ~ComposeSource() = default;
 
-  error::Error BuildHeaders(size_t object_size, std::string &etag);
+  error::Error BuildHeaders(size_t object_size, const std::string &etag);
   size_t ObjectSize() const;
   utils::Multimap Headers() const;
 

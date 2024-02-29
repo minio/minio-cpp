@@ -267,7 +267,7 @@ minio::error::Error minio::s3::CopyObjectArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::ComposeSource::BuildHeaders(size_t object_size, std::string& etag) {
+minio::error::Error minio::s3::ComposeSource::BuildHeaders(size_t object_size, const std::string& etag) {
   std::string msg = "source " + bucket + "/" + object;
   if (!version_id.empty()) msg += "?versionId=" + version_id;
   msg += ": ";
