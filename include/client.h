@@ -40,7 +40,10 @@ class ListObjectsResult {
 
  public:
   ListObjectsResult(error::Error err);
-  ListObjectsResult(Client* client, ListObjectsArgs args);
+  ListObjectsResult(Client* const client, const ListObjectsArgs& args);
+  ListObjectsResult(Client* const client, ListObjectsArgs&& args);
+  ~ListObjectsResult() = default;
+  
   Item& operator*() const { return *itr_; }
   explicit operator bool() const { return itr_ != resp_.contents.end(); }
   ListObjectsResult& operator++() {
@@ -69,7 +72,10 @@ class RemoveObjectsResult {
 
  public:
   RemoveObjectsResult(error::Error err);
-  RemoveObjectsResult(Client* client, RemoveObjectsArgs args);
+  RemoveObjectsResult(Client* const client, const RemoveObjectsArgs& args);
+  RemoveObjectsResult(Client* const client, RemoveObjectsArgs&& args);
+  ~RemoveObjectsResult() = default;
+
   DeleteError& operator*() const { return *itr_; }
   explicit operator bool() const { return itr_ != resp_.errors.end(); }
   RemoveObjectsResult& operator++() {
@@ -96,11 +102,13 @@ class Client : public BaseClient {
                                         std::list<ComposeSource> sources);
   ComposeObjectResponse ComposeObject(ComposeObjectArgs args,
                                       std::string& upload_id);
-  PutObjectResponse PutObject(PutObjectArgs& args, std::string& upload_id,
+  PutObjectResponse PutObject(PutObjectArgs args, std::string& upload_id,
                               char* buf);
 
  public:
-  Client(BaseUrl& base_url, creds::Provider* provider = nullptr);
+  Client(BaseUrl& base_url, creds::Provider* const provider = nullptr);
+  ~Client() = default;
+
   ComposeObjectResponse ComposeObject(ComposeObjectArgs args);
   CopyObjectResponse CopyObject(CopyObjectArgs args);
   DownloadObjectResponse DownloadObject(DownloadObjectArgs args);
