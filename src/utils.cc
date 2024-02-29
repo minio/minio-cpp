@@ -97,7 +97,7 @@ bool minio::utils::StringToBool(const std::string& str) {
 }
 
 std::string minio::utils::Trim(std::string_view str, char ch) {
-  int start, len;
+  std::size_t start, len;
   for (start = 0; start < str.size() && str[start] == ch; start++)
     ;
   for (len = str.size() - start; len > 0 && str[start + len - 1] == ch; len--)
@@ -205,7 +205,7 @@ std::string minio::utils::Sha256Hash(std::string_view str) {
 
   std::string hash;
   char buf[3];
-  for (int i = 0; i < length; ++i) {
+  for (unsigned int i = 0; i < length; ++i) {
     snprintf(buf, 3, "%02x", digest[i]);
     hash += buf;
   }
@@ -557,7 +557,7 @@ minio::error::Error minio::utils::CalcPartInfo(long object_size,
   }
 
   if (object_size >= 0) {
-    if (object_size > kMaxObjectSize) {
+    if (object_size > static_cast<long>(kMaxObjectSize)) {
       return error::Error("object size " + std::to_string(object_size) +
                           " is not supported; maximum allowed 5TiB");
     }
@@ -577,7 +577,7 @@ minio::error::Error minio::utils::CalcPartInfo(long object_size,
     part_size = (size_t)std::ceil(psize / kMinPartSize) * kMinPartSize;
   }
 
-  if (part_size > object_size) part_size = object_size;
+  if (static_cast<long>(part_size) > object_size) part_size = object_size;
   part_count =
       part_size > 0 ? (long)std::ceil((double)object_size / part_size) : 1;
   if (part_count > kMaxMultipartCount) {
