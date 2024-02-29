@@ -264,7 +264,7 @@ std::string minio::utils::Md5sumHash(std::string_view str) {
 
   EVP_MD_CTX_destroy(ctx);
 
-  std::string hash = std::string((const char*)digest, length);
+  std::string hash(reinterpret_cast<const char*>(digest), length);
   OPENSSL_free(digest);
 
   return minio::utils::Base64Encode(hash);
