@@ -212,9 +212,9 @@ minio::error::Error minio::http::Response::ReadHeaders() {
   return error::SUCCESS;
 }
 
-size_t minio::http::Response::ResponseCallback(curlpp::Multi *requests,
-                                               curlpp::Easy *request,
-                                               char *buffer, size_t size,
+size_t minio::http::Response::ResponseCallback(curlpp::Multi* const requests,
+                                               curlpp::Easy* const request,
+                                               const char* const buffer, size_t size,
                                                size_t length) {
   size_t realsize = size * length;
 
@@ -225,7 +225,7 @@ size_t minio::http::Response::ResponseCallback(curlpp::Multi *requests,
   }
 
   if (!status_code_read_ || !headers_read_) {
-    response_ += std::string(buffer, length);
+    response_.append(buffer, length);
   }
 
   if (!status_code_read_) {
@@ -263,7 +263,7 @@ size_t minio::http::Response::ResponseCallback(curlpp::Multi *requests,
     DataFunctionArgs args{request, this, std::string(buffer, length), userdata};
     if (!datafunc(args)) requests->remove(request);
   } else {
-    body += std::string(buffer, length);
+    body.append(buffer, length);
   }
 
   return realsize;

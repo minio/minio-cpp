@@ -33,7 +33,7 @@ namespace http {
 enum class Method { kGet, kHead, kPost, kPut, kDelete };
 
 // MethodToString converts http Method enum to string.
-constexpr const char* MethodToString(const Method& method) throw() {
+constexpr const char* MethodToString(Method method) throw() {
   switch (method) {
     case Method::kGet:
       return "GET";
@@ -147,8 +147,8 @@ struct Response {
   Response() = default;
   ~Response() = default;
 
-  size_t ResponseCallback(curlpp::Multi* requests, curlpp::Easy* request,
-                          char* buffer, size_t size, size_t length);
+  size_t ResponseCallback(curlpp::Multi* const requests, curlpp::Easy* const request,
+                          const char* const buffer, size_t size, size_t length);
 
   explicit operator bool() const {
     return error.empty() && status_code >= 200 && status_code <= 299;
