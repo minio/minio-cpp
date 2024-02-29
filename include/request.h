@@ -126,7 +126,7 @@ struct Request {
   http::Request ToHttpRequest(creds::Provider* const provider = nullptr);
 
  private:
-  void BuildHeaders(http::Url& url, creds::Provider* provider);
+  void BuildHeaders(http::Url& url, creds::Provider* const provider);
 };  // struct Request
 }  // namespace s3
 }  // namespace minio

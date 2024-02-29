@@ -258,7 +258,7 @@ minio::s3::Request::Request(http::Method method, std::string region,
   , query_params(std::move(extra_query_params)) {}
 
 void minio::s3::Request::BuildHeaders(http::Url& url,
-                                      creds::Provider* provider) {
+                                      creds::Provider* const provider) {
   headers.Add("Host", url.HostHeaderValue());
   headers.Add("User-Agent", user_agent);
 
