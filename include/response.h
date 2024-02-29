@@ -118,7 +118,7 @@ struct CompleteMultipartUploadResponse : public Response {
   CompleteMultipartUploadResponse(const Response& resp) : Response(resp) {}
 
   ~CompleteMultipartUploadResponse() = default;
-
+  
   static CompleteMultipartUploadResponse ParseXML(std::string_view data,
                                                   std::string version_id);
 };  // struct CompleteMultipartUploadResponse
