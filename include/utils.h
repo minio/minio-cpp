@@ -126,7 +126,7 @@ class Time {
  public:
   Time() = default;
 
-  Time(std::time_t tv_sec, suseconds_t tv_usec, bool utc)
+  Time(std::time_t tv_sec, long tv_usec, bool utc)
     : tv_{ .tv_sec = std::move(tv_sec), .tv_usec = std::move(tv_usec) }
     , utc_(utc) {}
 
