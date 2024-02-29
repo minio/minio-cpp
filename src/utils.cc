@@ -322,7 +322,7 @@ minio::utils::Time minio::utils::Time::FromHttpHeaderValue(const char* value) {
   auto week_day = pos - std::begin(WEEK_DAYS);
 
   // Parse day.
-  std::tm day{0};
+  std::tm day{};
   strptime(s.substr(5, 2).c_str(), "%d", &day);
   if (s.at(7) != ' ') return Time();
 
@@ -332,7 +332,7 @@ minio::utils::Time minio::utils::Time::FromHttpHeaderValue(const char* value) {
   auto month = pos - std::begin(MONTHS);
 
   // Parse rest of values.
-  std::tm ltm{0};
+  std::tm ltm{};
   strptime(s.substr(11).c_str(), " %Y %H:%M:%S GMT", &ltm);
   ltm.tm_mday = day.tm_mday;
   ltm.tm_mon = month;
@@ -356,7 +356,7 @@ std::string minio::utils::Time::ToISO8601UTC() const {
 }
 
 minio::utils::Time minio::utils::Time::FromISO8601UTC(const char* value) {
-  std::tm t{0};
+  std::tm t{};
   char* rv = strptime(value, "%Y-%m-%dT%H:%M:%S", &t);
   unsigned long ul = 0;
   sscanf(rv, ".%lu", &ul);
@@ -378,6 +378,15 @@ int minio::utils::Time::Compare(const Time& rhs) const {
 
 minio::utils::Multimap::Multimap(const Multimap& headers) {
   this->AddAll(headers); // PWTODO: why isn't a default copy constructor sufficient?
+}
+
+minio::utils::Multimap& minio::utils::Multimap::operator =(const Multimap& headers) { // PWTODO: why isn't a default copy constructor sufficient?
+  if (this != &headers) { // PWTODO: rectify this madness
+    Multimap t(*this);
+    std::swap(map_, t.map_);
+    std::swap(keys_, t.keys_);
+  }
+  return *this;
 }
 
 void minio::utils::Multimap::Add(std::string key, std::string value) {
@@ -594,4 +603,15 @@ minio::utils::CharBuffer::~CharBuffer() {}
 
 std::streambuf::pos_type minio::utils::CharBuffer::seekpos(pos_type sp, std::ios_base::openmode which) {
   return seekoff(sp - pos_type(off_type(0)), std::ios_base::beg, which);
+}
+
+std::streambuf::pos_type minio::utils::CharBuffer::seekoff(off_type off, std::ios_base::seekdir dir,
+                 std::ios_base::openmode /* which */) {
+  if (dir == std::ios_base::cur)
+    gbump(off);
+  else if (dir == std::ios_base::end)
+    setg(eback(), egptr() + off, egptr());
+  else if (dir == std::ios_base::beg)
+    setg(eback(), eback() + off, egptr());
+  return gptr() - eback();
 }

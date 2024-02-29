@@ -67,7 +67,7 @@ std::string FormatTime(const std::tm* time, const char* format);
 bool StringToBool(const std::string& str);
 
 // BoolToString converts bool to string.
-inline const char* const BoolToString(bool b) { return b ? "true" : "false"; }
+inline const char* BoolToString(bool b) { return b ? "true" : "false"; }
 
 // Trim trims leading and trailing character of a string.
 std::string Trim(std::string_view str, char ch = ' ');
@@ -204,7 +204,10 @@ class Multimap {
 
  public:
   Multimap() = default;
-  Multimap(const Multimap& headers);
+  Multimap(const Multimap& headers); // PWTODO: why can't use the default?
+  Multimap& operator =(const Multimap& headers); // PWTODO: why can't use the default?
+  Multimap(Multimap&& headers) = default;
+  Multimap& operator =(Multimap&& headers) = default;
   ~Multimap() = default;
 
   void Add(std::string key, std::string value);
@@ -236,21 +239,12 @@ class Multimap {
  */
 struct CharBuffer : std::streambuf {
   CharBuffer(char* buf, size_t size) { this->setg(buf, buf, buf + size); }
-
-  pos_type seekoff(off_type off, std::ios_base::seekdir dir,
-                   std::ios_base::openmode which = std::ios_base::in) override {
-    if (dir == std::ios_base::cur)
-      gbump(off);
-    else if (dir == std::ios_base::end)
-      setg(eback(), egptr() + off, egptr());
-    else if (dir == std::ios_base::beg)
-      setg(eback(), eback() + off, egptr());
-    return gptr() - eback();
-  }
-
   virtual ~CharBuffer();
 
   virtual pos_type seekpos(pos_type sp, std::ios_base::openmode which) override;
+
+  virtual pos_type seekoff(off_type off, std::ios_base::seekdir dir,
+                   std::ios_base::openmode which = std::ios_base::in) override;
 };  // struct CharBuffer
 }  // namespace utils
 }  // namespace minio
