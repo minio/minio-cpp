@@ -335,8 +335,8 @@ struct Retention {
 };  // struct Retention
 
 struct DeleteObject {
-  std::string name;
-  std::string version_id;
+  std::string name = {};
+  std::string version_id = {};
 
   DeleteObject() = default;
   ~DeleteObject() = default;

@@ -225,7 +225,7 @@ class Tests {
         throw std::runtime_error("ListBuckets(): " + resp.Error().String());
       }
 
-      int c = 0;
+      std::size_t c = 0;
       for (auto& bucket : resp.buckets) {
         if (std::find(bucket_names.begin(), bucket_names.end(), bucket.name) !=
             bucket_names.end()) {
@@ -398,7 +398,7 @@ class Tests {
         object_names.push_back(object_name);
       }
 
-      int c = 0;
+      std::size_t c = 0;
       minio::s3::ListObjectsArgs args;
       args.bucket = bucket_name_;
       minio::s3::ListObjectsResult result = client_.ListObjects(args);
@@ -671,7 +671,7 @@ class Tests {
   }
 };  // class Tests
 
-int main(int argc, char* argv[]) {
+int main(int /*argc*/, char* /*argv*/[]) {
   std::string host;
   if (!minio::utils::GetEnv(host, "SERVER_ENDPOINT")) {
     std::cerr << "SERVER_ENDPOINT environment variable must be set"
