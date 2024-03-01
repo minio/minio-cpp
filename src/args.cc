@@ -556,8 +556,8 @@ minio::error::Error minio::s3::PostPolicy::AddContentLengthRangeCondition(size_t
   if (lower_limit > upper_limit) {
     return error::Error("lower limit cannot be greater than upper limit");
   }
-  lower_limit_ = Integer(lower_limit);
-  upper_limit_ = Integer(upper_limit);
+  lower_limit_ = Integer(static_cast<int>(lower_limit));
+  upper_limit_ = Integer(static_cast<int>(upper_limit));
   return error::SUCCESS;
 }
 

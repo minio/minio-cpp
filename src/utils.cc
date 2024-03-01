@@ -76,7 +76,7 @@ std::string minio::utils::Printable(const std::string& s) {
 }
 
 unsigned long minio::utils::CRC32(std::string_view str) {
-  return crc32(0, (const unsigned char*)str.data(), str.size());
+  return crc32(0, reinterpret_cast<const unsigned char*>(str.data()), static_cast<uInt>(str.size()));
 }
 
 unsigned int minio::utils::Int(std::string_view str) {
@@ -220,7 +220,7 @@ std::string minio::utils::Base64Encode(std::string_view str) {
   auto base64 = BIO_new(BIO_f_base64());
   base64 = BIO_push(base64, base64_memory);
 
-  BIO_write(base64, str.data(), str.size());
+  BIO_write(base64, str.data(), static_cast<int>(str.size()));
   BIO_flush(base64);
 
   BUF_MEM* buf_mem{};
@@ -335,7 +335,7 @@ minio::utils::Time minio::utils::Time::FromHttpHeaderValue(const char* value) {
   std::tm ltm{};
   strptime(s.substr(11).c_str(), " %Y %H:%M:%S GMT", &ltm);
   ltm.tm_mday = day.tm_mday;
-  ltm.tm_mon = month;
+  ltm.tm_mon = static_cast<int>(month);
 
   // Validate week day.
   std::time_t time = std::mktime(&ltm);
@@ -587,8 +587,7 @@ minio::error::Error minio::utils::CalcPartInfo(long object_size,
   }
 
   if (static_cast<long>(part_size) > object_size) part_size = object_size;
-  part_count =
-      part_size > 0 ? (long)std::ceil((double)object_size / part_size) : 1;
+  part_count = (part_size > 0) ? ((object_size + part_size - 1) / part_size) : 1;
   if (part_count > kMaxMultipartCount) {
     return error::Error(
         "object size " + std::to_string(object_size) + " and part size " +
@@ -608,7 +607,7 @@ std::streambuf::pos_type minio::utils::CharBuffer::seekpos(pos_type sp, std::ios
 std::streambuf::pos_type minio::utils::CharBuffer::seekoff(off_type off, std::ios_base::seekdir dir,
                  std::ios_base::openmode /* which */) {
   if (dir == std::ios_base::cur)
-    gbump(off);
+    gbump(static_cast<int>(off));
   else if (dir == std::ios_base::end)
     setg(eback(), egptr() + off, egptr());
   else if (dir == std::ios_base::beg)

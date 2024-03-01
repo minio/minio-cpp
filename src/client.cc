@@ -456,7 +456,7 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
         }
 
         http::ProgressFunctionArgs actual_args;
-        actual_args.upload_total_bytes = object_size;
+        actual_args.upload_total_bytes = static_cast<double>(object_size); // PWTODO: size_t kept as double? Can I upload a quarter of a byte?
         actual_args.uploaded_bytes = uploaded_bytes + args.uploaded_bytes;
         actual_args.userdata = progress_userdata;
         progressfunc(actual_args);
@@ -470,9 +470,9 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
 
     if (UploadPartResponse resp = UploadPart(up_args)) {
       if (args.progressfunc != nullptr) {
-        uploaded_bytes += data.length();
+        uploaded_bytes += static_cast<double>(data.length()); // PWTODO: size_t kept as double? Can I upload a quarter of a byte?
         http::ProgressFunctionArgs actual_args;
-        actual_args.upload_total_bytes = object_size;
+        actual_args.upload_total_bytes = static_cast<double>(object_size); // PWTODO: size_t kept as double? Can I upload a quarter of a byte?
         actual_args.uploaded_bytes = uploaded_bytes;
         actual_args.userdata = args.progress_userdata;
         args.progressfunc(actual_args);
