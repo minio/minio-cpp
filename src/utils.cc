@@ -377,8 +377,8 @@ int minio::utils::Time::Compare(const Time& rhs) const {
 }
 
 void minio::utils::Multimap::Add(std::string key, std::string value) {
-  map_[key].insert(value); // PWTODO: move construction
-  keys_[ToLower(key)].insert(key);
+  map_[key].insert(std::move(value));
+  keys_[ToLower(key)].insert(std::move(key));
 }
 
 void minio::utils::Multimap::AddAll(const Multimap& headers) {
