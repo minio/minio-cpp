@@ -382,7 +382,7 @@ minio::utils::Multimap::Multimap(const Multimap& headers) {
 
 minio::utils::Multimap& minio::utils::Multimap::operator =(const Multimap& headers) { // PWTODO: why isn't a default copy constructor sufficient?
   if (this != &headers) { // PWTODO: rectify this madness
-    Multimap t(*this);
+    Multimap t(headers);
     std::swap(map_, t.map_);
     std::swap(keys_, t.keys_);
   }
