@@ -110,8 +110,7 @@ bool minio::utils::CheckNonEmptyString(std::string_view str) {
 }
 
 std::string minio::utils::ToLower(const std::string& str) {
-  std::string s;
-  s.reserve(str.length());
+  std::string s(str);
   std::transform(s.begin(), s.end(), s.begin(), ::tolower);
   return s;
 }
