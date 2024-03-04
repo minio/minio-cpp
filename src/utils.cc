@@ -376,19 +376,6 @@ int minio::utils::Time::Compare(const Time& rhs) const {
   return 0;
 }
 
-minio::utils::Multimap::Multimap(const Multimap& headers) {
-  this->AddAll(headers); // PWTODO: why isn't a default copy constructor sufficient?
-}
-
-minio::utils::Multimap& minio::utils::Multimap::operator =(const Multimap& headers) { // PWTODO: why isn't a default copy constructor sufficient?
-  if (this != &headers) { // PWTODO: rectify this madness
-    Multimap t(headers);
-    std::swap(map_, t.map_);
-    std::swap(keys_, t.keys_);
-  }
-  return *this;
-}
-
 void minio::utils::Multimap::Add(std::string key, std::string value) {
   map_[key].insert(value); // PWTODO: move construction
   keys_[ToLower(key)].insert(key);

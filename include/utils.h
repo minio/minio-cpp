@@ -204,8 +204,8 @@ class Multimap {
 
  public:
   Multimap() = default;
-  Multimap(const Multimap& headers); // PWTODO: why can't use the default?
-  Multimap& operator =(const Multimap& headers); // PWTODO: why can't use the default?
+  Multimap(const Multimap& headers) = default;
+  Multimap& operator =(const Multimap& headers) = default;
   Multimap(Multimap&& headers) = default;
   Multimap& operator =(Multimap&& headers) = default;
   ~Multimap() = default;
