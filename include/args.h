@@ -335,7 +335,7 @@ using DeleteObjectFunction = std::function<bool(DeleteObject &)>;
 
 struct RemoveObjectsArgs : public BucketArgs {
   bool bypass_governance_mode = false;
-  DeleteObjectFunction func = nullptr; // PWTODO: nullptr
+  DeleteObjectFunction func = nullptr;
 
   RemoveObjectsArgs() = default;
   ~RemoveObjectsArgs() = default;

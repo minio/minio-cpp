@@ -152,10 +152,10 @@ class Time {
 
   explicit operator bool() const { return tv_.tv_sec != 0 && tv_.tv_usec != 0; }
 
-  int Compare(const Time& rhs) const; // PWTODO: implement me
+  int Compare(const Time& rhs) const;
 
   bool Equal(const Time& rhs) const {
-    return Compare(rhs) == 0; // PWTODO: can be optimized, good enough for now
+    return Compare(rhs) == 0;
   }
 
   bool operator ==(const Time& rhs) const {
@@ -167,11 +167,11 @@ class Time {
   }
 
   bool operator <(const Time& rhs) const {
-    return Compare(rhs) < 0; // PWTODO: can be optimized, good enough for now
+    return Compare(rhs) < 0;
   }
 
   bool operator >(const Time& rhs) const {
-    return Compare(rhs) > 0; // PWTODO: can be optimized, good enough for now
+    return Compare(rhs) > 0;
   }
 
   bool operator <=(const Time& rhs) const {

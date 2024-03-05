@@ -511,7 +511,7 @@ struct Prefix {
 
   Prefix(std::string value)
     : value_(std::move(value))
-    , is_set_(true) {} // PWTODO: get rid of converting constructors
+    , is_set_(true) {}
 
   ~Prefix() = default;
 
@@ -533,7 +533,7 @@ struct Integer {
 
   Integer(int value)
     : value_(value)
-    , is_set_(true) {} // PWTODO: get rid of converting constructors
+    , is_set_(true) {}
 
   ~Integer() = default;
 
@@ -555,7 +555,7 @@ struct Boolean {
 
   Boolean(bool value)
     : value_(value)
-    , is_set_(true) {} // PWTODO: get rid of converting constructors
+    , is_set_(true) {}
 
   ~Boolean() = default;
 
