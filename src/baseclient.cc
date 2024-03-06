@@ -936,7 +936,8 @@ minio::s3::BaseClient::GetPresignedObjectUrl(GetPresignedObjectUrlArgs args) {
     utils::Time date = utils::Time::Now();
     if (args.request_time) date = args.request_time;
 
-    signer::PresignV4(args.method, url.host, url.path, region, query_params,
+    std::string host = url.HostHeaderValue();
+    signer::PresignV4(args.method, host, url.path, region, query_params,
                       creds.access_key, creds.secret_key, date,
                       args.expiry_seconds);
     url.query_string = query_params.ToQueryString();
