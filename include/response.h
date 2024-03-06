@@ -147,16 +147,13 @@ struct PutObjectResponse : public Response {
 
   PutObjectResponse() = default;
 
-  PutObjectResponse(error::Error err)
-    : Response(std::move(err)) {}
-      
+  PutObjectResponse(error::Error err) : Response(std::move(err)) {}
+
   PutObjectResponse(const Response& resp)
       : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   PutObjectResponse(const CompleteMultipartUploadResponse& resp)
-    : Response(resp)
-    , etag(resp.etag)
-    , version_id(resp.version_id) {}
+      : Response(resp), etag(resp.etag), version_id(resp.version_id) {}
 
   ~PutObjectResponse() = default;
 };  // struct PutObjectResponse
