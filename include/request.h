@@ -67,7 +67,7 @@ struct BaseUrl {
   bool virtual_style = false;
 
   BaseUrl() = default;
-  BaseUrl(std::string host, bool https = true, std::string region = {});
+  explicit BaseUrl(std::string host, bool https = true, std::string region = {});
   ~BaseUrl() = default;
 
   error::Error BuildUrl(http::Url& url, http::Method method,
@@ -79,7 +79,9 @@ struct BaseUrl {
   explicit operator bool() const { return !err_ && !host.empty(); }
 
   error::Error Error() const {
-    if (host.empty() && !err_) return error::Error("empty host");
+    if (host.empty() && !err_) {
+      return error::Error("empty host");
+    }
     return err_;
   }
 

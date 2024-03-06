@@ -37,7 +37,7 @@ class Sse {
 
 class SseCustomerKey : public Sse {
  public:
-  SseCustomerKey(std::string_view key);
+  explicit SseCustomerKey(std::string_view key);
   virtual ~SseCustomerKey();
 
   virtual bool TlsRequired() const override;

@@ -240,7 +240,7 @@ struct ListObjectsV1Args : public ListObjectsCommonArgs {
   std::string marker;
 
   ListObjectsV1Args();
-  ListObjectsV1Args(ListObjectsArgs args);
+  explicit ListObjectsV1Args(ListObjectsArgs args);
   ~ListObjectsV1Args() = default;
 };  // struct ListObjectsV1Args
 
@@ -251,7 +251,7 @@ struct ListObjectsV2Args : public ListObjectsCommonArgs {
   bool include_user_metadata = false;
 
   ListObjectsV2Args();
-  ListObjectsV2Args(ListObjectsArgs args);
+  explicit ListObjectsV2Args(ListObjectsArgs args);
   ~ListObjectsV2Args() = default;
 };  // struct ListObjectsV2Args
 
@@ -260,7 +260,7 @@ struct ListObjectVersionsArgs : public ListObjectsCommonArgs {
   std::string version_id_marker;
 
   ListObjectVersionsArgs();
-  ListObjectVersionsArgs(ListObjectsArgs args);
+  explicit ListObjectVersionsArgs(ListObjectsArgs args);
   ~ListObjectVersionsArgs() = default;
 };  // struct ListObjectVersionsArgs
 
@@ -347,7 +347,8 @@ struct SelectObjectContentArgs : public ObjectReadArgs {
   SelectResultFunction resultfunc = nullptr;
 
   SelectObjectContentArgs(SelectRequest &req, SelectResultFunction func)
-      : request(req), resultfunc(func) {}
+    : request(req)
+    , resultfunc(func) {}
 
   ~SelectObjectContentArgs() = default;
 
@@ -386,8 +387,8 @@ using GetBucketNotificationArgs = BucketArgs;
 struct SetBucketNotificationArgs : public BucketArgs {
   NotificationConfig &config;
 
-  SetBucketNotificationArgs(NotificationConfig &configvalue)
-      : config(configvalue) {}
+  explicit SetBucketNotificationArgs(NotificationConfig &configvalue)
+    : config(configvalue) {}
 
   ~SetBucketNotificationArgs() = default;
 };  // struct SetBucketNotification
@@ -399,7 +400,9 @@ using GetBucketEncryptionArgs = BucketArgs;
 struct SetBucketEncryptionArgs : public BucketArgs {
   SseConfig &config;
 
-  SetBucketEncryptionArgs(SseConfig &sseconfig) : config(sseconfig) {}
+  explicit SetBucketEncryptionArgs(SseConfig &sseconfig)
+    : config(sseconfig) {}
+
   ~SetBucketEncryptionArgs() = default;
 
   error::Error Validate() const;
@@ -424,7 +427,9 @@ using GetBucketReplicationArgs = BucketArgs;
 struct SetBucketReplicationArgs : public BucketArgs {
   ReplicationConfig &config;
 
-  SetBucketReplicationArgs(ReplicationConfig &value) : config(value) {}
+  explicit SetBucketReplicationArgs(ReplicationConfig &value)
+    : config(value) {}
+
   ~SetBucketReplicationArgs() = default;
 };  // struct SetBucketReplication
 
@@ -435,7 +440,9 @@ using GetBucketLifecycleArgs = BucketArgs;
 struct SetBucketLifecycleArgs : public BucketArgs {
   LifecycleConfig &config;
 
-  SetBucketLifecycleArgs(LifecycleConfig &value) : config(value) {}
+  explicit SetBucketLifecycleArgs(LifecycleConfig &value)
+    : config(value) {}
+
   ~SetBucketLifecycleArgs() = default;
 };  // struct SetBucketLifecycle
 

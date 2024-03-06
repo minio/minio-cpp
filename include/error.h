@@ -32,14 +32,8 @@ class Error {
   Error(const Error&) = default;
   Error& operator=(const Error&) = default;
 
-  Error(Error&& v) : msg_(std::move(v.msg_)) {}
-
-  Error& operator=(Error&& v) {
-    if (this != &v) {
-      msg_ = std::move(v.msg_);
-    }
-    return *this;
-  }
+  Error(Error&& v) = default;
+  Error& operator =(Error&& v) = default;
 
   ~Error() = default;
 

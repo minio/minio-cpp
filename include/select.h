@@ -54,8 +54,8 @@ class SelectHandler {
   bool process(const http::DataFunctionArgs& args, bool& cont);
 
  public:
-  SelectHandler(SelectResultFunction result_func)
-      : result_func_(std::move(result_func)) {}
+  explicit SelectHandler(SelectResultFunction result_func)
+    : result_func_(std::move(result_func)) {}
 
   ~SelectHandler() = default;
 

@@ -288,9 +288,12 @@ struct SelectResult {
   long int bytes_returned = -1;
   std::string records;
 
-  SelectResult() : ended(true) {}
+  SelectResult()
+    : ended(true) {}
 
-  SelectResult(error::Error err) : err(std::move(err)), ended(true) {}
+  explicit SelectResult(error::Error err)
+    : err(std::move(err))
+    , ended(true) {}
 
   SelectResult(long int bytes_scanned, long int bytes_processed,
                long int bytes_returned)
@@ -401,8 +404,9 @@ struct FilterValue {
  public:
   FilterValue() = default;
 
-  FilterValue(std::string value)
-      : value_(std::move(value)), is_value_set_(true) {}
+  explicit FilterValue(std::string value)
+    : value_(std::move(value))
+    , is_value_set_(true) {}
 
   ~FilterValue() = default;
 
@@ -415,7 +419,8 @@ struct PrefixFilterRule : public FilterValue {
 
   PrefixFilterRule() = default;
 
-  PrefixFilterRule(std::string value) : FilterValue(std::move(value)) {}
+  explicit PrefixFilterRule(std::string value)
+    : FilterValue(std::move(value)) {}
 
   ~PrefixFilterRule() = default;
 };  // struct PrefixFilterRule
@@ -425,7 +430,8 @@ struct SuffixFilterRule : public FilterValue {
 
   SuffixFilterRule() = default;
 
-  SuffixFilterRule(std::string value) : FilterValue(std::move(value)) {}
+  explicit SuffixFilterRule(std::string value)
+    : FilterValue(std::move(value)) {}
 
   ~SuffixFilterRule() = default;
 };  // struct SuffixFilterRule
@@ -503,7 +509,9 @@ struct Prefix {
  public:
   Prefix() = default;
 
-  Prefix(std::string value) : value_(std::move(value)), is_set_(true) {}
+  explicit Prefix(std::string value)
+    : value_(std::move(value))
+    , is_set_(true) {}
 
   ~Prefix() = default;
 
@@ -523,7 +531,9 @@ struct Integer {
  public:
   Integer() = default;
 
-  Integer(int value) : value_(value), is_set_(true) {}
+  explicit Integer(int value)
+    : value_(value)
+    , is_set_(true) {}
 
   ~Integer() = default;
 
@@ -543,7 +553,9 @@ struct Boolean {
  public:
   Boolean() = default;
 
-  Boolean(bool value) : value_(value), is_set_(true) {}
+  explicit Boolean(bool value)
+    : value_(value)
+    , is_set_(true) {}
 
   ~Boolean() = default;
 

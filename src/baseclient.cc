@@ -85,7 +85,9 @@ void minio::s3::BaseClient::HandleRedirectResponse(
 minio::s3::Response minio::s3::BaseClient::GetErrorResponse(
     http::Response resp, std::string_view resource, http::Method method,
     const std::string& bucket_name, const std::string& object_name) {
-  if (!resp.error.empty()) return error::Error(resp.error);
+  if (!resp.error.empty()) {
+    return Response(error::Error(resp.error));
+  }
 
   if (!resp.body.empty()) {
     std::list<std::string> values = resp.headers.Get("Content-Type");
@@ -214,33 +216,39 @@ minio::s3::GetRegionResponse minio::s3::BaseClient::GetRegion(
   std::string base_region = base_url_.region;
   if (!region.empty()) {
     if (!base_region.empty() && base_region != region) {
-      return error::Error("region must be " + base_region + ", but passed " +
-                          region);
+      return GetRegionResponse(error::Error("region must be " + base_region + ", but passed " + region));
     }
 
-    return region;
+    return GetRegionResponse(region);
   }
 
-  if (!base_region.empty()) return base_region;
+  if (!base_region.empty()) {
+    return GetRegionResponse(base_region);
+  }
 
   if (bucket_name.empty() || provider_ == nullptr) {
-    return std::string("us-east-1");
+    return GetRegionResponse("us-east-1");
   }
 
   std::string stored_region = region_map_[bucket_name];
-  if (!stored_region.empty()) return stored_region;
-
+  if (!stored_region.empty()) {
+    return GetRegionResponse(stored_region);
+  }
   Request req(http::Method::kGet, "us-east-1", base_url_, utils::Multimap(),
               utils::Multimap());
   req.query_params.Add("location", "");
   req.bucket_name = bucket_name;
 
   Response resp = Execute(req);
-  if (!resp) return resp;
+  if (!resp) {
+    return resp;
+  }
 
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(resp.data.data());
-  if (!result) return error::Error("unable to parse XML");
+  if (!result) {
+    return GetRegionResponse(error::Error("unable to parse XML"));
+  }
   auto text = xdoc.select_node("/LocationConstraint/text()");
   std::string value = text.node().value();
 
@@ -257,7 +265,9 @@ minio::s3::GetRegionResponse minio::s3::BaseClient::GetRegion(
 
 minio::s3::AbortMultipartUploadResponse
 minio::s3::BaseClient::AbortMultipartUpload(AbortMultipartUploadArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return AbortMultipartUploadResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -290,7 +300,7 @@ minio::s3::BucketExistsResponse minio::s3::BaseClient::BucketExists(
               args.extra_query_params);
   req.bucket_name = args.bucket;
   if (Response resp = Execute(req)) {
-    return true;
+    return BucketExistsResponse(true);
   } else {
     return BucketExistsResponse(false);
   }
@@ -299,7 +309,9 @@ minio::s3::BucketExistsResponse minio::s3::BaseClient::BucketExists(
 minio::s3::CompleteMultipartUploadResponse
 minio::s3::BaseClient::CompleteMultipartUpload(
     CompleteMultipartUploadArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return CompleteMultipartUploadResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -334,14 +346,18 @@ minio::s3::BaseClient::CompleteMultipartUpload(
   req.headers = headers;
 
   Response response = Execute(req);
-  if (!response) return response;
+  if (!response) {
+    return response;
+  }
   return CompleteMultipartUploadResponse::ParseXML(
       response.data, response.headers.GetFront("x-amz-version-id"));
 }
 
 minio::s3::CreateMultipartUploadResponse
 minio::s3::BaseClient::CreateMultipartUpload(CreateMultipartUploadArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return CreateMultipartUploadResponse(err);
+  }
 
   if (!args.headers.Contains("Content-Type")) {
     args.headers.Add("Content-Type", "application/octet-stream");
@@ -375,7 +391,9 @@ minio::s3::BaseClient::CreateMultipartUpload(CreateMultipartUploadArgs args) {
 
 minio::s3::DeleteBucketEncryptionResponse
 minio::s3::BaseClient::DeleteBucketEncryption(DeleteBucketEncryptionArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return DeleteBucketEncryptionResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -425,7 +443,9 @@ minio::s3::BaseClient::DisableObjectLegalHold(DisableObjectLegalHoldArgs args) {
 
 minio::s3::DeleteBucketLifecycleResponse
 minio::s3::BaseClient::DeleteBucketLifecycle(DeleteBucketLifecycleArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return DeleteBucketLifecycleResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -445,7 +465,9 @@ minio::s3::BaseClient::DeleteBucketLifecycle(DeleteBucketLifecycleArgs args) {
 minio::s3::DeleteBucketNotificationResponse
 minio::s3::BaseClient::DeleteBucketNotification(
     DeleteBucketNotificationArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return DeleteBucketNotificationResponse(err);
+  }
 
   NotificationConfig config;
   SetBucketNotificationArgs sbnargs(config);
@@ -459,7 +481,9 @@ minio::s3::BaseClient::DeleteBucketNotification(
 
 minio::s3::DeleteBucketPolicyResponse minio::s3::BaseClient::DeleteBucketPolicy(
     DeleteBucketPolicyArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return DeleteBucketPolicyResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -479,7 +503,9 @@ minio::s3::DeleteBucketPolicyResponse minio::s3::BaseClient::DeleteBucketPolicy(
 minio::s3::DeleteBucketReplicationResponse
 minio::s3::BaseClient::DeleteBucketReplication(
     DeleteBucketReplicationArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return DeleteBucketReplicationResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -501,7 +527,9 @@ minio::s3::BaseClient::DeleteBucketReplication(
 
 minio::s3::DeleteBucketTagsResponse minio::s3::BaseClient::DeleteBucketTags(
     DeleteBucketTagsArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return DeleteBucketTagsResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -520,7 +548,9 @@ minio::s3::DeleteBucketTagsResponse minio::s3::BaseClient::DeleteBucketTags(
 
 minio::s3::DeleteObjectLockConfigResponse
 minio::s3::BaseClient::DeleteObjectLockConfig(DeleteObjectLockConfigArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return DeleteObjectLockConfigResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -539,7 +569,9 @@ minio::s3::BaseClient::DeleteObjectLockConfig(DeleteObjectLockConfigArgs args) {
 
 minio::s3::DeleteObjectTagsResponse minio::s3::BaseClient::DeleteObjectTags(
     DeleteObjectTagsArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return DeleteObjectTagsResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -562,7 +594,9 @@ minio::s3::DeleteObjectTagsResponse minio::s3::BaseClient::DeleteObjectTags(
 
 minio::s3::EnableObjectLegalHoldResponse
 minio::s3::BaseClient::EnableObjectLegalHold(EnableObjectLegalHoldArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return EnableObjectLegalHoldResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -589,7 +623,9 @@ minio::s3::BaseClient::EnableObjectLegalHold(EnableObjectLegalHoldArgs args) {
 
 minio::s3::GetBucketEncryptionResponse
 minio::s3::BaseClient::GetBucketEncryption(GetBucketEncryptionArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return GetBucketEncryptionResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -610,7 +646,9 @@ minio::s3::BaseClient::GetBucketEncryption(GetBucketEncryptionArgs args) {
 
 minio::s3::GetBucketLifecycleResponse minio::s3::BaseClient::GetBucketLifecycle(
     GetBucketLifecycleArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return GetBucketLifecycleResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -636,7 +674,9 @@ minio::s3::GetBucketLifecycleResponse minio::s3::BaseClient::GetBucketLifecycle(
 
 minio::s3::GetBucketNotificationResponse
 minio::s3::BaseClient::GetBucketNotification(GetBucketNotificationArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return GetBucketNotificationResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -657,7 +697,9 @@ minio::s3::BaseClient::GetBucketNotification(GetBucketNotificationArgs args) {
 
 minio::s3::GetBucketPolicyResponse minio::s3::BaseClient::GetBucketPolicy(
     GetBucketPolicyArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return GetBucketPolicyResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -678,7 +720,9 @@ minio::s3::GetBucketPolicyResponse minio::s3::BaseClient::GetBucketPolicy(
 
 minio::s3::GetBucketReplicationResponse
 minio::s3::BaseClient::GetBucketReplication(GetBucketReplicationArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return GetBucketReplicationResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -699,7 +743,9 @@ minio::s3::BaseClient::GetBucketReplication(GetBucketReplicationArgs args) {
 
 minio::s3::GetBucketTagsResponse minio::s3::BaseClient::GetBucketTags(
     GetBucketTagsArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return GetBucketTagsResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -720,7 +766,9 @@ minio::s3::GetBucketTagsResponse minio::s3::BaseClient::GetBucketTags(
 
 minio::s3::GetBucketVersioningResponse
 minio::s3::BaseClient::GetBucketVersioning(GetBucketVersioningArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return GetBucketVersioningResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -761,7 +809,9 @@ minio::s3::BaseClient::GetBucketVersioning(GetBucketVersioningArgs args) {
 
 minio::s3::GetObjectResponse minio::s3::BaseClient::GetObject(
     GetObjectArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return GetObjectResponse(err);
+  }
 
   if (args.ssec != nullptr && !base_url_.https) {
     return error::Error(
@@ -793,7 +843,9 @@ minio::s3::GetObjectResponse minio::s3::BaseClient::GetObject(
 
 minio::s3::GetObjectLockConfigResponse
 minio::s3::BaseClient::GetObjectLockConfig(GetObjectLockConfigArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return GetObjectLockConfigResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -839,7 +891,9 @@ minio::s3::BaseClient::GetObjectLockConfig(GetObjectLockConfigArgs args) {
 
 minio::s3::GetObjectRetentionResponse minio::s3::BaseClient::GetObjectRetention(
     GetObjectRetentionArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return GetObjectRetentionResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -880,7 +934,9 @@ minio::s3::GetObjectRetentionResponse minio::s3::BaseClient::GetObjectRetention(
 
 minio::s3::GetObjectTagsResponse minio::s3::BaseClient::GetObjectTags(
     GetObjectTagsArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return GetObjectTagsResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -905,7 +961,9 @@ minio::s3::GetObjectTagsResponse minio::s3::BaseClient::GetObjectTags(
 
 minio::s3::GetPresignedObjectUrlResponse
 minio::s3::BaseClient::GetPresignedObjectUrl(GetPresignedObjectUrlArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return GetPresignedObjectUrlResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -976,7 +1034,9 @@ minio::s3::BaseClient::GetPresignedPostFormData(PostPolicy policy) {
 minio::s3::IsObjectLegalHoldEnabledResponse
 minio::s3::BaseClient::IsObjectLegalHoldEnabled(
     IsObjectLegalHoldEnabledArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return IsObjectLegalHoldEnabledResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -1024,7 +1084,9 @@ minio::s3::ListBucketsResponse minio::s3::BaseClient::ListBuckets() {
 minio::s3::ListenBucketNotificationResponse
 minio::s3::BaseClient::ListenBucketNotification(
     ListenBucketNotificationArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return ListenBucketNotificationResponse(err);
+  }
 
   if (!base_url_.aws_domain_suffix.empty()) {
     return error::Error(
@@ -1084,7 +1146,9 @@ minio::s3::BaseClient::ListenBucketNotification(
 
 minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectsV1(
     ListObjectsV1Args args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return ListObjectsResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -1108,7 +1172,9 @@ minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectsV1(
 
 minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectsV2(
     ListObjectsV2Args args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return ListObjectsResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -1140,7 +1206,9 @@ minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectsV2(
 
 minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectVersions(
     ListObjectVersionsArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return ListObjectsResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -1170,7 +1238,9 @@ minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectVersions(
 
 minio::s3::MakeBucketResponse minio::s3::BaseClient::MakeBucket(
     MakeBucketArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return MakeBucketResponse(err);
+  }
 
   std::string region = args.region;
   std::string base_region = base_url_.region;
@@ -1207,7 +1277,9 @@ minio::s3::MakeBucketResponse minio::s3::BaseClient::MakeBucket(
 
 minio::s3::PutObjectResponse minio::s3::BaseClient::PutObject(
     PutObjectApiArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return PutObjectResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -1238,7 +1310,9 @@ minio::s3::PutObjectResponse minio::s3::BaseClient::PutObject(
 
 minio::s3::RemoveBucketResponse minio::s3::BaseClient::RemoveBucket(
     RemoveBucketArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return RemoveBucketResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -1256,7 +1330,9 @@ minio::s3::RemoveBucketResponse minio::s3::BaseClient::RemoveBucket(
 
 minio::s3::RemoveObjectResponse minio::s3::BaseClient::RemoveObject(
     RemoveObjectArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return RemoveObjectResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -1278,7 +1354,9 @@ minio::s3::RemoveObjectResponse minio::s3::BaseClient::RemoveObject(
 
 minio::s3::RemoveObjectsResponse minio::s3::BaseClient::RemoveObjects(
     RemoveObjectsApiArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return RemoveObjectsResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -1319,7 +1397,9 @@ minio::s3::RemoveObjectsResponse minio::s3::BaseClient::RemoveObjects(
 
 minio::s3::SelectObjectContentResponse
 minio::s3::BaseClient::SelectObjectContent(SelectObjectContentArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return SelectObjectContentResponse(err);
+  }
 
   if (args.ssec != nullptr && !base_url_.https) {
     return error::Error(
@@ -1352,7 +1432,9 @@ minio::s3::BaseClient::SelectObjectContent(SelectObjectContentArgs args) {
 
 minio::s3::SetBucketEncryptionResponse
 minio::s3::BaseClient::SetBucketEncryption(SetBucketEncryptionArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return SetBucketEncryptionResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -1385,7 +1467,9 @@ minio::s3::BaseClient::SetBucketEncryption(SetBucketEncryptionArgs args) {
 
 minio::s3::SetBucketLifecycleResponse minio::s3::BaseClient::SetBucketLifecycle(
     SetBucketLifecycleArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return SetBucketLifecycleResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -1408,7 +1492,9 @@ minio::s3::SetBucketLifecycleResponse minio::s3::BaseClient::SetBucketLifecycle(
 
 minio::s3::SetBucketNotificationResponse
 minio::s3::BaseClient::SetBucketNotification(SetBucketNotificationArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return SetBucketNotificationResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -1431,7 +1517,9 @@ minio::s3::BaseClient::SetBucketNotification(SetBucketNotificationArgs args) {
 
 minio::s3::SetBucketPolicyResponse minio::s3::BaseClient::SetBucketPolicy(
     SetBucketPolicyArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return SetBucketPolicyResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -1452,7 +1540,9 @@ minio::s3::SetBucketPolicyResponse minio::s3::BaseClient::SetBucketPolicy(
 
 minio::s3::SetBucketReplicationResponse
 minio::s3::BaseClient::SetBucketReplication(SetBucketReplicationArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return SetBucketReplicationResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -1475,7 +1565,9 @@ minio::s3::BaseClient::SetBucketReplication(SetBucketReplicationArgs args) {
 
 minio::s3::SetBucketTagsResponse minio::s3::BaseClient::SetBucketTags(
     SetBucketTagsArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return SetBucketTagsResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -1512,7 +1604,9 @@ minio::s3::SetBucketTagsResponse minio::s3::BaseClient::SetBucketTags(
 
 minio::s3::SetBucketVersioningResponse
 minio::s3::BaseClient::SetBucketVersioning(SetBucketVersioningArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return SetBucketVersioningResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -1546,7 +1640,9 @@ minio::s3::BaseClient::SetBucketVersioning(SetBucketVersioningArgs args) {
 
 minio::s3::SetObjectLockConfigResponse
 minio::s3::BaseClient::SetObjectLockConfig(SetObjectLockConfigArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return SetObjectLockConfigResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -1590,7 +1686,9 @@ minio::s3::BaseClient::SetObjectLockConfig(SetObjectLockConfigArgs args) {
 
 minio::s3::SetObjectRetentionResponse minio::s3::BaseClient::SetObjectRetention(
     SetObjectRetentionArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return SetObjectRetentionResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -1624,7 +1722,9 @@ minio::s3::SetObjectRetentionResponse minio::s3::BaseClient::SetObjectRetention(
 
 minio::s3::SetObjectTagsResponse minio::s3::BaseClient::SetObjectTags(
     SetObjectTagsArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return SetObjectTagsResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
@@ -1665,7 +1765,9 @@ minio::s3::SetObjectTagsResponse minio::s3::BaseClient::SetObjectTags(
 
 minio::s3::StatObjectResponse minio::s3::BaseClient::StatObject(
     StatObjectArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return StatObjectResponse(err);
+  }
 
   if (args.ssec != nullptr && !base_url_.https) {
     return error::Error(
@@ -1737,7 +1839,9 @@ minio::s3::StatObjectResponse minio::s3::BaseClient::StatObject(
 
 minio::s3::UploadPartResponse minio::s3::BaseClient::UploadPart(
     UploadPartArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return UploadPartResponse(err);
+  }
 
   utils::Multimap query_params;
   query_params.Add("partNumber", std::to_string(args.part_number));
@@ -1759,7 +1863,9 @@ minio::s3::UploadPartResponse minio::s3::BaseClient::UploadPart(
 
 minio::s3::UploadPartCopyResponse minio::s3::BaseClient::UploadPartCopy(
     UploadPartCopyArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return UploadPartCopyResponse(err);
+  }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
