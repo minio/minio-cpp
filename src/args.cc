@@ -23,7 +23,9 @@ minio::error::Error minio::s3::BucketArgs::Validate() const {
 }
 
 minio::error::Error minio::s3::ObjectArgs::Validate() const {
-  if (error::Error err = BucketArgs::Validate()) return err;
+  if (error::Error err = BucketArgs::Validate()) {
+    return err;
+  }
   if (!utils::CheckNonEmptyString(object)) {
     return error::Error("object name cannot be empty");
   }
@@ -32,30 +34,37 @@ minio::error::Error minio::s3::ObjectArgs::Validate() const {
 }
 
 minio::utils::Multimap minio::s3::ObjectWriteArgs::Headers() const {
-  utils::Multimap h;
-  h.AddAll(extra_headers);
-  h.AddAll(headers);
-  h.AddAll(user_metadata);
+  utils::Multimap result_headers;
+  result_headers.AddAll(extra_headers);
+  result_headers.AddAll(headers);
+  result_headers.AddAll(user_metadata);
 
-  if (sse != nullptr) h.AddAll(sse->Headers());
+  if (sse != nullptr) {
+    result_headers.AddAll(sse->Headers());
+  }
 
   std::string tagging;
   for (auto& [key, value] : tags) {
     std::string tag = curlpp::escape(key) + "=" + curlpp::escape(value);
-    if (!tagging.empty()) tagging += "&";
+    if (!tagging.empty()) {
+      tagging += "&";
+    }
     tagging += tag;
   }
-  if (!tagging.empty()) h.Add("x-amz-tagging", tagging);
-
+  if (!tagging.empty()) {
+    result_headers.Add("x-amz-tagging", tagging);
+  }
   if (retention != nullptr) {
-    h.Add("x-amz-object-lock-mode", RetentionModeToString(retention->mode));
-    h.Add("x-amz-object-lock-retain-until-date",
-          retention->retain_until_date.ToISO8601UTC());
+    result_headers.Add("x-amz-object-lock-mode",
+                       RetentionModeToString(retention->mode));
+    result_headers.Add("x-amz-object-lock-retain-until-date",
+                       retention->retain_until_date.ToISO8601UTC());
   }
 
-  if (legal_hold) h.Add("x-amz-object-lock-legal-hold", "ON");
-
-  return h;
+  if (legal_hold) {
+    result_headers.Add("x-amz-object-lock-legal-hold", "ON");
+  }
+  return result_headers;
 }
 
 minio::utils::Multimap minio::s3::ObjectConditionalReadArgs::Headers() const {
@@ -75,49 +84,59 @@ minio::utils::Multimap minio::s3::ObjectConditionalReadArgs::Headers() const {
     }
   }
 
-  utils::Multimap h;
-  if (!range.empty()) h.Add("Range", range);
-  if (!match_etag.empty()) h.Add("if-match", match_etag);
-  if (!not_match_etag.empty()) h.Add("if-none-match", not_match_etag);
+  utils::Multimap result_headers;
+  if (!range.empty()) {
+    result_headers.Add("Range", range);
+  }
+  if (!match_etag.empty()) {
+    result_headers.Add("if-match", match_etag);
+  }
+  if (!not_match_etag.empty()) {
+    result_headers.Add("if-none-match", not_match_etag);
+  }
   if (modified_since) {
-    h.Add("if-modified-since", modified_since.ToHttpHeaderValue());
+    result_headers.Add("if-modified-since", modified_since.ToHttpHeaderValue());
   }
   if (unmodified_since) {
-    h.Add("if-unmodified-since", unmodified_since.ToHttpHeaderValue());
+    result_headers.Add("if-unmodified-since",
+                       unmodified_since.ToHttpHeaderValue());
   }
-  if (ssec != nullptr) h.AddAll(ssec->Headers());
-
-  return h;
+  if (ssec != nullptr) {
+    result_headers.AddAll(ssec->Headers());
+  }
+  return result_headers;
 }
 
 minio::utils::Multimap minio::s3::ObjectConditionalReadArgs::CopyHeaders()
     const {
-  utils::Multimap h;
+  utils::Multimap result_headers;
 
   std::string copy_source = curlpp::escape("/" + bucket + "/" + object);
   if (!version_id.empty()) {
     copy_source += "?versionId=" + curlpp::escape(version_id);
   }
 
-  h.Add("x-amz-copy-source", copy_source);
+  result_headers.Add("x-amz-copy-source", copy_source);
 
-  if (ssec != nullptr) h.AddAll(ssec->CopyHeaders());
+  if (ssec != nullptr) {
+    result_headers.AddAll(ssec->CopyHeaders());
+  }
   if (!match_etag.empty()) {
-    h.Add("x-amz-copy-source-if-match", match_etag);
+    result_headers.Add("x-amz-copy-source-if-match", match_etag);
   }
   if (!not_match_etag.empty()) {
-    h.Add("x-amz-copy-source-if-none-match", not_match_etag);
+    result_headers.Add("x-amz-copy-source-if-none-match", not_match_etag);
   }
   if (modified_since) {
-    h.Add("x-amz-copy-source-if-modified-since",
-          modified_since.ToHttpHeaderValue());
+    result_headers.Add("x-amz-copy-source-if-modified-since",
+                       modified_since.ToHttpHeaderValue());
   }
   if (unmodified_since) {
-    h.Add("x-amz-copy-source-if-unmodified-since",
-          unmodified_since.ToHttpHeaderValue());
+    result_headers.Add("x-amz-copy-source-if-unmodified-since",
+                       unmodified_since.ToHttpHeaderValue());
   }
 
-  return h;
+  return result_headers;
 }
 
 minio::error::Error minio::s3::MakeBucketArgs::Validate() const {
@@ -125,7 +144,9 @@ minio::error::Error minio::s3::MakeBucketArgs::Validate() const {
 }
 
 minio::error::Error minio::s3::AbortMultipartUploadArgs::Validate() const {
-  if (error::Error err = ObjectArgs::Validate()) return err;
+  if (error::Error err = ObjectArgs::Validate()) {
+    return err;
+  }
   if (!utils::CheckNonEmptyString(upload_id)) {
     return error::Error("upload ID cannot be empty");
   }
@@ -134,7 +155,9 @@ minio::error::Error minio::s3::AbortMultipartUploadArgs::Validate() const {
 }
 
 minio::error::Error minio::s3::CompleteMultipartUploadArgs::Validate() const {
-  if (error::Error err = ObjectArgs::Validate()) return err;
+  if (error::Error err = ObjectArgs::Validate()) {
+    return err;
+  }
   if (!utils::CheckNonEmptyString(upload_id)) {
     return error::Error("upload ID cannot be empty");
   }
@@ -143,7 +166,9 @@ minio::error::Error minio::s3::CompleteMultipartUploadArgs::Validate() const {
 }
 
 minio::error::Error minio::s3::UploadPartArgs::Validate() const {
-  if (error::Error err = ObjectArgs::Validate()) return err;
+  if (error::Error err = ObjectArgs::Validate()) {
+    return err;
+  }
   if (!utils::CheckNonEmptyString(upload_id)) {
     return error::Error("upload ID cannot be empty");
   }
@@ -155,7 +180,9 @@ minio::error::Error minio::s3::UploadPartArgs::Validate() const {
 }
 
 minio::error::Error minio::s3::UploadPartCopyArgs::Validate() const {
-  if (error::Error err = ObjectArgs::Validate()) return err;
+  if (error::Error err = ObjectArgs::Validate()) {
+    return err;
+  }
   if (!utils::CheckNonEmptyString(upload_id)) {
     return error::Error("upload ID cannot be empty");
   }
@@ -167,7 +194,9 @@ minio::error::Error minio::s3::UploadPartCopyArgs::Validate() const {
 }
 
 minio::error::Error minio::s3::DownloadObjectArgs::Validate() const {
-  if (error::Error err = ObjectReadArgs::Validate()) return err;
+  if (error::Error err = ObjectReadArgs::Validate()) {
+    return err;
+  }
   if (!utils::CheckNonEmptyString(filename)) {
     return error::Error("filename cannot be empty");
   }
@@ -180,7 +209,9 @@ minio::error::Error minio::s3::DownloadObjectArgs::Validate() const {
 }
 
 minio::error::Error minio::s3::GetObjectArgs::Validate() const {
-  if (error::Error err = ObjectConditionalReadArgs::Validate()) return err;
+  if (error::Error err = ObjectConditionalReadArgs::Validate()) {
+    return err;
+  }
   if (datafunc == nullptr) {
     return error::Error("data callback must be set");
   }
@@ -250,9 +281,12 @@ minio::error::Error minio::s3::PutObjectArgs::Validate() {
 }
 
 minio::error::Error minio::s3::CopyObjectArgs::Validate() const {
-  if (error::Error err = ObjectArgs::Validate()) return err;
-  if (error::Error err = source.Validate()) return err;
-
+  if (error::Error err = ObjectArgs::Validate()) {
+    return err;
+  }
+  if (error::Error err = source.Validate()) {
+    return err;
+  }
   if (source.offset != nullptr || source.length != nullptr) {
     if (metadata_directive != nullptr &&
         *metadata_directive == Directive::kCopy) {
@@ -275,7 +309,9 @@ minio::error::Error minio::s3::CopyObjectArgs::Validate() const {
 minio::error::Error minio::s3::ComposeSource::BuildHeaders(
     size_t object_size, const std::string& etag) {
   std::string msg = "source " + bucket + "/" + object;
-  if (!version_id.empty()) msg += "?versionId=" + version_id;
+  if (!version_id.empty()) {
+    msg += "?versionId=" + version_id;
+  }
   msg += ": ";
 
   if (offset != nullptr && *offset >= object_size) {
@@ -332,9 +368,12 @@ minio::utils::Multimap minio::s3::ComposeSource::Headers() const {
 }
 
 minio::error::Error minio::s3::ComposeObjectArgs::Validate() const {
-  if (error::Error err = ObjectArgs::Validate()) return err;
-  if (sources.empty()) return error::Error("compose sources cannot be empty");
-
+  if (error::Error err = ObjectArgs::Validate()) {
+    return err;
+  }
+  if (sources.empty()) {
+    return error::Error("compose sources cannot be empty");
+  }
   int i = 1;
   for (auto& source : sources) {
     if (error::Error err = source.Validate()) {
@@ -347,8 +386,9 @@ minio::error::Error minio::s3::ComposeObjectArgs::Validate() const {
 }
 
 minio::error::Error minio::s3::UploadObjectArgs::Validate() {
-  if (error::Error err = ObjectArgs::Validate()) return err;
-
+  if (error::Error err = ObjectArgs::Validate()) {
+    return err;
+  }
   if (!utils::CheckNonEmptyString(filename)) {
     return error::Error("filename cannot be empty");
   }
@@ -364,7 +404,9 @@ minio::error::Error minio::s3::UploadObjectArgs::Validate() {
 }
 
 minio::error::Error minio::s3::RemoveObjectsArgs::Validate() const {
-  if (error::Error err = BucketArgs::Validate()) return err;
+  if (error::Error err = BucketArgs::Validate()) {
+    return err;
+  }
   if (func == nullptr) {
     return error::Error("delete object function must be set");
   }
@@ -373,8 +415,9 @@ minio::error::Error minio::s3::RemoveObjectsArgs::Validate() const {
 }
 
 minio::error::Error minio::s3::SelectObjectContentArgs::Validate() const {
-  if (error::Error err = ObjectReadArgs::Validate()) return err;
-
+  if (error::Error err = ObjectReadArgs::Validate()) {
+    return err;
+  }
   if (!utils::CheckNonEmptyString(request.expr)) {
     return error::Error("SQL expression must not be empty");
   }
@@ -389,22 +432,26 @@ minio::error::Error minio::s3::SelectObjectContentArgs::Validate() const {
     return error::Error("One of CSV or JSON output serialization must be set");
   }
 
-  if (resultfunc == nullptr) return error::Error("result function must be set");
-
+  if (resultfunc == nullptr) {
+    return error::Error("result function must be set");
+  }
   return error::SUCCESS;
 }
 
 minio::error::Error minio::s3::ListenBucketNotificationArgs::Validate() const {
-  if (error::Error err = BucketArgs::Validate()) return err;
-  if (func == nullptr)
+  if (error::Error err = BucketArgs::Validate()) {
+    return err;
+  }
+  if (func == nullptr) {
     error::Error("notification records function must be set");
-
+  }
   return error::SUCCESS;
 }
 
 minio::error::Error minio::s3::SetBucketPolicyArgs::Validate() const {
-  if (error::Error err = BucketArgs::Validate()) return err;
-
+  if (error::Error err = BucketArgs::Validate()) {
+    return err;
+  }
   if (!utils::CheckNonEmptyString(policy)) {
     return error::Error("bucket policy cannot be empty");
   }
@@ -413,8 +460,9 @@ minio::error::Error minio::s3::SetBucketPolicyArgs::Validate() const {
 }
 
 minio::error::Error minio::s3::SetBucketEncryptionArgs::Validate() const {
-  if (error::Error err = BucketArgs::Validate()) return err;
-
+  if (error::Error err = BucketArgs::Validate()) {
+    return err;
+  }
   if (!config) {
     return error::Error("bucket encryption configuration cannot be empty");
   }
@@ -423,15 +471,19 @@ minio::error::Error minio::s3::SetBucketEncryptionArgs::Validate() const {
 }
 
 minio::error::Error minio::s3::SetBucketVersioningArgs::Validate() const {
-  if (error::Error err = BucketArgs::Validate()) return err;
-  if (!status) return error::Error("versioning status must be set");
-
+  if (error::Error err = BucketArgs::Validate()) {
+    return err;
+  }
+  if (!status) {
+    return error::Error("versioning status must be set");
+  }
   return error::SUCCESS;
 }
 
 minio::error::Error minio::s3::SetBucketTagsArgs::Validate() const {
-  if (error::Error err = BucketArgs::Validate()) return err;
-
+  if (error::Error err = BucketArgs::Validate()) {
+    return err;
+  }
   if (tags.size() > 50) {
     return error::Error("too many bucket tags; allowed = 50, found = " +
                         std::to_string(tags.size()));
@@ -451,13 +503,16 @@ minio::error::Error minio::s3::SetBucketTagsArgs::Validate() const {
 }
 
 minio::error::Error minio::s3::SetObjectLockConfigArgs::Validate() const {
-  if (error::Error err = BucketArgs::Validate()) return err;
+  if (error::Error err = BucketArgs::Validate()) {
+    return err;
+  }
   return config.Validate();
 }
 
 minio::error::Error minio::s3::SetObjectTagsArgs::Validate() const {
-  if (error::Error err = ObjectArgs::Validate()) return err;
-
+  if (error::Error err = ObjectArgs::Validate()) {
+    return err;
+  }
   if (tags.size() > 10) {
     return error::Error("too many object tags; allowed = 10, found = " +
                         std::to_string(tags.size()));
@@ -477,7 +532,9 @@ minio::error::Error minio::s3::SetObjectTagsArgs::Validate() const {
 }
 
 minio::error::Error minio::s3::SetObjectRetentionArgs::Validate() const {
-  if (error::Error err = ObjectArgs::Validate()) return err;
+  if (error::Error err = ObjectArgs::Validate()) {
+    return err;
+  }
   if (IsRetentionModeValid(retention_mode)) {
     return error::Error("valid retention mode must be set");
   }
@@ -489,7 +546,9 @@ minio::error::Error minio::s3::SetObjectRetentionArgs::Validate() const {
 }
 
 minio::error::Error minio::s3::GetPresignedObjectUrlArgs::Validate() const {
-  if (error::Error err = ObjectArgs::Validate()) return err;
+  if (error::Error err = ObjectArgs::Validate()) {
+    return err;
+  }
   if (method < http::Method::kGet || method > http::Method::kDelete) {
     return error::Error("valid HTTP method must be provided");
   }
@@ -578,7 +637,9 @@ void minio::s3::PostPolicy::RemoveContentLengthRangeCondition() {
 minio::error::Error minio::s3::PostPolicy::FormData(
     std::map<std::string, std::string>& data, std::string access_key,
     std::string secret_key, std::string session_token, std::string region) {
-  if (region.empty()) return error::Error("region cannot be empty");
+  if (region.empty()) {
+    return error::Error("region cannot be empty");
+  }
   if (conditions_[eq_]["key"].empty() &&
       conditions_[starts_with_]["key"].empty()) {
     return error::Error("key condition must be set");
@@ -626,7 +687,9 @@ minio::error::Error minio::s3::PostPolicy::FormData(
 }
 
 std::string minio::s3::PostPolicy::trimDollar(std::string value) {
-  if (value.front() == '$') value.erase(0, 1);
+  if (value.front() == '$') {
+    value.erase(0, 1);
+  }
   return value;
 }
 
