@@ -243,7 +243,7 @@ minio::s3::Request::Request(http::Method method, std::string region,
 
 void minio::s3::Request::BuildHeaders(http::Url& url,
                                       creds::Provider* provider) {
-  headers.Add("Host", url.host);
+  headers.Add("Host", url.HostHeaderValue());
   headers.Add("User-Agent", user_agent);
 
   bool md5sum_added = headers.Contains("Content-MD5");
