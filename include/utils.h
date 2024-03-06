@@ -122,14 +122,16 @@ error::Error CalcPartInfo(long object_size, size_t& part_size,
  */
 class Time {
  private:
-  struct timeval tv_ = {0, 0};
+  struct timeval tv_ = {};
   bool utc_ = false;
 
  public:
   Time() = default;
 
-  Time(std::time_t tv_sec, long tv_usec, bool utc)
-      : tv_{.tv_sec = tv_sec, .tv_usec = tv_usec}, utc_(utc) {}
+  Time(std::time_t tv_sec, long tv_usec, bool utc) : utc_(utc) {
+    tv_.tv_sec = tv_sec;
+    tv_.tv_usec = tv_usec;
+  }
 
   ~Time() = default;
 
