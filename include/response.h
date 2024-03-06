@@ -149,6 +149,12 @@ struct PutObjectResponse : public Response {
 
   PutObjectResponse(const Response& resp) : Response(resp) {}
 
+  PutObjectResponse(const CompleteMultipartUploadResponse& resp)
+      : Response(resp) {
+    this->etag = resp.etag;
+    this->version_id = resp.version_id;
+  }
+
   PutObjectResponse(error::Error err) : Response(err) {}
 };  // struct PutObjectResponse
 
