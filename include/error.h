@@ -16,8 +16,8 @@
 #ifndef _MINIO_ERROR_H
 #define _MINIO_ERROR_H
 
-#include <string>
 #include <ostream>
+#include <string>
 
 namespace minio {
 namespace error {
@@ -30,12 +30,11 @@ class Error {
   Error(std::string_view msg) : msg_(msg) {}
 
   Error(const Error&) = default;
-  Error& operator =(const Error&) = default;
+  Error& operator=(const Error&) = default;
 
-  Error(Error&& v)
-    : msg_(std::move(v.msg_)) {}
+  Error(Error&& v) : msg_(std::move(v.msg_)) {}
 
-  Error& operator =(Error&& v) {
+  Error& operator=(Error&& v) {
     if (this != &v) {
       msg_ = std::move(v.msg_);
     }
@@ -47,7 +46,7 @@ class Error {
   std::string String() const { return msg_; }
   explicit operator bool() const { return !msg_.empty(); }
 
-  friend std::ostream& operator <<(std::ostream& s, const Error& e) {
+  friend std::ostream& operator<<(std::ostream& s, const Error& e) {
     return s << e.msg_;
   }
 };  // class Error

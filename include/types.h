@@ -17,8 +17,8 @@
 #define _MINIO_S3_TYPES_H
 
 #include <iostream>
-#include <ostream>
 #include <nlohmann/json.hpp>
+#include <ostream>
 
 #include "utils.h"
 
@@ -239,41 +239,41 @@ struct SelectRequest {
 
   SelectRequest(std::string expression, CsvInputSerialization* csv_input,
                 CsvOutputSerialization* csv_output)
-    : expr(std::move(expression))
-    , csv_input(csv_input)
-    , csv_output(csv_output) {}
+      : expr(std::move(expression)),
+        csv_input(csv_input),
+        csv_output(csv_output) {}
 
   SelectRequest(std::string expression, CsvInputSerialization* csv_input,
                 JsonOutputSerialization* json_output)
-    : expr(std::move(expression))
-    , csv_input(csv_input)
-    , json_output(json_output) {}
+      : expr(std::move(expression)),
+        csv_input(csv_input),
+        json_output(json_output) {}
 
   SelectRequest(std::string expression, JsonInputSerialization* json_input,
                 CsvOutputSerialization* csv_output)
-    : expr(std::move(expression))
-    , json_input(json_input)
-    , csv_output(csv_output) {}
+      : expr(std::move(expression)),
+        json_input(json_input),
+        csv_output(csv_output) {}
 
   SelectRequest(std::string expression, JsonInputSerialization* json_input,
                 JsonOutputSerialization* json_output)
-    : expr(std::move(expression))
-    , json_input(json_input)
-    , json_output(json_output) {}
+      : expr(std::move(expression)),
+        json_input(json_input),
+        json_output(json_output) {}
 
   SelectRequest(std::string expression,
                 ParquetInputSerialization* parquet_input,
                 CsvOutputSerialization* csv_output)
-    : expr(std::move(expression))
-    , parquet_input(parquet_input)
-    , csv_output(csv_output) {}
+      : expr(std::move(expression)),
+        parquet_input(parquet_input),
+        csv_output(csv_output) {}
 
   SelectRequest(std::string expression,
                 ParquetInputSerialization* parquet_input,
                 JsonOutputSerialization* json_output)
-    : expr(std::move(expression))
-    , parquet_input(parquet_input)
-    , json_output(json_output) {}
+      : expr(std::move(expression)),
+        parquet_input(parquet_input),
+        json_output(json_output) {}
 
   ~SelectRequest() = default;
 
@@ -290,18 +290,15 @@ struct SelectResult {
 
   SelectResult() : ended(true) {}
 
-  SelectResult(error::Error err)
-    : err(std::move(err))
-    , ended(true) {}
+  SelectResult(error::Error err) : err(std::move(err)), ended(true) {}
 
   SelectResult(long int bytes_scanned, long int bytes_processed,
                long int bytes_returned)
-    : bytes_scanned(bytes_scanned)
-    , bytes_processed(bytes_processed)
-    , bytes_returned(bytes_returned) {}
+      : bytes_scanned(bytes_scanned),
+        bytes_processed(bytes_processed),
+        bytes_returned(bytes_returned) {}
 
-  SelectResult(std::string records)
-    : records(std::move(records)) {}
+  SelectResult(std::string records) : records(std::move(records)) {}
 
   ~SelectResult() = default;
 };
@@ -405,8 +402,7 @@ struct FilterValue {
   FilterValue() = default;
 
   FilterValue(std::string value)
-    : value_(std::move(value))
-    , is_value_set_(true) {}
+      : value_(std::move(value)), is_value_set_(true) {}
 
   ~FilterValue() = default;
 
@@ -419,8 +415,7 @@ struct PrefixFilterRule : public FilterValue {
 
   PrefixFilterRule() = default;
 
-  PrefixFilterRule(std::string value)
-    : FilterValue(std::move(value)) {}
+  PrefixFilterRule(std::string value) : FilterValue(std::move(value)) {}
 
   ~PrefixFilterRule() = default;
 };  // struct PrefixFilterRule
@@ -430,8 +425,7 @@ struct SuffixFilterRule : public FilterValue {
 
   SuffixFilterRule() = default;
 
-  SuffixFilterRule(std::string value)
-    : FilterValue(std::move(value)) {}
+  SuffixFilterRule(std::string value) : FilterValue(std::move(value)) {}
 
   ~SuffixFilterRule() = default;
 };  // struct SuffixFilterRule
@@ -448,7 +442,7 @@ struct NotificationCommonConfig {
 
 struct CloudFuncConfig : public NotificationCommonConfig {
   std::string cloud_func;
-  
+
   CloudFuncConfig() = default;
   ~CloudFuncConfig() = default;
 };  // struct CloudFuncConfig
@@ -509,17 +503,15 @@ struct Prefix {
  public:
   Prefix() = default;
 
-  Prefix(std::string value)
-    : value_(std::move(value))
-    , is_set_(true) {}
+  Prefix(std::string value) : value_(std::move(value)), is_set_(true) {}
 
   ~Prefix() = default;
 
   explicit operator bool() const { return is_set_; }
   std::string Get() const { return value_; }
 
-  friend std::ostream& operator <<(std::ostream& s, const Prefix& v) {
-    return s << v.value_; 
+  friend std::ostream& operator<<(std::ostream& s, const Prefix& v) {
+    return s << v.value_;
   }
 };  // struct Prefix
 
@@ -531,17 +523,15 @@ struct Integer {
  public:
   Integer() = default;
 
-  Integer(int value)
-    : value_(value)
-    , is_set_(true) {}
+  Integer(int value) : value_(value), is_set_(true) {}
 
   ~Integer() = default;
 
   explicit operator bool() const { return is_set_; }
   int Get() const { return value_; }
 
-  friend std::ostream& operator <<(std::ostream& s, const Integer& v) {
-    return s << v.value_; 
+  friend std::ostream& operator<<(std::ostream& s, const Integer& v) {
+    return s << v.value_;
   }
 };  // struct Integer
 
@@ -553,20 +543,17 @@ struct Boolean {
  public:
   Boolean() = default;
 
-  Boolean(bool value)
-    : value_(value)
-    , is_set_(true) {}
+  Boolean(bool value) : value_(value), is_set_(true) {}
 
   ~Boolean() = default;
 
   explicit operator bool() const { return is_set_; }
   bool Get() const { return value_; }
 
-  friend std::ostream& operator <<(std::ostream& s, const Boolean& v) {
-    return s << utils::BoolToString(v.value_); 
+  friend std::ostream& operator<<(std::ostream& s, const Boolean& v) {
+    return s << utils::BoolToString(v.value_);
   }
 };  // struct Boolean
-
 
 struct AndOperator {
   Prefix prefix;
@@ -586,7 +573,10 @@ struct Filter {
   Filter() = default;
   ~Filter() = default;
 
-  explicit operator bool() const { return static_cast<bool>(and_operator) ^ static_cast<bool>(prefix) ^ static_cast<bool>(tag); }
+  explicit operator bool() const {
+    return static_cast<bool>(and_operator) ^ static_cast<bool>(prefix) ^
+           static_cast<bool>(tag);
+  }
 };  // struct Filter
 
 struct AccessControlTranslation {

@@ -13,8 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <memory>
 #include "utils.h"
+
+#include <memory>
 
 const std::string WEEK_DAYS[] = {"Sun", "Mon", "Tue", "Wed",
                                  "Thu", "Fri", "Sat"};
@@ -76,7 +77,8 @@ std::string minio::utils::Printable(const std::string& s) {
 }
 
 unsigned long minio::utils::CRC32(std::string_view str) {
-  return crc32(0, reinterpret_cast<const unsigned char*>(str.data()), static_cast<uInt>(str.size()));
+  return crc32(0, reinterpret_cast<const unsigned char*>(str.data()),
+               static_cast<uInt>(str.size()));
 }
 
 unsigned int minio::utils::Int(std::string_view str) {
@@ -276,7 +278,8 @@ std::string minio::utils::FormatTime(const std::tm* time, const char* format) {
 }
 
 std::tm* minio::utils::Time::ToUTC() const {
-  std::tm* t = new std::tm; // PWTODO: why a dynamic object? Can it lead to memory leaks?
+  std::tm* t = new std::tm;  // PWTODO: why a dynamic object? Can it lead to
+                             // memory leaks?
   const time_t secs = tv_.tv_sec;
   *t = utc_ ? *std::localtime(&secs) : *std::gmtime(&secs);
   return t;
@@ -285,7 +288,8 @@ std::tm* minio::utils::Time::ToUTC() const {
 minio::utils::Time minio::utils::Time::Now() {
   auto usec = std::chrono::system_clock::now().time_since_epoch() /
               std::chrono::microseconds(1);
-  return Time(static_cast<long>(usec / 1000000), static_cast<long>(usec % 1000000), false);
+  return Time(static_cast<long>(usec / 1000000),
+              static_cast<long>(usec % 1000000), false);
 }
 
 std::string minio::utils::Time::ToSignerDate() const {
@@ -350,7 +354,8 @@ std::string minio::utils::Time::ToISO8601UTC() const {
   std::string usec_str(buf);
   if (usec_str.size() > 3) usec_str = usec_str.substr(0, 3);
   std::unique_ptr<std::tm> utc(ToUTC());
-  std::string result = FormatTime(utc.get(), "%Y-%m-%dT%H:%M:%S.") + usec_str + "Z";
+  std::string result =
+      FormatTime(utc.get(), "%Y-%m-%dT%H:%M:%S.") + usec_str + "Z";
   return result;
 }
 
@@ -365,7 +370,7 @@ minio::utils::Time minio::utils::Time::FromISO8601UTC(const char* value) {
 }
 
 int minio::utils::Time::Compare(const Time& rhs) const {
-  // PWTODO: what to do with the utc field?  
+  // PWTODO: what to do with the utc field?
   if (tv_.tv_sec != rhs.tv_.tv_sec) {
     return (tv_.tv_sec < rhs.tv_.tv_sec) ? -1 : 1;
   }
@@ -416,7 +421,7 @@ bool minio::utils::Multimap::Contains(std::string_view key) const {
 
 std::list<std::string> minio::utils::Multimap::Get(std::string_view key) const {
   std::list<std::string> result;
-  
+
   if (const auto i = keys_.find(ToLower(std::string(key))); i != keys_.cend()) {
     for (auto& k : i->second) {
       if (const auto j = map_.find(k); j != map_.cend()) {
@@ -484,11 +489,11 @@ std::string minio::utils::Multimap::GetCanonicalQueryString() const {
   for (auto& key : keys) {
     if (const auto i = map_.find(key); i != map_.cend()) {
       for (auto& value : i->second) {
-        values.push_back(curlpp::escape(key) + "=" + curlpp::escape(value));   
+        values.push_back(curlpp::escape(key) + "=" + curlpp::escape(value));
       }
     }
   }
- 
+
   return utils::Join(values, "&");
 }
 
@@ -573,7 +578,8 @@ minio::error::Error minio::utils::CalcPartInfo(long object_size,
   }
 
   if (static_cast<long>(part_size) > object_size) part_size = object_size;
-  part_count = (part_size > 0) ? ((object_size + part_size - 1) / part_size) : 1;
+  part_count =
+      (part_size > 0) ? ((object_size + part_size - 1) / part_size) : 1;
   if (part_count > kMaxMultipartCount) {
     return error::Error(
         "object size " + std::to_string(object_size) + " and part size " +
@@ -586,12 +592,14 @@ minio::error::Error minio::utils::CalcPartInfo(long object_size,
 
 minio::utils::CharBuffer::~CharBuffer() {}
 
-std::streambuf::pos_type minio::utils::CharBuffer::seekpos(pos_type sp, std::ios_base::openmode which) {
+std::streambuf::pos_type minio::utils::CharBuffer::seekpos(
+    pos_type sp, std::ios_base::openmode which) {
   return seekoff(sp - pos_type(off_type(0)), std::ios_base::beg, which);
 }
 
-std::streambuf::pos_type minio::utils::CharBuffer::seekoff(off_type off, std::ios_base::seekdir dir,
-                 std::ios_base::openmode /* which */) {
+std::streambuf::pos_type minio::utils::CharBuffer::seekoff(
+    off_type off, std::ios_base::seekdir dir,
+    std::ios_base::openmode /* which */) {
   if (dir == std::ios_base::cur)
     gbump(static_cast<int>(off));
   else if (dir == std::ios_base::end)

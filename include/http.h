@@ -147,8 +147,9 @@ struct Response {
   Response() = default;
   ~Response() = default;
 
-  size_t ResponseCallback(curlpp::Multi* const requests, curlpp::Easy* const request,
-                          const char* const buffer, size_t size, size_t length);
+  size_t ResponseCallback(curlpp::Multi* const requests,
+                          curlpp::Easy* const request, const char* const buffer,
+                          size_t size, size_t length);
 
   explicit operator bool() const {
     return error.empty() && status_code >= 200 && status_code <= 299;

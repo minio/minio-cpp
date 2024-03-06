@@ -17,7 +17,6 @@
 
 #include <curlpp/Infos.hpp>
 
-
 std::string minio::http::Url::String() const {
   if (host.empty()) return {};
 
@@ -214,8 +213,8 @@ minio::error::Error minio::http::Response::ReadHeaders() {
 
 size_t minio::http::Response::ResponseCallback(curlpp::Multi* const requests,
                                                curlpp::Easy* const request,
-                                               const char* const buffer, size_t size,
-                                               size_t length) {
+                                               const char* const buffer,
+                                               size_t size, size_t length) {
   size_t realsize = size * length;
 
   // If error occurred previously, just cancel the request.
@@ -307,7 +306,7 @@ minio::http::Response minio::http::Request::execute() {
     }
   }
 
-  utils::CharBuffer charbuf((char *)body.data(), body.size());
+  utils::CharBuffer charbuf((char*)body.data(), body.size());
   std::istream body_stream(&charbuf);
 
   switch (method) {
@@ -401,11 +400,11 @@ minio::http::Response minio::http::Request::execute() {
 minio::http::Response minio::http::Request::Execute() {
   try {
     return execute();
-  } catch (curlpp::LogicError &e) {
+  } catch (curlpp::LogicError& e) {
     Response response;
     response.error = std::string("curlpp::LogicError: ") + e.what();
     return response;
-  } catch (curlpp::RuntimeError &e) {
+  } catch (curlpp::RuntimeError& e) {
     Response response;
     response.error = std::string("curlpp::RuntimeError: ") + e.what();
     return response;

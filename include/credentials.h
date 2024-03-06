@@ -20,8 +20,7 @@
 
 namespace minio {
 namespace creds {
-  bool expired(const utils::Time& expiration);
-
+bool expired(const utils::Time& expiration);
 
 /**
  * Credentials contains access key and secret key with optional session token

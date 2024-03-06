@@ -21,7 +21,9 @@ minio::s3::Sse::~Sse() {}
 
 minio::utils::Multimap minio::s3::Sse::Headers() const { return headers_; }
 
-minio::utils::Multimap minio::s3::Sse::CopyHeaders() const { return copy_headers_; }
+minio::utils::Multimap minio::s3::Sse::CopyHeaders() const {
+  return copy_headers_;
+}
 
 minio::s3::SseCustomerKey::SseCustomerKey(std::string_view key) {
   std::string b64key = utils::Base64Encode(key);
@@ -33,8 +35,7 @@ minio::s3::SseCustomerKey::SseCustomerKey(std::string_view key) {
   this->headers_.Add("X-Amz-Server-Side-Encryption-Customer-Key-MD5", md5key);
 
   this->copy_headers_.Add(
-      "X-Amz-Copy-Source-Server-Side-Encryption-Customer-Algorithm",
-      "AES256");
+      "X-Amz-Copy-Source-Server-Side-Encryption-Customer-Algorithm", "AES256");
   this->copy_headers_.Add(
       "X-Amz-Copy-Source-Server-Side-Encryption-Customer-Key", b64key);
   this->copy_headers_.Add(

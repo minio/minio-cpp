@@ -35,10 +35,10 @@
 #include <iostream>
 #include <list>
 #include <map>
+#include <ostream>
 #include <regex>
 #include <set>
 #include <sstream>
-#include <ostream>
 
 #include "error.h"
 
@@ -92,10 +92,12 @@ bool Contains(std::string_view str, char ch);
 bool Contains(std::string_view str, std::string_view substr);
 
 // Join returns a string of joined values by delimiter.
-std::string Join(const std::list<std::string>& values, const std::string& delimiter);
+std::string Join(const std::list<std::string>& values,
+                 const std::string& delimiter);
 
 // Join returns a string of joined values by delimiter.
-std::string Join(const std::vector<std::string>& values, const std::string& delimiter);
+std::string Join(const std::vector<std::string>& values,
+                 const std::string& delimiter);
 
 // EncodePath does URL encoding of path. It also normalizes multiple slashes.
 std::string EncodePath(const std::string& path);
@@ -127,8 +129,7 @@ class Time {
   Time() = default;
 
   Time(std::time_t tv_sec, long tv_usec, bool utc)
-    : tv_{ .tv_sec = tv_sec, .tv_usec = tv_usec }
-    , utc_(utc) {}
+      : tv_{.tv_sec = tv_sec, .tv_usec = tv_usec}, utc_(utc) {}
 
   ~Time() = default;
 
@@ -154,41 +155,25 @@ class Time {
 
   int Compare(const Time& rhs) const;
 
-  bool Equal(const Time& rhs) const {
-    return Compare(rhs) == 0;
-  }
+  bool Equal(const Time& rhs) const { return Compare(rhs) == 0; }
 
-  bool operator ==(const Time& rhs) const {
-    return Equal(rhs);
-  }
+  bool operator==(const Time& rhs) const { return Equal(rhs); }
 
-  bool operator !=(const Time& rhs) const {
-    return !operator ==(rhs);
-  }
+  bool operator!=(const Time& rhs) const { return !operator==(rhs); }
 
-  bool operator <(const Time& rhs) const {
-    return Compare(rhs) < 0;
-  }
+  bool operator<(const Time& rhs) const { return Compare(rhs) < 0; }
 
-  bool operator >(const Time& rhs) const {
-    return Compare(rhs) > 0;
-  }
+  bool operator>(const Time& rhs) const { return Compare(rhs) > 0; }
 
-  bool operator <=(const Time& rhs) const {
-    return !operator >(rhs);
-  }
+  bool operator<=(const Time& rhs) const { return !operator>(rhs); }
 
-  bool operator >=(const Time& rhs) const {
-    return !operator <(rhs);
-  }
+  bool operator>=(const Time& rhs) const { return !operator<(rhs); }
 
 #if __cplusplus >= 202002L
-  auto operator <=>(const Time& rhs) const {
-    return Compare(rhs);
-  }
+  auto operator<=>(const Time& rhs) const { return Compare(rhs); }
 #endif
 
-  friend std::ostream& operator <<(std::ostream& s, const Time& v) {
+  friend std::ostream& operator<<(std::ostream& s, const Time& v) {
     // PWTODO: which variant should be selected?
     return s << v.ToAmzDate();
   }
@@ -205,9 +190,9 @@ class Multimap {
  public:
   Multimap() = default;
   Multimap(const Multimap& headers) = default;
-  Multimap& operator =(const Multimap& headers) = default;
+  Multimap& operator=(const Multimap& headers) = default;
   Multimap(Multimap&& headers) = default;
-  Multimap& operator =(Multimap&& headers) = default;
+  Multimap& operator=(Multimap&& headers) = default;
   ~Multimap() = default;
 
   void Add(std::string key, std::string value);
@@ -243,8 +228,9 @@ struct CharBuffer : std::streambuf {
 
   virtual pos_type seekpos(pos_type sp, std::ios_base::openmode which) override;
 
-  virtual pos_type seekoff(off_type off, std::ios_base::seekdir dir,
-                   std::ios_base::openmode which = std::ios_base::in) override;
+  virtual pos_type seekoff(
+      off_type off, std::ios_base::seekdir dir,
+      std::ios_base::openmode which = std::ios_base::in) override;
 };  // struct CharBuffer
 }  // namespace utils
 }  // namespace minio

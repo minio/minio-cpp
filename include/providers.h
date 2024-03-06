@@ -17,6 +17,7 @@
 #define _MINIO_CREDS_PROVIDERS_H
 
 #include <sys/types.h>
+
 #include <string>
 
 #include "credentials.h"
@@ -66,7 +67,7 @@ class ChainedProvider : public Provider {
 
  public:
   ChainedProvider(std::list<Provider*> providers)
-    : providers_(std::move(providers)) {}
+      : providers_(std::move(providers)) {}
 
   virtual ~ChainedProvider();
 
@@ -78,7 +79,8 @@ class ChainedProvider : public Provider {
  */
 class StaticProvider : public Provider {
  public:
-  StaticProvider(std::string access_key, std::string secret_key, std::string session_token = {});
+  StaticProvider(std::string access_key, std::string secret_key,
+                 std::string session_token = {});
   virtual ~StaticProvider();
 
   virtual Credentials Fetch() override;

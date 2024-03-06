@@ -213,7 +213,8 @@ bool minio::s3::SelectHandler::process(const http::DataFunctionArgs& /* args */,
   return false;
 }
 
-bool minio::s3::SelectHandler::DataFunction(const http::DataFunctionArgs& args) {
+bool minio::s3::SelectHandler::DataFunction(
+    const http::DataFunctionArgs& args) {
   if (done_) return false;
 
   response_ += args.datachunk;

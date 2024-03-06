@@ -108,8 +108,7 @@ std::string minio::s3::extractRegion(const std::string& host) {
 }
 
 minio::s3::BaseUrl::BaseUrl(std::string host, bool https, std::string region)
-  : https(https)
-  , region(std::move(region)) {
+    : https(https), region(std::move(region)) {
   const http::Url url = http::Url::Parse(host);
   if (!url.path.empty() || !url.query_string.empty()) {
     this->err_ = error::Error(
@@ -135,10 +134,9 @@ minio::s3::BaseUrl::BaseUrl(std::string host, bool https, std::string region)
                         utils::EndsWith(this->host, "aliyuncs.com");
 }
 
-minio::error::Error minio::s3::BaseUrl::BuildAwsUrl(http::Url& url,
-                                                    const std::string& bucket_name,
-                                                    bool enforce_path_style,
-                                                    const std::string& region) {
+minio::error::Error minio::s3::BaseUrl::BuildAwsUrl(
+    http::Url& url, const std::string& bucket_name, bool enforce_path_style,
+    const std::string& region) {
   std::string host = this->aws_s3_prefix + this->aws_domain_suffix;
   if (host == "s3-external-1.amazonaws.com" ||
       host == "s3-us-gov-west-1.amazonaws.com" ||
@@ -191,12 +189,10 @@ void minio::s3::BaseUrl::BuildListBucketsUrl(http::Url& url,
   url.host = s3_prefix + region + "." + domain_suffix;
 }
 
-minio::error::Error minio::s3::BaseUrl::BuildUrl(http::Url& url,
-                                                 http::Method method,
-                                                 const std::string& region,
-                                                 const utils::Multimap& query_params,
-                                                 const std::string& bucket_name,
-                                                 const std::string& object_name) {
+minio::error::Error minio::s3::BaseUrl::BuildUrl(
+    http::Url& url, http::Method method, const std::string& region,
+    const utils::Multimap& query_params, const std::string& bucket_name,
+    const std::string& object_name) {
   if (err_) return err_;
 
   if (bucket_name.empty() && !object_name.empty()) {
@@ -251,11 +247,11 @@ minio::error::Error minio::s3::BaseUrl::BuildUrl(http::Url& url,
 minio::s3::Request::Request(http::Method method, std::string region,
                             BaseUrl& baseurl, utils::Multimap extra_headers,
                             utils::Multimap extra_query_params)
-  : method(method)
-  , region(std::move(region))
-  , base_url(baseurl)
-  , headers(std::move(extra_headers))
-  , query_params(std::move(extra_query_params)) {}
+    : method(method),
+      region(std::move(region)),
+      base_url(baseurl),
+      headers(std::move(extra_headers)),
+      query_params(std::move(extra_query_params)) {}
 
 void minio::s3::Request::BuildHeaders(http::Url& url,
                                       creds::Provider* const provider) {

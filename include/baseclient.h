@@ -24,10 +24,9 @@
 
 namespace minio {
 namespace s3 {
-utils::Multimap GetCommonListObjectsQueryParams(const std::string& delimiter,
-                                                const std::string& encoding_type,
-                                                unsigned int max_keys,
-                                                const std::string& prefix);
+utils::Multimap GetCommonListObjectsQueryParams(
+    const std::string& delimiter, const std::string& encoding_type,
+    unsigned int max_keys, const std::string& prefix);
 
 /**
  * Base client to perform S3 APIs.
@@ -43,7 +42,8 @@ class BaseClient {
   std::string user_agent_ = DEFAULT_USER_AGENT;
 
  public:
-  explicit BaseClient(BaseUrl base_url, creds::Provider* const provider = nullptr);
+  explicit BaseClient(BaseUrl base_url,
+                      creds::Provider* const provider = nullptr);
   virtual ~BaseClient() = default;
 
   void Debug(bool flag) { debug_ = flag; }
@@ -59,14 +59,16 @@ class BaseClient {
 
   void HandleRedirectResponse(std::string& code, std::string& message,
                               int status_code, http::Method method,
-                              const utils::Multimap& headers, const std::string& bucket_name,
+                              const utils::Multimap& headers,
+                              const std::string& bucket_name,
                               bool retry = false);
   Response GetErrorResponse(http::Response resp, std::string_view resource,
                             http::Method method, const std::string& bucket_name,
                             const std::string& object_name);
   Response execute(Request& req);
   Response Execute(Request& req);
-  GetRegionResponse GetRegion(const std::string& bucket_name, const std::string& region);
+  GetRegionResponse GetRegion(const std::string& bucket_name,
+                              const std::string& region);
 
   AbortMultipartUploadResponse AbortMultipartUpload(
       AbortMultipartUploadArgs args);

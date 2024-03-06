@@ -602,7 +602,8 @@ std::string minio::s3::LifecycleConfig::ToXML() const {
 
 minio::error::Error minio::s3::ObjectLockConfig::Validate() const {
   if (IsRetentionModeValid(retention_mode)) {
-    if (!(static_cast<bool>(retention_duration_days) ^ static_cast<bool>(retention_duration_years))) {
+    if (!(static_cast<bool>(retention_duration_days) ^
+          static_cast<bool>(retention_duration_years))) {
       return error::Error(
           "retention mode must be provided with retention duration days or "
           "years");

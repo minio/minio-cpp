@@ -36,14 +36,13 @@ struct Response {
   std::string object_name;
 
   Response();
-  Response(error::Error err)
-    : err_(std::move(err)) {}
+  Response(error::Error err) : err_(std::move(err)) {}
 
   Response(const Response& resp) = default;
-  Response& operator =(const Response& resp) = default;
+  Response& operator=(const Response& resp) = default;
 
   Response(Response&& resp) = default;
-  Response& operator =(Response&& resp) = default;
+  Response& operator=(Response&& resp) = default;
 
   ~Response();
 
@@ -64,14 +63,12 @@ struct Response {
 struct GetRegionResponse : public Response {
   std::string region;
 
-  GetRegionResponse(std::string region)
-    : region(std::move(region)) {}
+  GetRegionResponse(std::string region) : region(std::move(region)) {}
 
-  GetRegionResponse(error::Error err)
-    : Response(std::move(err)) {}
+  GetRegionResponse(error::Error err) : Response(std::move(err)) {}
 
   GetRegionResponse(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~GetRegionResponse() = default;
 };  // struct GetRegionResponse
@@ -82,13 +79,12 @@ struct ListBucketsResponse : public Response {
   std::list<Bucket> buckets;
 
   ListBucketsResponse(std::list<Bucket> buckets)
-    : buckets(std::move(buckets)) {}
+      : buckets(std::move(buckets)) {}
 
-  ListBucketsResponse(error::Error err)
-    : Response(std::move(err)) {}
+  ListBucketsResponse(error::Error err) : Response(std::move(err)) {}
 
   ListBucketsResponse(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~ListBucketsResponse() = default;
 
@@ -98,14 +94,12 @@ struct ListBucketsResponse : public Response {
 struct BucketExistsResponse : public Response {
   bool exist = false;
 
-  BucketExistsResponse(bool exist)
-    : exist(exist) {}
+  BucketExistsResponse(bool exist) : exist(exist) {}
 
-  BucketExistsResponse(error::Error err)
-    : Response(std::move(err)) {}
+  BucketExistsResponse(error::Error err) : Response(std::move(err)) {}
 
   BucketExistsResponse(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~BucketExistsResponse() = default;
 };  // struct BucketExistsResponse
@@ -122,13 +116,13 @@ struct CompleteMultipartUploadResponse : public Response {
   CompleteMultipartUploadResponse() = default;
 
   CompleteMultipartUploadResponse(error::Error err)
-    : Response(std::move(err)) {}
+      : Response(std::move(err)) {}
 
   CompleteMultipartUploadResponse(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~CompleteMultipartUploadResponse() = default;
-  
+
   static CompleteMultipartUploadResponse ParseXML(std::string_view data,
                                                   std::string version_id);
 };  // struct CompleteMultipartUploadResponse
@@ -137,13 +131,12 @@ struct CreateMultipartUploadResponse : public Response {
   std::string upload_id;
 
   CreateMultipartUploadResponse(std::string upload_id)
-    : upload_id(std::move(upload_id)) {}
+      : upload_id(std::move(upload_id)) {}
 
-  CreateMultipartUploadResponse(error::Error err)
-    : Response(std::move(err)) {}
+  CreateMultipartUploadResponse(error::Error err) : Response(std::move(err)) {}
 
   CreateMultipartUploadResponse(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~CreateMultipartUploadResponse() = default;
 };  // struct CreateMultipartUploadResponse
@@ -158,7 +151,7 @@ struct PutObjectResponse : public Response {
     : Response(std::move(err)) {}
       
   PutObjectResponse(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   PutObjectResponse(const CompleteMultipartUploadResponse& resp)
     : Response(resp)
@@ -185,11 +178,10 @@ struct StatObjectResponse : public Response {
 
   StatObjectResponse() = default;
 
-  StatObjectResponse(error::Error err)
-    : Response(std::move(err)) {}
+  StatObjectResponse(error::Error err) : Response(std::move(err)) {}
 
   StatObjectResponse(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~StatObjectResponse() = default;
 };  // struct StatObjectResponse
@@ -217,11 +209,10 @@ struct Item : public Response {
 
   Item() = default;
 
-  Item(error::Error err)
-    : Response(std::move(err)) {}
+  Item(error::Error err) : Response(std::move(err)) {}
 
   Item(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~Item() = default;
 };  // struct Item
@@ -254,11 +245,10 @@ struct ListObjectsResponse : public Response {
 
   ListObjectsResponse() = default;
 
-  ListObjectsResponse(error::Error err)
-    : Response(std::move(err)) {}
+  ListObjectsResponse(error::Error err) : Response(std::move(err)) {}
 
   ListObjectsResponse(const Response& resp)
-    : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~ListObjectsResponse() = default;
 
@@ -286,11 +276,10 @@ struct DeleteError : public Response {
 
   DeleteError() = default;
 
-  DeleteError(error::Error err)
-    : Response(std::move(err)) {}
+  DeleteError(error::Error err) : Response(std::move(err)) {}
 
   DeleteError(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~DeleteError() = default;
 };  // struct DeleteError
@@ -301,11 +290,10 @@ struct RemoveObjectsResponse : public Response {
 
   RemoveObjectsResponse() = default;
 
-  RemoveObjectsResponse(error::Error err)
-    : Response(std::move(err)) {}
+  RemoveObjectsResponse(error::Error err) : Response(std::move(err)) {}
 
   RemoveObjectsResponse(const Response& resp)
-    : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~RemoveObjectsResponse() = default;
 
@@ -321,14 +309,12 @@ using DeleteBucketPolicyResponse = Response;
 struct GetBucketPolicyResponse : public Response {
   std::string policy;
 
-  GetBucketPolicyResponse(std::string policy)
-    : policy(std::move(policy)) {}
+  GetBucketPolicyResponse(std::string policy) : policy(std::move(policy)) {}
 
-  GetBucketPolicyResponse(error::Error err)
-    : Response(std::move(err)) {}
+  GetBucketPolicyResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketPolicyResponse(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~GetBucketPolicyResponse() = default;
 };  // struct GetBucketPolicyResponse
@@ -341,13 +327,12 @@ struct GetBucketNotificationResponse : public Response {
   NotificationConfig config;
 
   GetBucketNotificationResponse(NotificationConfig config)
-    : config(std::move(config)) {}
+      : config(std::move(config)) {}
 
-  GetBucketNotificationResponse(error::Error err)
-    : Response(std::move(err)) {}
+  GetBucketNotificationResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketNotificationResponse(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~GetBucketNotificationResponse() = default;
 
@@ -361,14 +346,12 @@ using DeleteBucketEncryptionResponse = Response;
 struct GetBucketEncryptionResponse : public Response {
   SseConfig config;
 
-  GetBucketEncryptionResponse(SseConfig config)
-    : config(std::move(config)) {}
+  GetBucketEncryptionResponse(SseConfig config) : config(std::move(config)) {}
 
-  GetBucketEncryptionResponse(error::Error err)
-    : Response(std::move(err)) {}
+  GetBucketEncryptionResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketEncryptionResponse(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~GetBucketEncryptionResponse() = default;
 
@@ -383,11 +366,10 @@ struct GetBucketVersioningResponse : public Response {
 
   GetBucketVersioningResponse() = default;
 
-  GetBucketVersioningResponse(error::Error err)
-    : Response(std::move(err)) {}
+  GetBucketVersioningResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketVersioningResponse(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~GetBucketVersioningResponse() = default;
 
@@ -410,13 +392,12 @@ struct GetBucketReplicationResponse : public Response {
   ReplicationConfig config;
 
   GetBucketReplicationResponse(ReplicationConfig config)
-    : config(std::move(config)) {}
+      : config(std::move(config)) {}
 
-  GetBucketReplicationResponse(error::Error err)
-    : Response(std::move(err)) {}
+  GetBucketReplicationResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketReplicationResponse(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~GetBucketReplicationResponse() = default;
 
@@ -431,13 +412,12 @@ struct GetBucketLifecycleResponse : public Response {
   LifecycleConfig config;
 
   GetBucketLifecycleResponse(LifecycleConfig config)
-    : config(std::move(config)) {}
+      : config(std::move(config)) {}
 
-  GetBucketLifecycleResponse(error::Error err)
-    : Response(std::move(err)) {}
+  GetBucketLifecycleResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketLifecycleResponse(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   static GetBucketLifecycleResponse ParseXML(std::string_view data);
 };  // struct GetBucketLifecycleResponse
@@ -450,13 +430,12 @@ struct GetBucketTagsResponse : public Response {
   std::map<std::string, std::string> tags;
 
   GetBucketTagsResponse(std::map<std::string, std::string> tags)
-    : tags(std::move(tags)) {}
+      : tags(std::move(tags)) {}
 
-  GetBucketTagsResponse(error::Error err)
-    : Response(std::move(err)) {}
+  GetBucketTagsResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketTagsResponse(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~GetBucketTagsResponse() = default;
 
@@ -471,13 +450,12 @@ struct GetObjectLockConfigResponse : public Response {
   ObjectLockConfig config;
 
   GetObjectLockConfigResponse(ObjectLockConfig config)
-    : config(std::move(config)) {}
+      : config(std::move(config)) {}
 
-  GetObjectLockConfigResponse(error::Error err)
-    : Response(std::move(err)) {}
+  GetObjectLockConfigResponse(error::Error err) : Response(std::move(err)) {}
 
   GetObjectLockConfigResponse(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~GetObjectLockConfigResponse() = default;
 };  // struct GetObjectLockConfigResponse
@@ -490,13 +468,12 @@ struct GetObjectTagsResponse : public Response {
   std::map<std::string, std::string> tags;
 
   GetObjectTagsResponse(std::map<std::string, std::string> tags)
-    : tags(std::move(tags)) {}
+      : tags(std::move(tags)) {}
 
-  GetObjectTagsResponse(error::Error err)
-    : Response(std::move(err)) {}
+  GetObjectTagsResponse(error::Error err) : Response(std::move(err)) {}
 
   GetObjectTagsResponse(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~GetObjectTagsResponse() = default;
 
@@ -512,14 +489,13 @@ using DisableObjectLegalHoldResponse = Response;
 struct IsObjectLegalHoldEnabledResponse : public Response {
   bool enabled = false;
 
-  IsObjectLegalHoldEnabledResponse(bool enabled)
-    : enabled(enabled) {}
+  IsObjectLegalHoldEnabledResponse(bool enabled) : enabled(enabled) {}
 
   IsObjectLegalHoldEnabledResponse(error::Error err)
-    : Response(std::move(err)) {}
+      : Response(std::move(err)) {}
 
   IsObjectLegalHoldEnabledResponse(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~IsObjectLegalHoldEnabledResponse() = default;
 };  // struct IsObjectLegalHoldEnabledResponse
@@ -530,11 +506,10 @@ struct GetObjectRetentionResponse : public Response {
 
   GetObjectRetentionResponse() = default;
 
-  GetObjectRetentionResponse(error::Error err)
-    : Response(std::move(err)) {}
+  GetObjectRetentionResponse(error::Error err) : Response(std::move(err)) {}
 
   GetObjectRetentionResponse(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~GetObjectRetentionResponse() = default;
 };  // struct GetObjectRetentionResponse
@@ -544,14 +519,12 @@ using SetObjectRetentionResponse = Response;
 struct GetPresignedObjectUrlResponse : public Response {
   std::string url;
 
-  GetPresignedObjectUrlResponse(std::string url)
-    : url(std::move(url)) {}
+  GetPresignedObjectUrlResponse(std::string url) : url(std::move(url)) {}
 
-  GetPresignedObjectUrlResponse(error::Error err)
-    : Response(std::move(err)) {}
+  GetPresignedObjectUrlResponse(error::Error err) : Response(std::move(err)) {}
 
   GetPresignedObjectUrlResponse(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~GetPresignedObjectUrlResponse() = default;
 };  // struct GetPresignedObjectUrlResponse
@@ -560,13 +533,13 @@ struct GetPresignedPostFormDataResponse : public Response {
   std::map<std::string, std::string> form_data;
 
   GetPresignedPostFormDataResponse(std::map<std::string, std::string> form_data)
-    : form_data(std::move(form_data)) {}
+      : form_data(std::move(form_data)) {}
 
   GetPresignedPostFormDataResponse(error::Error err)
-    : Response(std::move(err)) {}
+      : Response(std::move(err)) {}
 
   GetPresignedPostFormDataResponse(const Response& resp)
-    : Response(resp) {} // PWTODO: what is it supposed to do?!
+      : Response(resp) {}  // PWTODO: what is it supposed to do?!
 
   ~GetPresignedPostFormDataResponse() = default;
 };  // struct GetPresignedPostFormDataResponse

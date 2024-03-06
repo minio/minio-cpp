@@ -13,9 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "args.h"
+
 #include <filesystem>
 #include <nlohmann/json.hpp>
-#include "args.h"
 
 minio::error::Error minio::s3::BucketArgs::Validate() const {
   return utils::CheckBucketName(bucket);
@@ -47,10 +48,9 @@ minio::utils::Multimap minio::s3::ObjectWriteArgs::Headers() const {
   if (!tagging.empty()) h.Add("x-amz-tagging", tagging);
 
   if (retention != nullptr) {
-    h.Add("x-amz-object-lock-mode",
-                RetentionModeToString(retention->mode));
+    h.Add("x-amz-object-lock-mode", RetentionModeToString(retention->mode));
     h.Add("x-amz-object-lock-retain-until-date",
-                retention->retain_until_date.ToISO8601UTC());
+          retention->retain_until_date.ToISO8601UTC());
   }
 
   if (legal_hold) h.Add("x-amz-object-lock-legal-hold", "ON");
@@ -90,7 +90,8 @@ minio::utils::Multimap minio::s3::ObjectConditionalReadArgs::Headers() const {
   return h;
 }
 
-minio::utils::Multimap minio::s3::ObjectConditionalReadArgs::CopyHeaders() const {
+minio::utils::Multimap minio::s3::ObjectConditionalReadArgs::CopyHeaders()
+    const {
   utils::Multimap h;
 
   std::string copy_source = curlpp::escape("/" + bucket + "/" + object);
@@ -109,11 +110,11 @@ minio::utils::Multimap minio::s3::ObjectConditionalReadArgs::CopyHeaders() const
   }
   if (modified_since) {
     h.Add("x-amz-copy-source-if-modified-since",
-                modified_since.ToHttpHeaderValue());
+          modified_since.ToHttpHeaderValue());
   }
   if (unmodified_since) {
     h.Add("x-amz-copy-source-if-unmodified-since",
-                unmodified_since.ToHttpHeaderValue());
+          unmodified_since.ToHttpHeaderValue());
   }
 
   return h;
@@ -189,7 +190,8 @@ minio::error::Error minio::s3::GetObjectArgs::Validate() const {
 
 minio::s3::ListObjectsV1Args::ListObjectsV1Args() {}
 
-minio::s3::ListObjectsV1Args::ListObjectsV1Args(ListObjectsArgs args) { // PWTODO: why copy constructor is wrong?
+minio::s3::ListObjectsV1Args::ListObjectsV1Args(
+    ListObjectsArgs args) {  // PWTODO: why copy constructor is wrong?
   this->extra_headers = args.extra_headers;
   this->extra_query_params = args.extra_query_params;
   this->bucket = args.bucket;
@@ -203,7 +205,8 @@ minio::s3::ListObjectsV1Args::ListObjectsV1Args(ListObjectsArgs args) { // PWTOD
 
 minio::s3::ListObjectsV2Args::ListObjectsV2Args() {}
 
-minio::s3::ListObjectsV2Args::ListObjectsV2Args(ListObjectsArgs args) { // PWTODO: why copy constructor is wrong?
+minio::s3::ListObjectsV2Args::ListObjectsV2Args(
+    ListObjectsArgs args) {  // PWTODO: why copy constructor is wrong?
   this->extra_headers = args.extra_headers;
   this->extra_query_params = args.extra_query_params;
   this->bucket = args.bucket;
@@ -251,13 +254,15 @@ minio::error::Error minio::s3::CopyObjectArgs::Validate() const {
   if (error::Error err = source.Validate()) return err;
 
   if (source.offset != nullptr || source.length != nullptr) {
-    if (metadata_directive != nullptr && *metadata_directive == Directive::kCopy) {
+    if (metadata_directive != nullptr &&
+        *metadata_directive == Directive::kCopy) {
       return error::Error(
           "COPY metadata directive is not applicable to source object with "
           "range");
     }
 
-    if (tagging_directive != nullptr && *tagging_directive == Directive::kCopy) {
+    if (tagging_directive != nullptr &&
+        *tagging_directive == Directive::kCopy) {
       return error::Error(
           "COPY tagging directive is not applicable to source object with "
           "range");
@@ -267,7 +272,8 @@ minio::error::Error minio::s3::CopyObjectArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::ComposeSource::BuildHeaders(size_t object_size, const std::string& etag) {
+minio::error::Error minio::s3::ComposeSource::BuildHeaders(
+    size_t object_size, const std::string& etag) {
   std::string msg = "source " + bucket + "/" + object;
   if (!version_id.empty()) msg += "?versionId=" + version_id;
   msg += ": ";
@@ -390,7 +396,8 @@ minio::error::Error minio::s3::SelectObjectContentArgs::Validate() const {
 
 minio::error::Error minio::s3::ListenBucketNotificationArgs::Validate() const {
   if (error::Error err = BucketArgs::Validate()) return err;
-  if (func == nullptr) error::Error("notification records function must be set");
+  if (func == nullptr)
+    error::Error("notification records function must be set");
 
   return error::SUCCESS;
 }
@@ -494,7 +501,8 @@ minio::error::Error minio::s3::GetPresignedObjectUrlArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::PostPolicy::AddEqualsCondition(std::string element, std::string value) {
+minio::error::Error minio::s3::PostPolicy::AddEqualsCondition(
+    std::string element, std::string value) {
   if (element.empty()) {
     return error::Error("condition element cannot be empty");
   }
@@ -513,7 +521,8 @@ minio::error::Error minio::s3::PostPolicy::AddEqualsCondition(std::string elemen
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::PostPolicy::RemoveEqualsCondition(std::string element) {
+minio::error::Error minio::s3::PostPolicy::RemoveEqualsCondition(
+    std::string element) {
   if (element.empty()) {
     return error::Error("condition element cannot be empty");
   }
@@ -521,18 +530,17 @@ minio::error::Error minio::s3::PostPolicy::RemoveEqualsCondition(std::string ele
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::PostPolicy::AddStartsWithCondition(std::string element, std::string value) {
+minio::error::Error minio::s3::PostPolicy::AddStartsWithCondition(
+    std::string element, std::string value) {
   if (element.empty()) {
     return error::Error("condition element cannot be empty");
   }
 
   element = trimDollar(element);
-  if (element == "success_action_status" ||
-      element == "content-length-range" ||
+  if (element == "success_action_status" || element == "content-length-range" ||
       (utils::StartsWith(element, "x-amz-") &&
        utils::StartsWith(element, "x-amz-meta-"))) {
-    return error::Error(element +
-                        " is unsupported for starts-with condition");
+    return error::Error(element + " is unsupported for starts-with condition");
   }
 
   if (isReservedElement(element)) {
@@ -543,7 +551,8 @@ minio::error::Error minio::s3::PostPolicy::AddStartsWithCondition(std::string el
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::PostPolicy::RemoveStartsWithCondition(std::string element) {
+minio::error::Error minio::s3::PostPolicy::RemoveStartsWithCondition(
+    std::string element) {
   if (element.empty()) {
     return error::Error("condition element cannot be empty");
   }
@@ -551,8 +560,8 @@ minio::error::Error minio::s3::PostPolicy::RemoveStartsWithCondition(std::string
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::PostPolicy::AddContentLengthRangeCondition(size_t lower_limit,
-                                            size_t upper_limit) {
+minio::error::Error minio::s3::PostPolicy::AddContentLengthRangeCondition(
+    size_t lower_limit, size_t upper_limit) {
   if (lower_limit > upper_limit) {
     return error::Error("lower limit cannot be greater than upper limit");
   }
@@ -566,9 +575,9 @@ void minio::s3::PostPolicy::RemoveContentLengthRangeCondition() {
   upper_limit_ = Integer();
 }
 
-minio::error::Error minio::s3::PostPolicy::FormData(std::map<std::string, std::string> &data,
-                      std::string access_key, std::string secret_key,
-                      std::string session_token, std::string region) {
+minio::error::Error minio::s3::PostPolicy::FormData(
+    std::map<std::string, std::string>& data, std::string access_key,
+    std::string secret_key, std::string session_token, std::string region) {
   if (region.empty()) return error::Error("region cannot be empty");
   if (conditions_[eq_]["key"].empty() &&
       conditions_[starts_with_]["key"].empty()) {
@@ -580,8 +589,8 @@ minio::error::Error minio::s3::PostPolicy::FormData(std::map<std::string, std::s
 
   nlohmann::json conditions = nlohmann::json::array();
   conditions.push_back({eq_, "$bucket", bucket});
-  for (auto &[cond_key, cond] : conditions_) {
-    for (auto &[key, value] : cond) {
+  for (auto& [cond_key, cond] : conditions_) {
+    for (auto& [key, value] : cond) {
       conditions.push_back({cond_key, "$" + key, value});
     }
   }
@@ -622,7 +631,8 @@ std::string minio::s3::PostPolicy::trimDollar(std::string value) {
 }
 
 std::string minio::s3::PostPolicy::getCredentialString(std::string access_key,
-                                       utils::Time date, std::string region) {
+                                                       utils::Time date,
+                                                       std::string region) {
   return access_key + "/" + date.ToSignerDate() + "/" + region +
          "/s3/aws4_request";
 }

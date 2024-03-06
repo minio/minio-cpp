@@ -24,7 +24,8 @@ namespace minio {
 namespace signer {
 std::string GetScope(const utils::Time& time, const std::string& region,
                      const std::string& service_name);
-std::string GetCanonicalRequestHash(const std::string& method, const std::string& uri,
+std::string GetCanonicalRequestHash(const std::string& method,
+                                    const std::string& uri,
                                     const std::string& query_string,
                                     const std::string& headers,
                                     const std::string& signed_headers,
@@ -32,35 +33,44 @@ std::string GetCanonicalRequestHash(const std::string& method, const std::string
 std::string GetStringToSign(const utils::Time& date, const std::string& scope,
                             const std::string& canonical_request_hash);
 std::string HmacHash(std::string_view key, std::string_view data);
-std::string GetSigningKey(const std::string& secret_key, const utils::Time& date,
-                          std::string_view region,
+std::string GetSigningKey(const std::string& secret_key,
+                          const utils::Time& date, std::string_view region,
                           std::string_view service_name);
 std::string GetSignature(std::string_view signing_key,
                          std::string_view string_to_sign);
-std::string GetAuthorization(const std::string& access_key, const std::string& scope,
+std::string GetAuthorization(const std::string& access_key,
+                             const std::string& scope,
                              const std::string& signed_headers,
                              const std::string& signature);
 utils::Multimap SignV4(const std::string& service_name, http::Method method,
-                        const std::string& uri, const std::string& region,
-                        utils::Multimap& headers, utils::Multimap query_params,
-                        const std::string& access_key, const std::string& secret_key,
-                        const std::string& content_sha256, const utils::Time& date);
+                       const std::string& uri, const std::string& region,
+                       utils::Multimap& headers, utils::Multimap query_params,
+                       const std::string& access_key,
+                       const std::string& secret_key,
+                       const std::string& content_sha256,
+                       const utils::Time& date);
 utils::Multimap SignV4S3(http::Method method, const std::string& uri,
-                          const std::string& region, utils::Multimap& headers,
-                          utils::Multimap query_params, const std::string& access_key,
-                          const std::string& secret_key, const std::string& content_sha256,
-                          const utils::Time& date);
+                         const std::string& region, utils::Multimap& headers,
+                         utils::Multimap query_params,
+                         const std::string& access_key,
+                         const std::string& secret_key,
+                         const std::string& content_sha256,
+                         const utils::Time& date);
 utils::Multimap SignV4STS(http::Method method, const std::string& uri,
-                           const std::string& region, utils::Multimap& headers,
-                           utils::Multimap query_params,
-                           const std::string& access_key, const std::string& secret_key,
-                           const std::string& content_sha256, const utils::Time& date);
+                          const std::string& region, utils::Multimap& headers,
+                          utils::Multimap query_params,
+                          const std::string& access_key,
+                          const std::string& secret_key,
+                          const std::string& content_sha256,
+                          const utils::Time& date);
 utils::Multimap PresignV4(http::Method method, const std::string& host,
-                           const std::string& uri, const std::string& region,
-                           utils::Multimap query_params,
-                           const std::string& access_key, const std::string& secret_key,
-                           const utils::Time& date, unsigned int expires);
-std::string PostPresignV4(const std::string& data, const std::string& secret_key,
+                          const std::string& uri, const std::string& region,
+                          utils::Multimap query_params,
+                          const std::string& access_key,
+                          const std::string& secret_key,
+                          const utils::Time& date, unsigned int expires);
+std::string PostPresignV4(const std::string& data,
+                          const std::string& secret_key,
                           const utils::Time& date, const std::string& region);
 }  // namespace signer
 }  // namespace minio

@@ -247,7 +247,7 @@ struct ListObjectsV1Args : public ListObjectsCommonArgs {
 struct ListObjectsV2Args : public ListObjectsCommonArgs {
   std::string start_after;
   std::string continuation_token;
-  bool fetch_owner =  false; 
+  bool fetch_owner = false;
   bool include_user_metadata = false;
 
   ListObjectsV2Args();
@@ -272,8 +272,8 @@ struct PutObjectArgs : public PutObjectBaseArgs {
   PutObjectArgs(std::istream &stream, long object_size, long part_size);
   ~PutObjectArgs() = default;
 
-  error::Error Validate(); // PWTODO: the validator modifies the object
-};  // struct PutObjectArgs
+  error::Error Validate();  // PWTODO: the validator modifies the object
+};                          // struct PutObjectArgs
 
 using CopySource = ObjectConditionalReadArgs;
 
@@ -289,7 +289,6 @@ struct CopyObjectArgs : public ObjectWriteArgs {
 };  // struct CopyObjectArgs
 
 struct ComposeSource : public ObjectConditionalReadArgs {
-
   ComposeSource() = default;
   ~ComposeSource() = default;
 
@@ -319,8 +318,8 @@ struct UploadObjectArgs : public PutObjectBaseArgs {
   UploadObjectArgs() = default;
   ~UploadObjectArgs() = default;
 
-  error::Error Validate(); // PWTODO: the validator modifies the object
-};  // struct UploadObjectArgs
+  error::Error Validate();  // PWTODO: the validator modifies the object
+};                          // struct UploadObjectArgs
 
 struct RemoveObjectsApiArgs : public BucketArgs {
   bool bypass_governance_mode = false;
@@ -516,8 +515,7 @@ struct PostPolicy {
   std::string region;
 
   PostPolicy(std::string bucket, utils::Time expiration)
-    : bucket(std::move(bucket))
-    , expiration_(std::move(expiration)) {}
+      : bucket(std::move(bucket)), expiration_(std::move(expiration)) {}
 
   ~PostPolicy() = default;
 
@@ -527,7 +525,8 @@ struct PostPolicy {
   error::Error RemoveEqualsCondition(std::string element);
   error::Error AddStartsWithCondition(std::string element, std::string value);
   error::Error RemoveStartsWithCondition(std::string element);
-  error::Error AddContentLengthRangeCondition(size_t lower_limit, size_t upper_limit);
+  error::Error AddContentLengthRangeCondition(size_t lower_limit,
+                                              size_t upper_limit);
   void RemoveContentLengthRangeCondition();
 
   error::Error FormData(std::map<std::string, std::string> &data,
@@ -545,7 +544,8 @@ struct PostPolicy {
   Integer upper_limit_;
 
   static std::string trimDollar(std::string value);
-  static std::string getCredentialString(std::string access_key, utils::Time date, std::string region);
+  static std::string getCredentialString(std::string access_key,
+                                         utils::Time date, std::string region);
   static bool isReservedElement(std::string element);
 };  // struct PostPolicy
 }  // namespace s3

@@ -43,7 +43,7 @@ class ListObjectsResult {
   ListObjectsResult(Client* const client, const ListObjectsArgs& args);
   ListObjectsResult(Client* const client, ListObjectsArgs&& args);
   ~ListObjectsResult() = default;
-  
+
   Item& operator*() const { return *itr_; }
   explicit operator bool() const { return itr_ != resp_.contents.end(); }
   ListObjectsResult& operator++() {

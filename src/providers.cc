@@ -22,13 +22,14 @@
 #include <sys/socket.h>
 #endif
 
-#include <fstream>
-#include <nlohmann/json.hpp>
 #include <INIReader.h>
 
+#include <fstream>
+#include <nlohmann/json.hpp>
+
+#include "providers.h"
 #include "signer.h"
 #include "utils.h"
-#include "providers.h"
 
 minio::error::Error minio::creds::checkLoopbackHost(const std::string& host) {
   struct addrinfo hints = {};
@@ -76,9 +77,11 @@ minio::creds::Credentials minio::creds::ChainedProvider::Fetch() {
   return Credentials{error::Error("All providers fail to fetch credentials")};
 }
 
-minio::creds::StaticProvider::StaticProvider(std::string access_key, std::string secret_key,
-               std::string session_token) {
-    this->creds_ = Credentials{error::SUCCESS, std::move(access_key), std::move(secret_key), std::move(session_token)};
+minio::creds::StaticProvider::StaticProvider(std::string access_key,
+                                             std::string secret_key,
+                                             std::string session_token) {
+  this->creds_ = Credentials{error::SUCCESS, std::move(access_key),
+                             std::move(secret_key), std::move(session_token)};
 }
 
 minio::creds::StaticProvider::~StaticProvider() {}
@@ -125,7 +128,8 @@ minio::creds::Credentials minio::creds::EnvMinioProvider::Fetch() {
   return creds_;
 }
 
-minio::creds::AwsConfigProvider::AwsConfigProvider(std::string filename, std::string profile) {
+minio::creds::AwsConfigProvider::AwsConfigProvider(std::string filename,
+                                                   std::string profile) {
   if (filename.empty()) {
     if (!utils::GetEnv(filename, "AWS_SHARED_CREDENTIALS_FILE")) {
       filename = utils::GetHomeDir() + "/aws/credentials";
@@ -140,10 +144,10 @@ minio::creds::AwsConfigProvider::AwsConfigProvider(std::string filename, std::st
   if (reader.ParseError() < 0) {
     this->creds_ = Credentials{error::Error("unable to read " + filename)};
   } else {
-    this->creds_ = Credentials{
-        error::SUCCESS, reader.Get(profile, "aws_access_key_id", ""),
-        reader.Get(profile, "aws_secret_access_key", ""),
-        reader.Get(profile, "aws_session_token", "")};
+    this->creds_ = Credentials{error::SUCCESS,
+                               reader.Get(profile, "aws_access_key_id", ""),
+                               reader.Get(profile, "aws_secret_access_key", ""),
+                               reader.Get(profile, "aws_session_token", "")};
   }
 }
 
@@ -153,7 +157,8 @@ minio::creds::Credentials minio::creds::AwsConfigProvider::Fetch() {
   return creds_;
 }
 
-minio::creds::MinioClientConfigProvider::MinioClientConfigProvider(std::string filename, std::string alias) {
+minio::creds::MinioClientConfigProvider::MinioClientConfigProvider(
+    std::string filename, std::string alias) {
   if (filename.empty()) filename = utils::GetHomeDir() + "/.mc/config.json";
 
   if (alias.empty()) {
@@ -170,8 +175,8 @@ minio::creds::MinioClientConfigProvider::MinioClientConfigProvider(std::string f
   } else if (json.contains("aliases")) {
     aliases = json["aliases"];
   } else {
-    this->creds_ = Credentials{
-        error::Error("invalid configuration in file " + filename)};
+    this->creds_ =
+        Credentials{error::Error("invalid configuration in file " + filename)};
     return;
   }
 
@@ -192,12 +197,11 @@ minio::creds::Credentials minio::creds::MinioClientConfigProvider::Fetch() {
   return creds_;
 }
 
-minio::creds::AssumeRoleProvider::AssumeRoleProvider(http::Url sts_endpoint, std::string access_key,
-                   std::string secret_key, unsigned int duration_seconds,
-                   std::string policy, std::string region,
-                   std::string role_arn,
-                   std::string role_session_name,
-                   std::string external_id) {
+minio::creds::AssumeRoleProvider::AssumeRoleProvider(
+    http::Url sts_endpoint, std::string access_key, std::string secret_key,
+    unsigned int duration_seconds, std::string policy, std::string region,
+    std::string role_arn, std::string role_session_name,
+    std::string external_id) {
   this->sts_endpoint_ = sts_endpoint;
   this->access_key_ = access_key;
   this->secret_key_ = secret_key;
@@ -253,11 +257,9 @@ minio::creds::Credentials minio::creds::AssumeRoleProvider::Fetch() {
   return creds_;
 }
 
-minio::creds::WebIdentityClientGrantsProvider::WebIdentityClientGrantsProvider(JwtFunction jwtfunc, http::Url sts_endpoint,
-                                unsigned int duration_seconds,
-                                std::string policy,
-                                std::string role_arn,
-                                std::string role_session_name) {
+minio::creds::WebIdentityClientGrantsProvider::WebIdentityClientGrantsProvider(
+    JwtFunction jwtfunc, http::Url sts_endpoint, unsigned int duration_seconds,
+    std::string policy, std::string role_arn, std::string role_session_name) {
   this->jwtfunc_ = jwtfunc;
   this->sts_endpoint_ = sts_endpoint;
   this->duration_seconds_ = duration_seconds;
@@ -266,9 +268,11 @@ minio::creds::WebIdentityClientGrantsProvider::WebIdentityClientGrantsProvider(J
   this->role_session_name_ = role_session_name;
 }
 
-minio::creds::WebIdentityClientGrantsProvider::~WebIdentityClientGrantsProvider() {}
+minio::creds::WebIdentityClientGrantsProvider::
+    ~WebIdentityClientGrantsProvider() {}
 
-unsigned int minio::creds::WebIdentityClientGrantsProvider::getDurationSeconds(unsigned int expiry) const {
+unsigned int minio::creds::WebIdentityClientGrantsProvider::getDurationSeconds(
+    unsigned int expiry) const {
   if (duration_seconds_) expiry = duration_seconds_;
   if (expiry > MAX_DURATION_SECONDS) return MAX_DURATION_SECONDS;
   if (expiry == 0) return expiry;
@@ -276,7 +280,8 @@ unsigned int minio::creds::WebIdentityClientGrantsProvider::getDurationSeconds(u
   return expiry;
 }
 
-minio::creds::Credentials minio::creds::WebIdentityClientGrantsProvider::Fetch() {
+minio::creds::Credentials
+minio::creds::WebIdentityClientGrantsProvider::Fetch() {
   if (creds_) return creds_;
 
   Jwt jwt = jwtfunc_();
@@ -319,31 +324,25 @@ minio::creds::Credentials minio::creds::WebIdentityClientGrantsProvider::Fetch()
   return creds_;
 }
 
-minio::creds::ClientGrantsProvider::ClientGrantsProvider(JwtFunction jwtfunc, http::Url sts_endpoint,
-                     unsigned int duration_seconds,
-                     std::string policy, std::string role_arn,
-                     std::string role_session_name)
+minio::creds::ClientGrantsProvider::ClientGrantsProvider(
+    JwtFunction jwtfunc, http::Url sts_endpoint, unsigned int duration_seconds,
+    std::string policy, std::string role_arn, std::string role_session_name)
     : WebIdentityClientGrantsProvider(jwtfunc, sts_endpoint, duration_seconds,
                                       policy, role_arn, role_session_name) {}
 
 minio::creds::ClientGrantsProvider::~ClientGrantsProvider() {}
 
-bool minio::creds::ClientGrantsProvider::IsWebIdentity() const {
-  return false;
-}
+bool minio::creds::ClientGrantsProvider::IsWebIdentity() const { return false; }
 
-minio::creds::WebIdentityProvider::WebIdentityProvider(JwtFunction jwtfunc, http::Url sts_endpoint,
-                  unsigned int duration_seconds,
-                  std::string policy, std::string role_arn,
-                  std::string role_session_name)
-  : WebIdentityClientGrantsProvider(jwtfunc, sts_endpoint, duration_seconds,
-                                    policy, role_arn, role_session_name) {}
+minio::creds::WebIdentityProvider::WebIdentityProvider(
+    JwtFunction jwtfunc, http::Url sts_endpoint, unsigned int duration_seconds,
+    std::string policy, std::string role_arn, std::string role_session_name)
+    : WebIdentityClientGrantsProvider(jwtfunc, sts_endpoint, duration_seconds,
+                                      policy, role_arn, role_session_name) {}
 
 minio::creds::WebIdentityProvider::~WebIdentityProvider() {}
 
-bool minio::creds::WebIdentityProvider::IsWebIdentity() const {
-  return true;
-}
+bool minio::creds::WebIdentityProvider::IsWebIdentity() const { return true; }
 
 minio::creds::IamAwsProvider::IamAwsProvider(http::Url custom_endpoint) {
   this->custom_endpoint_ = custom_endpoint;
@@ -351,8 +350,7 @@ minio::creds::IamAwsProvider::IamAwsProvider(http::Url custom_endpoint) {
   utils::GetEnv(this->aws_region_, "AWS_REGION");
   utils::GetEnv(this->role_arn_, "AWS_ROLE_ARN");
   utils::GetEnv(this->role_session_name_, "AWS_ROLE_SESSION_NAME");
-  utils::GetEnv(this->relative_uri_,
-                "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI");
+  utils::GetEnv(this->relative_uri_, "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI");
   if (!this->relative_uri_.empty() && this->relative_uri_.front() != '/') {
     this->relative_uri_ = "/" + this->relative_uri_;
   }
@@ -426,8 +424,8 @@ minio::creds::Credentials minio::creds::IamAwsProvider::fetch(http::Url url) {
   nlohmann::json json = nlohmann::json::parse(resp.body);
   std::string code = json.value("Code", "Success");
   if (code != "Success") {
-    return Credentials{error::Error(url.String() + " failed with code " +
-                                    code + " and message " +
+    return Credentials{error::Error(url.String() + " failed with code " + code +
+                                    " and message " +
                                     json.value("Message", ""))};
   }
 
@@ -437,7 +435,8 @@ minio::creds::Credentials minio::creds::IamAwsProvider::fetch(http::Url url) {
                      utils::Time::FromISO8601UTC(expiration.c_str())};
 }
 
-minio::error::Error minio::creds::IamAwsProvider::getRoleName(std::string& role_name, http::Url url) const {
+minio::error::Error minio::creds::IamAwsProvider::getRoleName(
+    std::string& role_name, http::Url url) const {
   http::Request req(http::Method::kGet, url);
   http::Response resp = req.Execute();
   if (!resp) return resp.Error();
@@ -452,15 +451,17 @@ minio::error::Error minio::creds::IamAwsProvider::getRoleName(std::string& role_
   if (!lines.empty()) role_names.push_back(lines);
 
   if (role_names.empty()) {
-    return error::Error(std::string("no IAM roles attached to EC2 service ") + url.String());
+    return error::Error(std::string("no IAM roles attached to EC2 service ") +
+                        url.String());
   }
 
   role_name = utils::Trim(role_names.front(), '\r');
   return error::SUCCESS;
 }
 
-minio::creds::LdapIdentityProvider::LdapIdentityProvider(http::Url sts_endpoint, std::string ldap_username,
-                     std::string ldap_password) {
+minio::creds::LdapIdentityProvider::LdapIdentityProvider(
+    http::Url sts_endpoint, std::string ldap_username,
+    std::string ldap_password) {
   this->sts_endpoint_ = sts_endpoint;
   utils::Multimap map;
   map.Add("Action", "AssumeRoleWithLDAPIdentity");
@@ -479,15 +480,13 @@ minio::creds::Credentials minio::creds::LdapIdentityProvider::Fetch() {
   http::Response resp = req.Execute();
   if (!resp) return Credentials{resp.Error()};
 
-  creds_ =
-      Credentials::ParseXML(resp.body, "AssumeRoleWithLDAPIdentityResult");
+  creds_ = Credentials::ParseXML(resp.body, "AssumeRoleWithLDAPIdentityResult");
   return creds_;
 }
 
-minio::creds::CertificateIdentityProvider::CertificateIdentityProvider(http::Url sts_endpoint, std::string key_file,
-                            std::string cert_file,
-                            std::string ssl_cert_file,
-                            unsigned int duration_seconds) {
+minio::creds::CertificateIdentityProvider::CertificateIdentityProvider(
+    http::Url sts_endpoint, std::string key_file, std::string cert_file,
+    std::string ssl_cert_file, unsigned int duration_seconds) {
   if (!sts_endpoint.https) {
     this->err_ = error::Error("sts endpoint scheme must be HTTPS");
     return;
@@ -530,7 +529,6 @@ minio::creds::Credentials minio::creds::CertificateIdentityProvider::Fetch() {
   http::Response resp = req.Execute();
   if (!resp) return Credentials{resp.Error()};
 
-  creds_ =
-      Credentials::ParseXML(resp.body, "AssumeRoleWithCertificateResult");
+  creds_ = Credentials::ParseXML(resp.body, "AssumeRoleWithCertificateResult");
   return creds_;
 }

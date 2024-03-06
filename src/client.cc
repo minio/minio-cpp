@@ -16,20 +16,20 @@
 #include "client.h"
 
 minio::s3::ListObjectsResult::ListObjectsResult(error::Error err)
-  : failed_(true) {
+    : failed_(true) {
   this->resp_.contents.push_back(Item(std::move(err)));
   this->itr_ = resp_.contents.begin();
 }
 
-minio::s3::ListObjectsResult::ListObjectsResult(Client* const client, const ListObjectsArgs& args)
-  : client_(client)
-  , args_(args) {
+minio::s3::ListObjectsResult::ListObjectsResult(Client* const client,
+                                                const ListObjectsArgs& args)
+    : client_(client), args_(args) {
   Populate();
 }
 
-minio::s3::ListObjectsResult::ListObjectsResult(Client* const client, ListObjectsArgs&& args)
-  : client_(client)
-  , args_(std::move(args)) {
+minio::s3::ListObjectsResult::ListObjectsResult(Client* const client,
+                                                ListObjectsArgs&& args)
+    : client_(client), args_(std::move(args)) {
   Populate();
 }
 
@@ -79,17 +79,15 @@ minio::s3::RemoveObjectsResult::RemoveObjectsResult(error::Error err) {
   itr_ = resp_.errors.begin();
 }
 
-minio::s3::RemoveObjectsResult::RemoveObjectsResult(Client* const client,
-                                                    const RemoveObjectsArgs& args)
-  : client_(client)
-  , args_(args) {
+minio::s3::RemoveObjectsResult::RemoveObjectsResult(
+    Client* const client, const RemoveObjectsArgs& args)
+    : client_(client), args_(args) {
   Populate();
 }
 
 minio::s3::RemoveObjectsResult::RemoveObjectsResult(Client* const client,
                                                     RemoveObjectsArgs&& args)
-  : client_(client)
-  , args_(args) {
+    : client_(client), args_(args) {
   Populate();
 }
 
@@ -328,7 +326,7 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
 }
 
 minio::s3::PutObjectResponse minio::s3::Client::PutObject(
-     PutObjectArgs args, std::string& upload_id, char* buf) {
+    PutObjectArgs args, std::string& upload_id, char* buf) {
   utils::Multimap headers = args.Headers();
   if (!headers.Contains("Content-Type")) {
     if (args.content_type.empty()) {
@@ -456,7 +454,9 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
         }
 
         http::ProgressFunctionArgs actual_args;
-        actual_args.upload_total_bytes = static_cast<double>(object_size); // PWTODO: size_t kept as double? Can I upload a quarter of a byte?
+        actual_args.upload_total_bytes = static_cast<double>(
+            object_size);  // PWTODO: size_t kept as double? Can I upload a
+                           // quarter of a byte?
         actual_args.uploaded_bytes = uploaded_bytes + args.uploaded_bytes;
         actual_args.userdata = progress_userdata;
         progressfunc(actual_args);
@@ -470,9 +470,13 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
 
     if (UploadPartResponse resp = UploadPart(up_args)) {
       if (args.progressfunc != nullptr) {
-        uploaded_bytes += static_cast<double>(data.length()); // PWTODO: size_t kept as double? Can I upload a quarter of a byte?
+        uploaded_bytes += static_cast<double>(
+            data.length());  // PWTODO: size_t kept as double? Can I upload a
+                             // quarter of a byte?
         http::ProgressFunctionArgs actual_args;
-        actual_args.upload_total_bytes = static_cast<double>(object_size); // PWTODO: size_t kept as double? Can I upload a quarter of a byte?
+        actual_args.upload_total_bytes = static_cast<double>(
+            object_size);  // PWTODO: size_t kept as double? Can I upload a
+                           // quarter of a byte?
         actual_args.uploaded_bytes = uploaded_bytes;
         actual_args.userdata = args.progress_userdata;
         args.progressfunc(actual_args);
@@ -646,7 +650,7 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
     etag = resp.etag;
     size = resp.size;
   }
-  (void) size; // PWTODO: should this be removed?
+  (void)size;  // PWTODO: should this be removed?
 
   std::string temp_filename =
       args.filename + "." + curlpp::escape(etag) + ".part.minio";

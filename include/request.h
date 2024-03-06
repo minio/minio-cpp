@@ -50,8 +50,8 @@ const std::regex REGION_REGEX("^((?!_)(?!-)[a-z_\\d-]{1,63})$",
 
 bool awsRegexMatch(std::string_view value, const std::regex& regex);
 
-error::Error getAwsInfo(const std::string& host, bool https, std::string& region,
-                        std::string& aws_s3_prefix,
+error::Error getAwsInfo(const std::string& host, bool https,
+                        std::string& region, std::string& aws_s3_prefix,
                         std::string& aws_domain_suffix, bool& dualstack);
 
 std::string extractRegion(const std::string& host);
@@ -70,7 +70,8 @@ struct BaseUrl {
   BaseUrl(std::string host, bool https = true, std::string region = {});
   ~BaseUrl() = default;
 
-  error::Error BuildUrl(http::Url& url, http::Method method, const std::string& region,
+  error::Error BuildUrl(http::Url& url, http::Method method,
+                        const std::string& region,
                         const utils::Multimap& query_params,
                         const std::string& bucket_name,
                         const std::string& object_name);

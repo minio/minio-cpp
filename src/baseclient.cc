@@ -16,8 +16,8 @@
 #include "baseclient.h"
 
 minio::utils::Multimap minio::s3::GetCommonListObjectsQueryParams(
-    const std::string& delimiter, const std::string& encoding_type, unsigned int max_keys,
-    const std::string& prefix) {
+    const std::string& delimiter, const std::string& encoding_type,
+    unsigned int max_keys, const std::string& prefix) {
   utils::Multimap query_params;
   query_params.Add("delimiter", delimiter);
   query_params.Add("max-keys", std::to_string(max_keys > 0 ? max_keys : 1000));
@@ -27,11 +27,10 @@ minio::utils::Multimap minio::s3::GetCommonListObjectsQueryParams(
 }
 
 minio::s3::BaseClient::BaseClient(BaseUrl base_url, creds::Provider* provider)
-    : base_url_(std::move(base_url))
-    , provider_(provider) {
+    : base_url_(std::move(base_url)), provider_(provider) {
   if (!base_url_) {
-    std::cerr << "valid base url must be provided; "
-              << base_url_.Error() << std::endl;
+    std::cerr << "valid base url must be provided; " << base_url_.Error()
+              << std::endl;
     std::terminate();
   }
 }
@@ -49,8 +48,8 @@ minio::error::Error minio::s3::BaseClient::SetAppInfo(
 
 void minio::s3::BaseClient::HandleRedirectResponse(
     std::string& code, std::string& message, int status_code,
-    http::Method method, const utils::Multimap& headers, const std::string& bucket_name,
-    bool retry) {
+    http::Method method, const utils::Multimap& headers,
+    const std::string& bucket_name, bool retry) {
   switch (status_code) {
     case 301:
       code = "PermanentRedirect";
@@ -224,7 +223,8 @@ minio::s3::GetRegionResponse minio::s3::BaseClient::GetRegion(
 
   if (!base_region.empty()) return base_region;
 
-  if (bucket_name.empty() || provider_ == nullptr) return std::string("us-east-1");
+  if (bucket_name.empty() || provider_ == nullptr)
+    return std::string("us-east-1");
 
   std::string stored_region = region_map_[bucket_name];
   if (!stored_region.empty()) return stored_region;
@@ -282,7 +282,11 @@ minio::s3::BucketExistsResponse minio::s3::BaseClient::BucketExists(
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return BucketExistsResponse((resp.code == "NoSuchBucket") ? false : static_cast<bool>(resp)); // PWTODO: it makes no sense, as resp must be false already
+    return BucketExistsResponse(
+        (resp.code == "NoSuchBucket")
+            ? false
+            : static_cast<bool>(resp));  // PWTODO: it makes no sense, as resp
+                                         // must be false already
   }
 
   Request req(http::Method::kHead, region, base_url_, args.extra_headers,
@@ -291,7 +295,11 @@ minio::s3::BucketExistsResponse minio::s3::BaseClient::BucketExists(
   if (Response resp = Execute(req)) {
     return true;
   } else {
-    return BucketExistsResponse((resp.code == "NoSuchBucket") ? false : static_cast<bool>(resp)); // PWTODO: it makes no sense, as resp must be false already
+    return BucketExistsResponse(
+        (resp.code == "NoSuchBucket")
+            ? false
+            : static_cast<bool>(resp));  // PWTODO: it makes no sense, as resp
+                                         // must be false already
   }
 }
 
