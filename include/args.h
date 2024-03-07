@@ -224,6 +224,12 @@ struct ListObjectsArgs : public BucketArgs {
 
   ListObjectsArgs() = default;
   ~ListObjectsArgs() = default;
+
+  ListObjectsArgs(const ListObjectsArgs&) = default;
+  ListObjectsArgs& operator =(const ListObjectsArgs&) = default;
+
+  ListObjectsArgs(ListObjectsArgs&&) = default;
+  ListObjectsArgs& operator =(ListObjectsArgs&&) = default;
 };  // struct ListObjectsArgs
 
 struct ListObjectsCommonArgs : public BucketArgs {
@@ -234,14 +240,29 @@ struct ListObjectsCommonArgs : public BucketArgs {
 
   ListObjectsCommonArgs() = default;
   ~ListObjectsCommonArgs() = default;
+
+  ListObjectsCommonArgs(const ListObjectsCommonArgs&) = default;
+  ListObjectsCommonArgs& operator =(const ListObjectsCommonArgs&) = default;
+
+  ListObjectsCommonArgs(ListObjectsCommonArgs&&) = default;
+  ListObjectsCommonArgs& operator =(ListObjectsCommonArgs&&) = default;
 };  // struct ListObjectsCommonArgs
 
 struct ListObjectsV1Args : public ListObjectsCommonArgs {
   std::string marker;
 
   ListObjectsV1Args();
+
   explicit ListObjectsV1Args(ListObjectsArgs args);
+  ListObjectsV1Args& operator =(ListObjectsArgs args);
+
   ~ListObjectsV1Args() = default;
+
+  ListObjectsV1Args(const ListObjectsV1Args&) = default;
+  ListObjectsV1Args& operator =(const ListObjectsV1Args&) = default;
+
+  ListObjectsV1Args(ListObjectsV1Args&&) = default;
+  ListObjectsV1Args& operator =(ListObjectsV1Args&&) = default;
 };  // struct ListObjectsV1Args
 
 struct ListObjectsV2Args : public ListObjectsCommonArgs {
@@ -251,8 +272,17 @@ struct ListObjectsV2Args : public ListObjectsCommonArgs {
   bool include_user_metadata = false;
 
   ListObjectsV2Args();
+
   explicit ListObjectsV2Args(ListObjectsArgs args);
+  ListObjectsV2Args& operator =(ListObjectsArgs args);
+
   ~ListObjectsV2Args() = default;
+
+  ListObjectsV2Args(const ListObjectsV2Args&) = default;
+  ListObjectsV2Args& operator =(const ListObjectsV2Args&) = default;
+
+  ListObjectsV2Args(ListObjectsV2Args&&) = default;
+  ListObjectsV2Args& operator =(ListObjectsV2Args&&) = default;
 };  // struct ListObjectsV2Args
 
 struct ListObjectVersionsArgs : public ListObjectsCommonArgs {
@@ -260,8 +290,17 @@ struct ListObjectVersionsArgs : public ListObjectsCommonArgs {
   std::string version_id_marker;
 
   ListObjectVersionsArgs();
+
   explicit ListObjectVersionsArgs(ListObjectsArgs args);
+  ListObjectVersionsArgs& operator =(ListObjectsArgs args);
+
   ~ListObjectVersionsArgs() = default;
+
+  ListObjectVersionsArgs(const ListObjectVersionsArgs&) = default;
+  ListObjectVersionsArgs& operator =(const ListObjectVersionsArgs&) = default;
+
+  ListObjectVersionsArgs(ListObjectVersionsArgs&&) = default;
+  ListObjectVersionsArgs& operator =(ListObjectVersionsArgs&&) = default;
 };  // struct ListObjectVersionsArgs
 
 struct PutObjectArgs : public PutObjectBaseArgs {

@@ -535,6 +535,18 @@ struct Integer {
     : value_(value)
     , is_set_(true) {}
 
+  Integer& operator =(int value) {
+    value_ = value;
+    is_set_ = true;
+    return *this;
+  }
+
+  Integer(const Integer&) = default;
+  Integer& operator =(const Integer&) = default;
+
+  Integer(Integer&&) = default;
+  Integer& operator =(Integer&&) = default;
+
   ~Integer() = default;
 
   explicit operator bool() const { return is_set_; }
@@ -556,6 +568,18 @@ struct Boolean {
   explicit Boolean(bool value)
     : value_(value)
     , is_set_(true) {}
+
+  Boolean& operator =(bool value) {
+    value_ = value;
+    is_set_ = true;
+    return *this;
+  }
+
+  Boolean(const Boolean&) = default;
+  Boolean& operator =(const Boolean&) = default;
+
+  Boolean(Boolean&&) = default;
+  Boolean& operator =(Boolean&&) = default;
 
   ~Boolean() = default;
 

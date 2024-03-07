@@ -241,7 +241,7 @@ minio::s3::GetRegionResponse minio::s3::BaseClient::GetRegion(
 
   Response resp = Execute(req);
   if (!resp) {
-    return resp;
+    return GetRegionResponse(resp);
   }
 
   pugi::xml_document xdoc;
@@ -260,7 +260,7 @@ minio::s3::GetRegionResponse minio::s3::BaseClient::GetRegion(
 
   region_map_[bucket_name] = value;
 
-  return value;
+  return GetRegionResponse(value);
 }
 
 minio::s3::AbortMultipartUploadResponse
@@ -287,8 +287,9 @@ minio::s3::BaseClient::AbortMultipartUpload(AbortMultipartUploadArgs args) {
 
 minio::s3::BucketExistsResponse minio::s3::BaseClient::BucketExists(
     BucketExistsArgs args) {
-  if (error::Error err = args.Validate()) return err;
-
+  if (error::Error err = args.Validate()) {
+    return BucketExistsResponse(err);
+  }
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
@@ -317,7 +318,7 @@ minio::s3::BaseClient::CompleteMultipartUpload(
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return CompleteMultipartUploadResponse(resp);
   }
 
   Request req(http::Method::kPost, region, base_url_, args.extra_headers,
@@ -347,7 +348,7 @@ minio::s3::BaseClient::CompleteMultipartUpload(
 
   Response response = Execute(req);
   if (!response) {
-    return response;
+    return CompleteMultipartUploadResponse(response);
   }
   return CompleteMultipartUploadResponse::ParseXML(
       response.data, response.headers.GetFront("x-amz-version-id"));
@@ -367,7 +368,7 @@ minio::s3::BaseClient::CreateMultipartUpload(CreateMultipartUploadArgs args) {
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return CreateMultipartUploadResponse(resp);
   }
 
   Request req(http::Method::kPost, region, base_url_, args.extra_headers,
@@ -380,12 +381,14 @@ minio::s3::BaseClient::CreateMultipartUpload(CreateMultipartUploadArgs args) {
   if (Response resp = Execute(req)) {
     pugi::xml_document xdoc;
     pugi::xml_parse_result result = xdoc.load_string(resp.data.data());
-    if (!result) return error::Error("unable to parse XML");
+    if (!result) {
+      return CreateMultipartUploadResponse(error::Error("unable to parse XML"));
+    }
     auto text =
         xdoc.select_node("/InitiateMultipartUploadResult/UploadId/text()");
-    return std::string(text.node().value());
+    return CreateMultipartUploadResponse(std::string(text.node().value()));
   } else {
-    return resp;
+    return CreateMultipartUploadResponse(resp);
   }
 }
 
@@ -399,7 +402,7 @@ minio::s3::BaseClient::DeleteBucketEncryption(DeleteBucketEncryptionArgs args) {
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return DeleteBucketEncryptionResponse(resp);
   }
 
   Request req(http::Method::kDelete, region, base_url_, args.extra_headers,
@@ -416,8 +419,9 @@ minio::s3::BaseClient::DeleteBucketEncryption(DeleteBucketEncryptionArgs args) {
 
 minio::s3::DisableObjectLegalHoldResponse
 minio::s3::BaseClient::DisableObjectLegalHold(DisableObjectLegalHoldArgs args) {
-  if (error::Error err = args.Validate()) return err;
-
+  if (error::Error err = args.Validate()) {
+    return DisableObjectLegalHoldResponse(err);
+  }
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
@@ -631,7 +635,7 @@ minio::s3::BaseClient::GetBucketEncryption(GetBucketEncryptionArgs args) {
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return GetBucketEncryptionResponse(resp);
   }
 
   Request req(http::Method::kGet, region, base_url_, args.extra_headers,
@@ -640,8 +644,10 @@ minio::s3::BaseClient::GetBucketEncryption(GetBucketEncryptionArgs args) {
   req.query_params.Add("encryption", "");
 
   Response resp = Execute(req);
-  if (resp) return GetBucketEncryptionResponse::ParseXML(resp.data);
-  return resp;
+  if (resp) {
+    return GetBucketEncryptionResponse::ParseXML(resp.data);
+  }
+  return GetBucketEncryptionResponse(resp);
 }
 
 minio::s3::GetBucketLifecycleResponse minio::s3::BaseClient::GetBucketLifecycle(
@@ -654,7 +660,7 @@ minio::s3::GetBucketLifecycleResponse minio::s3::BaseClient::GetBucketLifecycle(
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return GetBucketLifecycleResponse(resp);
   }
 
   Request req(http::Method::kGet, region, base_url_, args.extra_headers,
@@ -665,8 +671,10 @@ minio::s3::GetBucketLifecycleResponse minio::s3::BaseClient::GetBucketLifecycle(
   Response resp = Execute(req);
 
   if (!resp) {
-    if (resp.code == "NoSuchLifecycleConfiguration") return LifecycleConfig();
-    return resp;
+    if (resp.code == "NoSuchLifecycleConfiguration") {
+      return GetBucketLifecycleResponse(LifecycleConfig());
+    }
+    return GetBucketLifecycleResponse(resp);
   }
 
   return GetBucketLifecycleResponse::ParseXML(resp.data);
@@ -682,7 +690,7 @@ minio::s3::BaseClient::GetBucketNotification(GetBucketNotificationArgs args) {
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return GetBucketNotificationResponse(resp);
   }
 
   Request req(http::Method::kGet, region, base_url_, args.extra_headers,
@@ -691,8 +699,10 @@ minio::s3::BaseClient::GetBucketNotification(GetBucketNotificationArgs args) {
   req.query_params.Add("notification", "");
 
   Response resp = Execute(req);
-  if (resp) return GetBucketNotificationResponse::ParseXML(resp.data);
-  return resp;
+  if (resp) {
+    return GetBucketNotificationResponse::ParseXML(resp.data);
+  }
+  return GetBucketNotificationResponse(resp);
 }
 
 minio::s3::GetBucketPolicyResponse minio::s3::BaseClient::GetBucketPolicy(
@@ -705,7 +715,7 @@ minio::s3::GetBucketPolicyResponse minio::s3::BaseClient::GetBucketPolicy(
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return GetBucketPolicyResponse(resp);
   }
 
   Request req(http::Method::kGet, region, base_url_, args.extra_headers,
@@ -714,8 +724,10 @@ minio::s3::GetBucketPolicyResponse minio::s3::BaseClient::GetBucketPolicy(
   req.query_params.Add("policy", "");
 
   Response resp = Execute(req);
-  if (resp) return resp.data;
-  return resp;
+  if (resp) {
+    return GetBucketPolicyResponse(resp.data);
+  }
+  return GetBucketPolicyResponse(resp);
 }
 
 minio::s3::GetBucketReplicationResponse
@@ -728,7 +740,7 @@ minio::s3::BaseClient::GetBucketReplication(GetBucketReplicationArgs args) {
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return GetBucketReplicationResponse(resp);
   }
 
   Request req(http::Method::kGet, region, base_url_, args.extra_headers,
@@ -737,8 +749,10 @@ minio::s3::BaseClient::GetBucketReplication(GetBucketReplicationArgs args) {
   req.query_params.Add("replication", "");
 
   Response resp = Execute(req);
-  if (resp) return GetBucketReplicationResponse::ParseXML(resp.data);
-  return resp;
+  if (resp) {
+    return GetBucketReplicationResponse::ParseXML(resp.data);
+  }
+  return GetBucketReplicationResponse(resp);
 }
 
 minio::s3::GetBucketTagsResponse minio::s3::BaseClient::GetBucketTags(
@@ -751,7 +765,7 @@ minio::s3::GetBucketTagsResponse minio::s3::BaseClient::GetBucketTags(
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return GetBucketTagsResponse(resp);
   }
 
   Request req(http::Method::kGet, region, base_url_, args.extra_headers,
@@ -760,8 +774,10 @@ minio::s3::GetBucketTagsResponse minio::s3::BaseClient::GetBucketTags(
   req.query_params.Add("tagging", "");
 
   Response resp = Execute(req);
-  if (resp) return GetBucketTagsResponse::ParseXML(resp.data);
-  return resp;
+  if (resp) {
+    return GetBucketTagsResponse::ParseXML(resp.data);
+  }
+  return GetBucketTagsResponse(resp);
 }
 
 minio::s3::GetBucketVersioningResponse
@@ -774,7 +790,7 @@ minio::s3::BaseClient::GetBucketVersioning(GetBucketVersioningArgs args) {
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return GetBucketVersioningResponse(resp);
   }
 
   Request req(http::Method::kGet, region, base_url_, args.extra_headers,
@@ -783,13 +799,16 @@ minio::s3::BaseClient::GetBucketVersioning(GetBucketVersioningArgs args) {
   req.query_params.Add("versioning", "");
 
   Response resp = Execute(req);
-  if (!resp) return resp;
-
+  if (!resp) {
+    return GetBucketVersioningResponse(resp);
+  }
   GetBucketVersioningResponse response;
 
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(resp.data.data());
-  if (!result) return error::Error("unable to parse XML");
+  if (!result) {
+    return GetBucketVersioningResponse(error::Error("unable to parse XML"));
+  }
 
   auto root = xdoc.select_node("/VersioningConfiguration");
 
@@ -804,7 +823,7 @@ minio::s3::BaseClient::GetBucketVersioning(GetBucketVersioningArgs args) {
     response.mfa_delete = (strcmp(text.node().value(), "Enabled") == 0);
   }
 
-  return response;
+  return GetBucketVersioningResponse(response);
 }
 
 minio::s3::GetObjectResponse minio::s3::BaseClient::GetObject(
@@ -814,15 +833,14 @@ minio::s3::GetObjectResponse minio::s3::BaseClient::GetObject(
   }
 
   if (args.ssec != nullptr && !base_url_.https) {
-    return error::Error(
-        "SSE-C operation must be performed over a secure connection");
+    return GetObjectResponse(error::Error("SSE-C operation must be performed over a secure connection"));
   }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return GetObjectResponse(resp);
   }
 
   Request req(http::Method::kGet, region, base_url_, args.extra_headers,
@@ -851,7 +869,7 @@ minio::s3::BaseClient::GetObjectLockConfig(GetObjectLockConfigArgs args) {
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return GetObjectLockConfigResponse(resp);
   }
 
   Request req(http::Method::kGet, region, base_url_, args.extra_headers,
@@ -860,17 +878,20 @@ minio::s3::BaseClient::GetObjectLockConfig(GetObjectLockConfigArgs args) {
   req.query_params.Add("object-lock", "");
 
   Response resp = Execute(req);
-  if (!resp) return resp;
-
+  if (!resp) {
+    return GetObjectLockConfigResponse(resp);
+  }
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(resp.data.data());
-  if (!result) return error::Error("unable to parse XML");
-
+  if (!result) {
+    return GetObjectLockConfigResponse(error::Error("unable to parse XML"));
+  }
   ObjectLockConfig config;
 
   auto rule = xdoc.select_node("/ObjectLockConfiguration/Rule");
-  if (!rule) return config;
-
+  if (!rule) {
+    return GetObjectLockConfigResponse(config);
+  }
   auto text = rule.node().select_node("DefaultRetention/Mode/text()");
   config.retention_mode = StringToRetentionMode(text.node().value());
 
@@ -886,7 +907,7 @@ minio::s3::BaseClient::GetObjectLockConfig(GetObjectLockConfigArgs args) {
     config.retention_duration_years = Integer(std::stoi(value));
   }
 
-  return config;
+  return GetObjectLockConfigResponse(config);
 }
 
 minio::s3::GetObjectRetentionResponse minio::s3::BaseClient::GetObjectRetention(
@@ -899,7 +920,7 @@ minio::s3::GetObjectRetentionResponse minio::s3::BaseClient::GetObjectRetention(
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return GetObjectRetentionResponse(resp);
   }
 
   Request req(http::Method::kGet, region, base_url_, args.extra_headers,
@@ -915,13 +936,17 @@ minio::s3::GetObjectRetentionResponse minio::s3::BaseClient::GetObjectRetention(
 
   Response resp = Execute(req);
   if (!resp) {
-    if (resp.code == "NoSuchObjectLockConfiguration") return response;
-    return resp;
+    if (resp.code == "NoSuchObjectLockConfiguration") {
+      return GetObjectRetentionResponse(response);
+    }
+    return GetObjectRetentionResponse(resp);
   }
 
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(resp.data.data());
-  if (!result) return error::Error("unable to parse XML");
+  if (!result) {
+    return GetObjectRetentionResponse(error::Error("unable to parse XML"));
+  }
 
   auto text = xdoc.select_node("/Retention/Mode/text()");
   response.retention_mode = StringToRetentionMode(text.node().value());
@@ -929,7 +954,7 @@ minio::s3::GetObjectRetentionResponse minio::s3::BaseClient::GetObjectRetention(
   text = xdoc.select_node("/Retention/RetainUntilDate/text()");
   response.retain_until_date = utils::Time::FromISO8601UTC(text.node().value());
 
-  return response;
+  return GetObjectRetentionResponse(response);
 }
 
 minio::s3::GetObjectTagsResponse minio::s3::BaseClient::GetObjectTags(
@@ -942,7 +967,7 @@ minio::s3::GetObjectTagsResponse minio::s3::BaseClient::GetObjectTags(
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return GetObjectTagsResponse(resp);
   }
 
   Request req(http::Method::kGet, region, base_url_, args.extra_headers,
@@ -955,8 +980,10 @@ minio::s3::GetObjectTagsResponse minio::s3::BaseClient::GetObjectTags(
   req.query_params.Add("tagging", "");
 
   Response resp = Execute(req);
-  if (resp) return GetObjectTagsResponse::ParseXML(resp.data);
-  return resp;
+  if (resp) {
+    return GetObjectTagsResponse::ParseXML(resp.data);
+  }
+  return GetObjectTagsResponse(resp);
 }
 
 minio::s3::GetPresignedObjectUrlResponse
@@ -969,7 +996,7 @@ minio::s3::BaseClient::GetPresignedObjectUrl(GetPresignedObjectUrlArgs args) {
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return GetPresignedObjectUrlResponse(resp);
   }
 
   utils::Multimap query_params;
@@ -1000,25 +1027,24 @@ minio::s3::BaseClient::GetPresignedObjectUrl(GetPresignedObjectUrlArgs args) {
     url.query_string = query_params.ToQueryString();
   }
 
-  return url.String();
+  return GetPresignedObjectUrlResponse(url.String());
 }
 
 minio::s3::GetPresignedPostFormDataResponse
 minio::s3::BaseClient::GetPresignedPostFormData(PostPolicy policy) {
   if (!policy) {
-    return error::Error("valid policy must be provided");
+    return GetPresignedPostFormDataResponse(error::Error("valid policy must be provided"));
   }
 
   if (provider_ == nullptr) {
-    return error::Error(
-        "Anonymous access does not require presigned post form-data");
+    return GetPresignedPostFormDataResponse(error::Error("Anonymous access does not require presigned post form-data"));
   }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(policy.bucket, policy.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return GetPresignedPostFormDataResponse(resp);
   }
 
   creds::Credentials creds = provider_->Fetch();
@@ -1026,9 +1052,9 @@ minio::s3::BaseClient::GetPresignedPostFormData(PostPolicy policy) {
   if (error::Error err =
           policy.FormData(data, creds.access_key, creds.secret_key,
                           creds.session_token, region)) {
-    return err;
+    return GetPresignedPostFormDataResponse(err);
   }
-  return data;
+  return GetPresignedPostFormDataResponse(data);
 }
 
 minio::s3::IsObjectLegalHoldEnabledResponse
@@ -1042,7 +1068,7 @@ minio::s3::BaseClient::IsObjectLegalHoldEnabled(
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return IsObjectLegalHoldEnabledResponse(resp);
   }
 
   Request req(http::Method::kGet, region, base_url_, args.extra_headers,
@@ -1056,16 +1082,20 @@ minio::s3::BaseClient::IsObjectLegalHoldEnabled(
 
   Response resp = Execute(req);
   if (!resp) {
-    if (resp.code == "NoSuchObjectLockConfiguration") return false;
-    return resp;
+    if (resp.code == "NoSuchObjectLockConfiguration") {
+      return IsObjectLegalHoldEnabledResponse(false);
+    }
+    return IsObjectLegalHoldEnabledResponse(resp);
   }
 
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(resp.data.data());
-  if (!result) return error::Error("unable to parse XML");
+  if (!result) {
+    return IsObjectLegalHoldEnabledResponse(error::Error("unable to parse XML"));
+  }
   auto text = xdoc.select_node("/LegalHold/Status/text()");
   std::string value = text.node().value();
-  return (value == "ON");
+  return IsObjectLegalHoldEnabledResponse(value == "ON");
 }
 
 minio::s3::ListBucketsResponse minio::s3::BaseClient::ListBuckets(
@@ -1073,7 +1103,9 @@ minio::s3::ListBucketsResponse minio::s3::BaseClient::ListBuckets(
   Request req(http::Method::kGet, base_url_.region, base_url_,
               args.extra_headers, args.extra_query_params);
   Response resp = Execute(req);
-  if (!resp) return resp;
+  if (!resp) {
+    return ListBucketsResponse(resp);
+  }
   return ListBucketsResponse::ParseXML(resp.data);
 }
 
@@ -1089,15 +1121,14 @@ minio::s3::BaseClient::ListenBucketNotification(
   }
 
   if (!base_url_.aws_domain_suffix.empty()) {
-    return error::Error(
-        "ListenBucketNotification API is not supported in Amazon S3");
+    return ListenBucketNotificationResponse(error::Error("ListenBucketNotification API is not supported in Amazon S3"));
   }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return ListenBucketNotificationResponse(resp);
   }
 
   Request req = Request(http::Method::kGet, region, base_url_,
@@ -1136,8 +1167,10 @@ minio::s3::BaseClient::ListenBucketNotification(
       }
 
       if (records.size() <= 0) continue;
-
-      if (!func(records)) return false;
+/*PWTODO: there is no such conversion. How did it go in the original version?
+      if (!func(records)) {
+        return ListenBucketNotificationResponse(false);
+      }*/
     }
   };
 
@@ -1154,7 +1187,7 @@ minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectsV1(
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return ListObjectsResponse(resp);
   }
 
   Request req(http::Method::kGet, region, base_url_, args.extra_headers,
@@ -1162,11 +1195,13 @@ minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectsV1(
   req.bucket_name = args.bucket;
   req.query_params.AddAll(GetCommonListObjectsQueryParams(
       args.delimiter, args.encoding_type, args.max_keys, args.prefix));
-  if (!args.marker.empty()) req.query_params.Add("marker", args.marker);
-
+  if (!args.marker.empty()) {
+    req.query_params.Add("marker", args.marker);
+  }
   Response resp = Execute(req);
-  if (!resp) return resp;
-
+  if (!resp) {
+    return ListObjectsResponse(resp);
+  }
   return ListObjectsResponse::ParseXML(resp.data, false);
 }
 
@@ -1180,7 +1215,7 @@ minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectsV2(
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return ListObjectsResponse(resp);
   }
 
   Request req(http::Method::kGet, region, base_url_, args.extra_headers,
@@ -1192,15 +1227,19 @@ minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectsV2(
   if (!args.continuation_token.empty()) {
     req.query_params.Add("continuation-token", args.continuation_token);
   }
-  if (args.fetch_owner) req.query_params.Add("fetch-owner", "true");
+  if (args.fetch_owner) {
+    req.query_params.Add("fetch-owner", "true");
+  }
   if (!args.start_after.empty()) {
     req.query_params.Add("start-after", args.start_after);
   }
-  if (args.include_user_metadata) req.query_params.Add("metadata", "true");
-
+  if (args.include_user_metadata) {
+    req.query_params.Add("metadata", "true");
+  }
   Response resp = Execute(req);
-  if (!resp) return resp;
-
+  if (!resp) {
+    return ListObjectsResponse(resp);
+  }
   return ListObjectsResponse::ParseXML(resp.data, false);
 }
 
@@ -1214,7 +1253,7 @@ minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectVersions(
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return ListObjectsResponse(resp);
   }
 
   Request req(http::Method::kGet, region, base_url_, args.extra_headers,
@@ -1231,8 +1270,9 @@ minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectVersions(
   }
 
   Response resp = Execute(req);
-  if (!resp) return resp;
-
+  if (!resp) {
+    return ListObjectsResponse(resp);
+  }
   return ListObjectsResponse::ParseXML(resp.data, true);
 }
 
@@ -1245,13 +1285,15 @@ minio::s3::MakeBucketResponse minio::s3::BaseClient::MakeBucket(
   std::string region = args.region;
   std::string base_region = base_url_.region;
   if (!base_region.empty() && !region.empty() && base_region != region) {
-    return error::Error("region must be " + base_region + ", but passed " +
-                        region);
+    return MakeBucketResponse(error::Error("region must be " + base_region + ", but passed " + region));
   }
 
-  if (region.empty()) region = base_region;
-  if (region.empty()) region = "us-east-1";
-
+  if (region.empty()) {
+    region = base_region;
+  }
+  if (region.empty()) {
+    region = "us-east-1";
+  }
   Request req(http::Method::kPut, region, base_url_, args.extra_headers,
               args.extra_query_params);
   req.bucket_name = args.bucket;
@@ -1270,8 +1312,9 @@ minio::s3::MakeBucketResponse minio::s3::BaseClient::MakeBucket(
   }
 
   Response resp = Execute(req);
-  if (resp) region_map_[args.bucket] = region;
-
+  if (resp) {
+    region_map_[args.bucket] = region;
+  }
   return resp;
 }
 
@@ -1285,7 +1328,7 @@ minio::s3::PutObjectResponse minio::s3::BaseClient::PutObject(
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return PutObjectResponse(resp);
   }
 
   Request req(http::Method::kPut, region, base_url_, args.extra_headers,
@@ -1299,8 +1342,9 @@ minio::s3::PutObjectResponse minio::s3::BaseClient::PutObject(
   req.progress_userdata = args.progress_userdata;
 
   Response response = Execute(req);
-  if (!response) return response;
-
+  if (!response) {
+    return PutObjectResponse(response);
+  }
   PutObjectResponse resp;
   resp.etag = utils::Trim(response.headers.GetFront("etag"), '"');
   resp.version_id = response.headers.GetFront("x-amz-version-id");
@@ -1362,7 +1406,7 @@ minio::s3::RemoveObjectsResponse minio::s3::BaseClient::RemoveObjects(
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return RemoveObjectsResponse(resp);
   }
 
   Request req(http::Method::kPost, region, base_url_, args.extra_headers,
@@ -1391,7 +1435,9 @@ minio::s3::RemoveObjectsResponse minio::s3::BaseClient::RemoveObjects(
   req.headers.Add("Content-MD5", utils::Md5sumHash(body));
 
   Response response = Execute(req);
-  if (!response) return response;
+  if (!response) {
+    return RemoveObjectsResponse(response);
+  }
   return RemoveObjectsResponse::ParseXML(response.data);
 }
 
@@ -1402,8 +1448,7 @@ minio::s3::BaseClient::SelectObjectContent(SelectObjectContentArgs args) {
   }
 
   if (args.ssec != nullptr && !base_url_.https) {
-    return error::Error(
-        "SSE-C operation must be performed over a secure connection");
+    return SelectObjectContentResponse(error::Error("SSE-C operation must be performed over a secure connection"));
   }
 
   std::string region;
@@ -1770,15 +1815,14 @@ minio::s3::StatObjectResponse minio::s3::BaseClient::StatObject(
   }
 
   if (args.ssec != nullptr && !base_url_.https) {
-    return error::Error(
-        "SSE-C operation must be performed over a secure connection");
+    return StatObjectResponse(error::Error("SSE-C operation must be performed over a secure connection"));
   }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return StatObjectResponse(resp);
   }
 
   Request req(http::Method::kHead, region, base_url_, args.extra_headers,
@@ -1791,9 +1835,10 @@ minio::s3::StatObjectResponse minio::s3::BaseClient::StatObject(
   req.headers.AddAll(args.Headers());
 
   Response response = Execute(req);
-  if (!response) return response;
-
-  StatObjectResponse resp = response;
+  if (!response) {
+    return StatObjectResponse(response);
+  }
+  StatObjectResponse resp(response);
   resp.bucket_name = args.bucket;
   resp.object_name = args.object;
   resp.version_id = response.headers.GetFront("x-amz-version-id");
@@ -1871,7 +1916,7 @@ minio::s3::UploadPartCopyResponse minio::s3::BaseClient::UploadPartCopy(
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return UploadPartCopyResponse(resp);
   }
 
   Request req(http::Method::kPut, region, base_url_, args.extra_headers,
@@ -1884,8 +1929,9 @@ minio::s3::UploadPartCopyResponse minio::s3::BaseClient::UploadPartCopy(
   req.headers.AddAll(args.headers);
 
   Response response = Execute(req);
-  if (!response) return response;
-
+  if (!response) {
+    return UploadPartCopyResponse(response);
+  }
   UploadPartCopyResponse resp;
   resp.etag = utils::Trim(response.headers.GetFront("etag"), '"');
 

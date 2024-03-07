@@ -232,6 +232,10 @@ minio::s3::ListObjectsV1Args::ListObjectsV1Args(ListObjectsArgs args) {
   this->marker = args.marker;
 }
 
+minio::s3::ListObjectsV1Args& minio::s3::ListObjectsV1Args::operator =(ListObjectsArgs args) {
+  return this->operator =(ListObjectsV1Args(std::move(args)));
+}
+
 minio::s3::ListObjectsV2Args::ListObjectsV2Args() {}
 
 minio::s3::ListObjectsV2Args::ListObjectsV2Args(ListObjectsArgs args) {
@@ -249,6 +253,10 @@ minio::s3::ListObjectsV2Args::ListObjectsV2Args(ListObjectsArgs args) {
   this->include_user_metadata = args.include_user_metadata;
 }
 
+minio::s3::ListObjectsV2Args& minio::s3::ListObjectsV2Args::operator =(ListObjectsArgs args) {
+  return this->operator =(ListObjectsV2Args(std::move(args)));
+}
+
 minio::s3::ListObjectVersionsArgs::ListObjectVersionsArgs() {}
 
 minio::s3::ListObjectVersionsArgs::ListObjectVersionsArgs(
@@ -263,6 +271,10 @@ minio::s3::ListObjectVersionsArgs::ListObjectVersionsArgs(
   this->prefix = args.prefix;
   this->key_marker = args.key_marker;
   this->version_id_marker = args.version_id_marker;
+}
+
+minio::s3::ListObjectVersionsArgs& minio::s3::ListObjectVersionsArgs::operator =(ListObjectsArgs args) {
+  return this->operator =(ListObjectVersionsArgs(args));  
 }
 
 minio::s3::PutObjectArgs::PutObjectArgs(std::istream& istream, long object_size,
