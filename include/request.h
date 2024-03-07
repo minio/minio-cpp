@@ -67,7 +67,8 @@ struct BaseUrl {
   bool virtual_style = false;
 
   BaseUrl() = default;
-  explicit BaseUrl(std::string host, bool https = true, std::string region = {});
+  explicit BaseUrl(std::string host, bool https = true,
+                   std::string region = {});
   ~BaseUrl() = default;
 
   error::Error BuildUrl(http::Url& url, http::Method method,

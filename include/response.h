@@ -36,8 +36,7 @@ struct Response {
   std::string object_name;
 
   Response();
-  explicit Response(error::Error err)
-    : err_(std::move(err)) {}
+  explicit Response(error::Error err) : err_(std::move(err)) {}
 
   Response(const Response& resp) = default;
   Response& operator=(const Response& resp) = default;
@@ -64,11 +63,9 @@ struct Response {
 struct GetRegionResponse : public Response {
   std::string region;
 
-  explicit GetRegionResponse(std::string region)
-    : region(std::move(region)) {}
+  explicit GetRegionResponse(std::string region) : region(std::move(region)) {}
 
-  explicit GetRegionResponse(error::Error err)
-    : Response(std::move(err)) {}
+  explicit GetRegionResponse(error::Error err) : Response(std::move(err)) {}
 
   explicit GetRegionResponse(const Response& resp)
     : Response(resp) {}
@@ -82,10 +79,9 @@ struct ListBucketsResponse : public Response {
   std::list<Bucket> buckets;
 
   explicit ListBucketsResponse(std::list<Bucket> buckets)
-    : buckets(std::move(buckets)) {}
+      : buckets(std::move(buckets)) {}
 
-  explicit ListBucketsResponse(error::Error err)
-    : Response(std::move(err)) {}
+  explicit ListBucketsResponse(error::Error err) : Response(std::move(err)) {}
 
   explicit ListBucketsResponse(const Response& resp)
     : Response(resp) {} 
@@ -98,11 +94,9 @@ struct ListBucketsResponse : public Response {
 struct BucketExistsResponse : public Response {
   bool exist = false;
 
-  explicit BucketExistsResponse(bool exist)
-    : exist(exist) {}
+  explicit BucketExistsResponse(bool exist) : exist(exist) {}
 
-  explicit BucketExistsResponse(error::Error err)
-    : Response(std::move(err)) {}
+  explicit BucketExistsResponse(error::Error err) : Response(std::move(err)) {}
 
   explicit BucketExistsResponse(const Response& resp)
     : Response(resp) {}
@@ -122,13 +116,13 @@ struct CompleteMultipartUploadResponse : public Response {
   CompleteMultipartUploadResponse() = default;
 
   explicit CompleteMultipartUploadResponse(error::Error err)
-    : Response(std::move(err)) {}
+      : Response(std::move(err)) {}
 
   explicit CompleteMultipartUploadResponse(const Response& resp)
     : Response(resp) {}
 
   ~CompleteMultipartUploadResponse() = default;
-  
+
   static CompleteMultipartUploadResponse ParseXML(std::string_view data,
                                                   std::string version_id);
 };  // struct CompleteMultipartUploadResponse
@@ -137,10 +131,10 @@ struct CreateMultipartUploadResponse : public Response {
   std::string upload_id;
 
   explicit CreateMultipartUploadResponse(std::string upload_id)
-    : upload_id(std::move(upload_id)) {}
+      : upload_id(std::move(upload_id)) {}
 
   explicit CreateMultipartUploadResponse(error::Error err)
-    : Response(std::move(err)) {}
+      : Response(std::move(err)) {}
 
   explicit CreateMultipartUploadResponse(const Response& resp)
     : Response(resp) {}
@@ -154,8 +148,7 @@ struct PutObjectResponse : public Response {
 
   PutObjectResponse() = default;
 
-  explicit PutObjectResponse(error::Error err)
-    : Response(std::move(err)) {}
+  explicit PutObjectResponse(error::Error err) : Response(std::move(err)) {}
 
   explicit PutObjectResponse(const Response& resp)
     : Response(resp) {}
@@ -183,8 +176,7 @@ struct StatObjectResponse : public Response {
 
   StatObjectResponse() = default;
 
-  explicit StatObjectResponse(error::Error err)
-    : Response(std::move(err)) {}
+  explicit StatObjectResponse(error::Error err) : Response(std::move(err)) {}
 
   explicit StatObjectResponse(const Response& resp)
     : Response(resp) {}
@@ -215,8 +207,7 @@ struct Item : public Response {
 
   Item() = default;
 
-  explicit Item(error::Error err)
-    : Response(std::move(err)) {}
+  explicit Item(error::Error err) : Response(std::move(err)) {}
 
   explicit Item(const Response& resp)
     : Response(resp) {}
@@ -252,8 +243,7 @@ struct ListObjectsResponse : public Response {
 
   ListObjectsResponse() = default;
 
-  explicit ListObjectsResponse(error::Error err)
-    : Response(std::move(err)) {}
+  explicit ListObjectsResponse(error::Error err) : Response(std::move(err)) {}
 
   explicit ListObjectsResponse(const Response& resp)
     : Response(resp) {}
@@ -284,8 +274,7 @@ struct DeleteError : public Response {
 
   DeleteError() = default;
 
-  explicit DeleteError(error::Error err)
-    : Response(std::move(err)) {}
+  explicit DeleteError(error::Error err) : Response(std::move(err)) {}
 
   explicit DeleteError(const Response& resp)
     : Response(resp) {}
@@ -299,8 +288,7 @@ struct RemoveObjectsResponse : public Response {
 
   RemoveObjectsResponse() = default;
 
-  explicit RemoveObjectsResponse(error::Error err)
-    : Response(std::move(err)) {}
+  explicit RemoveObjectsResponse(error::Error err) : Response(std::move(err)) {}
 
   explicit RemoveObjectsResponse(const Response& resp)
     : Response(resp) {}
@@ -320,10 +308,10 @@ struct GetBucketPolicyResponse : public Response {
   std::string policy;
 
   explicit GetBucketPolicyResponse(std::string policy)
-    : policy(std::move(policy)) {}
+      : policy(std::move(policy)) {}
 
   explicit GetBucketPolicyResponse(error::Error err)
-    : Response(std::move(err)) {}
+      : Response(std::move(err)) {}
 
   explicit GetBucketPolicyResponse(const Response& resp)
     : Response(resp) {}
@@ -339,10 +327,10 @@ struct GetBucketNotificationResponse : public Response {
   NotificationConfig config;
 
   explicit GetBucketNotificationResponse(NotificationConfig config)
-    : config(std::move(config)) {}
+      : config(std::move(config)) {}
 
   explicit GetBucketNotificationResponse(error::Error err)
-    : Response(std::move(err)) {}
+      : Response(std::move(err)) {}
 
   explicit GetBucketNotificationResponse(const Response& resp)
     : Response(resp) {}
@@ -360,10 +348,10 @@ struct GetBucketEncryptionResponse : public Response {
   SseConfig config;
 
   explicit GetBucketEncryptionResponse(SseConfig config)
-    : config(std::move(config)) {}
+      : config(std::move(config)) {}
 
   explicit GetBucketEncryptionResponse(error::Error err)
-    : Response(std::move(err)) {}
+      : Response(std::move(err)) {}
 
   explicit GetBucketEncryptionResponse(const Response& resp)
     : Response(resp) {}
@@ -382,7 +370,7 @@ struct GetBucketVersioningResponse : public Response {
   GetBucketVersioningResponse() = default;
 
   explicit GetBucketVersioningResponse(error::Error err)
-    : Response(std::move(err)) {}
+      : Response(std::move(err)) {}
 
   explicit GetBucketVersioningResponse(const Response& resp)
     : Response(resp) {}
@@ -410,10 +398,10 @@ struct GetBucketReplicationResponse : public Response {
   ReplicationConfig config;
 
   explicit GetBucketReplicationResponse(ReplicationConfig config)
-    : config(std::move(config)) {}
+      : config(std::move(config)) {}
 
   explicit GetBucketReplicationResponse(error::Error err)
-    : Response(std::move(err)) {}
+      : Response(std::move(err)) {}
 
   explicit GetBucketReplicationResponse(const Response& resp)
     : Response(resp) {}
@@ -431,10 +419,10 @@ struct GetBucketLifecycleResponse : public Response {
   LifecycleConfig config;
 
   explicit GetBucketLifecycleResponse(LifecycleConfig config)
-    : config(std::move(config)) {}
+      : config(std::move(config)) {}
 
   explicit GetBucketLifecycleResponse(error::Error err)
-    : Response(std::move(err)) {}
+      : Response(std::move(err)) {}
 
   explicit GetBucketLifecycleResponse(const Response& resp)
     : Response(resp) {}
@@ -452,8 +440,7 @@ struct GetBucketTagsResponse : public Response {
   GetBucketTagsResponse(std::map<std::string, std::string> tags)
       : tags(std::move(tags)) {}
 
-  explicit GetBucketTagsResponse(error::Error err)
-    : Response(std::move(err)) {}
+  explicit GetBucketTagsResponse(error::Error err) : Response(std::move(err)) {}
 
   explicit GetBucketTagsResponse(const Response& resp)
     : Response(resp) {}
@@ -471,10 +458,10 @@ struct GetObjectLockConfigResponse : public Response {
   ObjectLockConfig config;
 
   explicit GetObjectLockConfigResponse(ObjectLockConfig config)
-    : config(std::move(config)) {}
+      : config(std::move(config)) {}
 
   explicit GetObjectLockConfigResponse(error::Error err)
-    : Response(std::move(err)) {}
+      : Response(std::move(err)) {}
 
   explicit GetObjectLockConfigResponse(const Response& resp)
     : Response(resp) {}
@@ -492,8 +479,7 @@ struct GetObjectTagsResponse : public Response {
   GetObjectTagsResponse(std::map<std::string, std::string> tags)
       : tags(std::move(tags)) {}
 
-  explicit GetObjectTagsResponse(error::Error err)
-    : Response(std::move(err)) {}
+  explicit GetObjectTagsResponse(error::Error err) : Response(std::move(err)) {}
 
   explicit GetObjectTagsResponse(const Response& resp)
     : Response(resp) {}
@@ -512,11 +498,10 @@ using DisableObjectLegalHoldResponse = Response;
 struct IsObjectLegalHoldEnabledResponse : public Response {
   bool enabled = false;
 
-  explicit IsObjectLegalHoldEnabledResponse(bool enabled)
-    : enabled(enabled) {}
+  explicit IsObjectLegalHoldEnabledResponse(bool enabled) : enabled(enabled) {}
 
   explicit IsObjectLegalHoldEnabledResponse(error::Error err)
-    : Response(std::move(err)) {}
+      : Response(std::move(err)) {}
 
   explicit IsObjectLegalHoldEnabledResponse(const Response& resp)
     : Response(resp) {}
@@ -531,7 +516,7 @@ struct GetObjectRetentionResponse : public Response {
   GetObjectRetentionResponse() = default;
 
   explicit GetObjectRetentionResponse(error::Error err)
-    : Response(std::move(err)) {}
+      : Response(std::move(err)) {}
 
   explicit GetObjectRetentionResponse(const Response& resp)
     : Response(resp) {}
@@ -545,10 +530,10 @@ struct GetPresignedObjectUrlResponse : public Response {
   std::string url;
 
   explicit GetPresignedObjectUrlResponse(std::string url)
-    : url(std::move(url)) {}
+      : url(std::move(url)) {}
 
   explicit GetPresignedObjectUrlResponse(error::Error err)
-    : Response(std::move(err)) {}
+      : Response(std::move(err)) {}
 
   explicit GetPresignedObjectUrlResponse(const Response& resp)
     : Response(resp) {}
@@ -563,7 +548,7 @@ struct GetPresignedPostFormDataResponse : public Response {
       : form_data(std::move(form_data)) {}
 
   explicit GetPresignedPostFormDataResponse(error::Error err)
-    : Response(std::move(err)) {}
+      : Response(std::move(err)) {}
 
   explicit GetPresignedPostFormDataResponse(const Response& resp)
     : Response(resp) {}

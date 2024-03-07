@@ -67,7 +67,7 @@ class ChainedProvider : public Provider {
 
  public:
   explicit ChainedProvider(std::list<Provider*> providers)
-    : providers_(std::move(providers)) {}
+      : providers_(std::move(providers)) {}
 
   virtual ~ChainedProvider();
 
@@ -104,7 +104,8 @@ class EnvMinioProvider : public Provider {
 
 class AwsConfigProvider : public Provider {
  public:
-  explicit AwsConfigProvider(std::string filename = {}, std::string profile = {});
+  explicit AwsConfigProvider(std::string filename = {},
+                             std::string profile = {});
   virtual ~AwsConfigProvider();
 
   virtual Credentials Fetch() override;
@@ -112,7 +113,8 @@ class AwsConfigProvider : public Provider {
 
 class MinioClientConfigProvider : public Provider {
  public:
-  explicit MinioClientConfigProvider(std::string filename = {}, std::string alias = {});
+  explicit MinioClientConfigProvider(std::string filename = {},
+                                     std::string alias = {});
   virtual ~MinioClientConfigProvider();
 
   virtual Credentials Fetch() override;

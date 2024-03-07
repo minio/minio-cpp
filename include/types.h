@@ -288,12 +288,9 @@ struct SelectResult {
   long int bytes_returned = -1;
   std::string records;
 
-  SelectResult()
-    : ended(true) {}
+  SelectResult() : ended(true) {}
 
-  explicit SelectResult(error::Error err)
-    : err(std::move(err))
-    , ended(true) {}
+  explicit SelectResult(error::Error err) : err(std::move(err)), ended(true) {}
 
   SelectResult(long int bytes_scanned, long int bytes_processed,
                long int bytes_returned)
@@ -405,8 +402,7 @@ struct FilterValue {
   FilterValue() = default;
 
   explicit FilterValue(std::string value)
-    : value_(std::move(value))
-    , is_value_set_(true) {}
+      : value_(std::move(value)), is_value_set_(true) {}
 
   ~FilterValue() = default;
 
@@ -420,7 +416,7 @@ struct PrefixFilterRule : public FilterValue {
   PrefixFilterRule() = default;
 
   explicit PrefixFilterRule(std::string value)
-    : FilterValue(std::move(value)) {}
+      : FilterValue(std::move(value)) {}
 
   ~PrefixFilterRule() = default;
 };  // struct PrefixFilterRule
@@ -431,7 +427,7 @@ struct SuffixFilterRule : public FilterValue {
   SuffixFilterRule() = default;
 
   explicit SuffixFilterRule(std::string value)
-    : FilterValue(std::move(value)) {}
+      : FilterValue(std::move(value)) {}
 
   ~SuffixFilterRule() = default;
 };  // struct SuffixFilterRule
@@ -510,8 +506,7 @@ struct Prefix {
   Prefix() = default;
 
   explicit Prefix(std::string value)
-    : value_(std::move(value))
-    , is_set_(true) {}
+      : value_(std::move(value)), is_set_(true) {}
 
   ~Prefix() = default;
 
@@ -531,21 +526,19 @@ struct Integer {
  public:
   Integer() = default;
 
-  explicit Integer(int value)
-    : value_(value)
-    , is_set_(true) {}
+  explicit Integer(int value) : value_(value), is_set_(true) {}
 
-  Integer& operator =(int value) {
+  Integer& operator=(int value) {
     value_ = value;
     is_set_ = true;
     return *this;
   }
 
   Integer(const Integer&) = default;
-  Integer& operator =(const Integer&) = default;
+  Integer& operator=(const Integer&) = default;
 
   Integer(Integer&&) = default;
-  Integer& operator =(Integer&&) = default;
+  Integer& operator=(Integer&&) = default;
 
   ~Integer() = default;
 
@@ -565,21 +558,19 @@ struct Boolean {
  public:
   Boolean() = default;
 
-  explicit Boolean(bool value)
-    : value_(value)
-    , is_set_(true) {}
+  explicit Boolean(bool value) : value_(value), is_set_(true) {}
 
-  Boolean& operator =(bool value) {
+  Boolean& operator=(bool value) {
     value_ = value;
     is_set_ = true;
     return *this;
   }
 
   Boolean(const Boolean&) = default;
-  Boolean& operator =(const Boolean&) = default;
+  Boolean& operator=(const Boolean&) = default;
 
   Boolean(Boolean&&) = default;
-  Boolean& operator =(Boolean&&) = default;
+  Boolean& operator=(Boolean&&) = default;
 
   ~Boolean() = default;
 

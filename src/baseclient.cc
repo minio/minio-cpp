@@ -97,10 +97,10 @@ minio::s3::Response minio::s3::BaseClient::GetErrorResponse(
       }
     }
 
-    auto response = error::make<Response>(
-                    "invalid response received; status code: " +
-                     std::to_string(resp.status_code) +
-                     "; content-type: " + utils::Join(values, ","));
+    auto response =
+        error::make<Response>("invalid response received; status code: " +
+                              std::to_string(resp.status_code) +
+                              "; content-type: " + utils::Join(values, ","));
     response.status_code = resp.status_code;
     response.headers = resp.headers;
     return response;
@@ -153,8 +153,9 @@ minio::s3::Response minio::s3::BaseClient::GetErrorResponse(
           "The specified method is not allowed against this resource";
       break;
     default: {
-      auto response = error::make<Response>("server failed with HTTP status code " +
-                                     std::to_string(resp.status_code));
+      auto response =
+          error::make<Response>("server failed with HTTP status code " +
+                                std::to_string(resp.status_code));
       response.status_code = resp.status_code;
       response.headers = resp.headers;
       return response;
@@ -217,7 +218,8 @@ minio::s3::GetRegionResponse minio::s3::BaseClient::GetRegion(
   std::string base_region = base_url_.region;
   if (!region.empty()) {
     if (!base_region.empty() && base_region != region) {
-      return error::make<GetRegionResponse>("region must be " + base_region + ", but passed " + region);
+      return error::make<GetRegionResponse>("region must be " + base_region +
+                                            ", but passed " + region);
     }
 
     return GetRegionResponse(region);
@@ -834,7 +836,8 @@ minio::s3::GetObjectResponse minio::s3::BaseClient::GetObject(
   }
 
   if (args.ssec != nullptr && !base_url_.https) {
-    return error::make<GetObjectResponse>("SSE-C operation must be performed over a secure connection");
+    return error::make<GetObjectResponse>(
+        "SSE-C operation must be performed over a secure connection");
   }
 
   std::string region;
@@ -1034,11 +1037,13 @@ minio::s3::BaseClient::GetPresignedObjectUrl(GetPresignedObjectUrlArgs args) {
 minio::s3::GetPresignedPostFormDataResponse
 minio::s3::BaseClient::GetPresignedPostFormData(PostPolicy policy) {
   if (!policy) {
-    return error::make<GetPresignedPostFormDataResponse>("valid policy must be provided");
+    return error::make<GetPresignedPostFormDataResponse>(
+        "valid policy must be provided");
   }
 
   if (provider_ == nullptr) {
-    return error::make<GetPresignedPostFormDataResponse>("Anonymous access does not require presigned post form-data");
+    return error::make<GetPresignedPostFormDataResponse>(
+        "Anonymous access does not require presigned post form-data");
   }
 
   std::string region;
@@ -1122,7 +1127,8 @@ minio::s3::BaseClient::ListenBucketNotification(
   }
 
   if (!base_url_.aws_domain_suffix.empty()) {
-    return error::make<ListenBucketNotificationResponse>("ListenBucketNotification API is not supported in Amazon S3");
+    return error::make<ListenBucketNotificationResponse>(
+        "ListenBucketNotification API is not supported in Amazon S3");
   }
 
   std::string region;
@@ -1168,10 +1174,10 @@ minio::s3::BaseClient::ListenBucketNotification(
       }
 
       if (records.size() <= 0) continue;
-/*PWTODO: there is no such conversion. How did it go in the original version?
-      if (!func(records)) {
-        return ListenBucketNotificationResponse(false);
-      }*/
+      /*PWTODO: there is no such conversion. How did it go in the original
+         version? if (!func(records)) { return
+         ListenBucketNotificationResponse(false);
+            }*/
     }
   };
 
@@ -1286,7 +1292,8 @@ minio::s3::MakeBucketResponse minio::s3::BaseClient::MakeBucket(
   std::string region = args.region;
   std::string base_region = base_url_.region;
   if (!base_region.empty() && !region.empty() && base_region != region) {
-    return error::make<MakeBucketResponse>("region must be " + base_region + ", but passed " + region);
+    return error::make<MakeBucketResponse>("region must be " + base_region +
+                                           ", but passed " + region);
   }
 
   if (region.empty()) {
@@ -1449,7 +1456,8 @@ minio::s3::BaseClient::SelectObjectContent(SelectObjectContentArgs args) {
   }
 
   if (args.ssec != nullptr && !base_url_.https) {
-    return error::make<SelectObjectContentResponse>("SSE-C operation must be performed over a secure connection");
+    return error::make<SelectObjectContentResponse>(
+        "SSE-C operation must be performed over a secure connection");
   }
 
   std::string region;
@@ -1816,7 +1824,8 @@ minio::s3::StatObjectResponse minio::s3::BaseClient::StatObject(
   }
 
   if (args.ssec != nullptr && !base_url_.https) {
-    return error::make<StatObjectResponse>("SSE-C operation must be performed over a secure connection");
+    return error::make<StatObjectResponse>(
+        "SSE-C operation must be performed over a secure connection");
   }
 
   std::string region;

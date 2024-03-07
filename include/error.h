@@ -33,7 +33,7 @@ class Error {
   Error& operator=(const Error&) = default;
 
   Error(Error&& v) = default;
-  Error& operator =(Error&& v) = default;
+  Error& operator=(Error&& v) = default;
 
   ~Error() = default;
 
@@ -47,10 +47,8 @@ class Error {
 
 const static Error SUCCESS;
 
-template <
-  typename T_RESULT,
-  typename... TA
-> inline T_RESULT make(TA&&... args) {
+template <typename T_RESULT, typename... TA>
+inline T_RESULT make(TA&&... args) {
   return T_RESULT{Error(std::forward<TA>(args)...)};
 }
 }  // namespace error

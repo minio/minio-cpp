@@ -55,7 +55,7 @@ class SelectHandler {
 
  public:
   explicit SelectHandler(SelectResultFunction result_func)
-    : result_func_(std::move(result_func)) {}
+      : result_func_(std::move(result_func)) {}
 
   ~SelectHandler() = default;
 

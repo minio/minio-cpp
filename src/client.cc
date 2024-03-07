@@ -169,8 +169,9 @@ minio::s3::StatObjectResponse minio::s3::Client::CalculatePartCount(
 
     object_size += size;
     if (object_size > utils::kMaxObjectSize) {
-      return error::make<StatObjectResponse>("destination object size must be less than " +
-                          std::to_string(utils::kMaxObjectSize));
+      return error::make<StatObjectResponse>(
+          "destination object size must be less than " +
+          std::to_string(utils::kMaxObjectSize));
     }
 
     if (size > utils::kMaxPartSize) {
@@ -375,9 +376,10 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
       }
 
       if (bytes_read != part_size) {
-        return error::make<PutObjectResponse>("not enough data in the stream; expected: " +
-                            std::to_string(part_size) +
-                            ", got: " + std::to_string(bytes_read) + " bytes");
+        return error::make<PutObjectResponse>(
+            "not enough data in the stream; expected: " +
+            std::to_string(part_size) + ", got: " + std::to_string(bytes_read) +
+            " bytes");
       }
     } else {
       char* b = buf;
@@ -521,7 +523,8 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
   }
 
   if (args.sse != nullptr && args.sse->TlsRequired() && !base_url_.https) {
-    return error::make<ComposeObjectResponse>("SSE operation must be performed over a secure connection");
+    return error::make<ComposeObjectResponse>(
+        "SSE operation must be performed over a secure connection");
   }
 
   std::string upload_id;
@@ -545,11 +548,13 @@ minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
   }
 
   if (args.sse != nullptr && args.sse->TlsRequired() && !base_url_.https) {
-    return error::make<CopyObjectResponse>("SSE operation must be performed over a secure connection");
+    return error::make<CopyObjectResponse>(
+        "SSE operation must be performed over a secure connection");
   }
 
   if (args.source.ssec != nullptr && !base_url_.https) {
-    return error::make<CopyObjectResponse>("SSE-C operation must be performed over a secure connection");
+    return error::make<CopyObjectResponse>(
+        "SSE-C operation must be performed over a secure connection");
   }
 
   std::string etag;
@@ -650,7 +655,8 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
   }
 
   if (args.ssec != nullptr && !base_url_.https) {
-    return error::make<DownloadObjectResponse>("SSE-C operation must be performed over a secure connection");
+    return error::make<DownloadObjectResponse>(
+        "SSE-C operation must be performed over a secure connection");
   }
 
   std::string etag;
@@ -673,7 +679,8 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
       args.filename + "." + curlpp::escape(etag) + ".part.minio";
   std::ofstream fout(temp_filename, std::ios::trunc | std::ios::out);
   if (!fout.is_open()) {
-    return error::make<DownloadObjectResponse>("unable to open file " + temp_filename);
+    return error::make<DownloadObjectResponse>("unable to open file " +
+                                               temp_filename);
   }
 
   std::string region;
@@ -719,7 +726,8 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(PutObjectArgs args) {
   }
 
   if (args.sse != nullptr && args.sse->TlsRequired() && !base_url_.https) {
-    return error::make<PutObjectResponse>("SSE operation must be performed over a secure connection");
+    return error::make<PutObjectResponse>(
+        "SSE operation must be performed over a secure connection");
   }
 
   std::string upload_id;
@@ -751,8 +759,8 @@ minio::s3::UploadObjectResponse minio::s3::Client::UploadObject(
   try {
     file.open(args.filename);
   } catch (std::system_error& err) {
-    return error::make<UploadObjectResponse>("unable to open file " + args.filename + "; " +
-                        err.code().message());
+    return error::make<UploadObjectResponse>(
+        "unable to open file " + args.filename + "; " + err.code().message());
   }
 
   PutObjectArgs po_args(file, args.object_size, 0);

@@ -169,7 +169,8 @@ bool minio::s3::SelectHandler::process(const http::DataFunctionArgs& /* args */,
     pugi::xml_parse_result result = xdoc.load_string(payload.data());
     if (!result) {
       done_ = true;
-      result_func_(error::make<SelectResult>("unable to parse XML; " + payload));
+      result_func_(
+          error::make<SelectResult>("unable to parse XML; " + payload));
       return false;
     }
 
@@ -209,8 +210,8 @@ bool minio::s3::SelectHandler::process(const http::DataFunctionArgs& /* args */,
   }
 
   done_ = true;
-  result_func_(error::make<SelectResult>(
-      std::string("unknown event-type ") + headers[":event-type"]));
+  result_func_(error::make<SelectResult>(std::string("unknown event-type ") +
+                                         headers[":event-type"]));
   return false;
 }
 

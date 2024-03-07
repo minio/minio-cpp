@@ -177,12 +177,14 @@ minio::creds::MinioClientConfigProvider::MinioClientConfigProvider(
   } else if (json.contains("aliases")) {
     aliases = json["aliases"];
   } else {
-    this->creds_ = error::make<Credentials>("invalid configuration in file " + filename);
+    this->creds_ =
+        error::make<Credentials>("invalid configuration in file " + filename);
     return;
   }
 
   if (!aliases.contains(alias)) {
-    this->creds_ = error::make<Credentials>("alias " + alias + " not found in MinIO client configuration file " +
+    this->creds_ = error::make<Credentials>(
+        "alias " + alias + " not found in MinIO client configuration file " +
         filename);
     return;
   }
@@ -424,8 +426,8 @@ minio::creds::Credentials minio::creds::IamAwsProvider::fetch(http::Url url) {
   nlohmann::json json = nlohmann::json::parse(resp.body);
   std::string code = json.value("Code", "Success");
   if (code != "Success") {
-    return error::make<Credentials>(url.String() + " failed with code " +
-                                    code + " and message " +
+    return error::make<Credentials>(url.String() + " failed with code " + code +
+                                    " and message " +
                                     json.value("Message", ""));
   }
 
