@@ -21,7 +21,9 @@ minio::s3::Response::~Response() {}
 
 minio::error::Error minio::s3::Response::Error() const {
   if (err_) return err_;
-  if (!code.empty()) return error::Error(code + ": " + message);
+  if (!code.empty()) {
+    return error::Error(code + ": " + message);
+  }
   if (status_code && (status_code < 200 || status_code > 299)) {
     return error::Error("failed with HTTP status code " +
                         std::to_string(status_code));
@@ -77,7 +79,7 @@ minio::s3::ListBucketsResponse minio::s3::ListBucketsResponse::ParseXML(
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(data.data());
   if (!result) {
-    return ListBucketsResponse(error::Error("unable to parse XML"));
+    return error::make<ListBucketsResponse>("unable to parse XML");
   }
   pugi::xpath_node_set xnodes =
       xdoc.select_nodes("/ListAllMyBucketsResult/Buckets/Bucket");
@@ -106,7 +108,7 @@ minio::s3::CompleteMultipartUploadResponse::ParseXML(std::string_view data,
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(data.data());
   if (!result) {
-    return CompleteMultipartUploadResponse(error::Error("unable to parse XML"));
+    return error::make<CompleteMultipartUploadResponse>("unable to parse XML");
   }
   auto root = xdoc.select_node("/CompleteMultipartUploadOutput");
 
@@ -136,7 +138,7 @@ minio::s3::ListObjectsResponse minio::s3::ListObjectsResponse::ParseXML(
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(data.data());
   if (!result) {
-    return ListObjectsResponse(error::Error("unable to parse XML"));
+    return error::make<ListObjectsResponse>("unable to parse XML");
   }
   std::string xpath = version ? "/ListVersionsResult" : "/ListBucketResult";
 
@@ -304,7 +306,7 @@ minio::s3::RemoveObjectsResponse minio::s3::RemoveObjectsResponse::ParseXML(
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(data.data());
   if (!result) {
-    return RemoveObjectsResponse(error::Error("unable to parse XML"));
+    return error::make<RemoveObjectsResponse>("unable to parse XML");
   }
   auto root = xdoc.select_node("/DeleteResult");
 
@@ -361,7 +363,7 @@ minio::s3::GetBucketNotificationResponse::ParseXML(std::string_view data) {
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(data.data());
   if (!result) {
-    return GetBucketNotificationResponse(error::Error("unable to parse XML"));
+    return error::make<GetBucketNotificationResponse>("unable to parse XML");
   }
   auto root = xdoc.select_node("/NotificationConfiguration");
 
@@ -456,7 +458,7 @@ minio::s3::GetBucketEncryptionResponse::ParseXML(std::string_view data) {
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(data.data());
   if (!result) {
-    return GetBucketEncryptionResponse(error::Error("unable to parse XML"));
+    return error::make<GetBucketEncryptionResponse>("unable to parse XML");
   }
   auto root = xdoc.select_node(
       "/ServerSideEncryptionConfiguration/Rule"
@@ -478,7 +480,7 @@ minio::s3::GetBucketReplicationResponse::ParseXML(std::string_view data) {
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(data.data());
   if (!result) {
-    return GetBucketReplicationResponse(error::Error("unable to parse XML"));
+    return error::make<GetBucketReplicationResponse>("unable to parse XML");
   }
   auto root = xdoc.select_node("/ReplicationConfiguration");
 
@@ -642,7 +644,7 @@ minio::s3::GetBucketLifecycleResponse::ParseXML(std::string_view data) {
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(data.data());
   if (!result) {
-    return GetBucketLifecycleResponse(error::Error("unable to parse XML"));
+    return error::make<GetBucketLifecycleResponse>("unable to parse XML");
   }
   auto root = xdoc.select_node("/LifecycleConfiguration");
 
@@ -770,7 +772,7 @@ minio::s3::GetBucketTagsResponse minio::s3::GetBucketTagsResponse::ParseXML(
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(data.data());
   if (!result) {
-    return GetBucketTagsResponse(error::Error("unable to parse XML"));
+    return error::make<GetBucketTagsResponse>("unable to parse XML");
   }
   auto tags = xdoc.select_nodes("/Tagging/TagSet/Tag");
 
@@ -796,7 +798,7 @@ minio::s3::GetObjectTagsResponse minio::s3::GetObjectTagsResponse::ParseXML(
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(data.data());
   if (!result) {
-    return GetObjectTagsResponse(error::Error("unable to parse XML"));
+    return error::make<GetObjectTagsResponse>("unable to parse XML");
   }
   auto tags = xdoc.select_nodes("/Tagging/TagSet/Tag");
 

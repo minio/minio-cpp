@@ -135,7 +135,7 @@ minio::s3::StatObjectResponse minio::s3::Client::CalculatePartCount(
         msg += "?versionId=" + source.version_id;
       }
       msg += ": SSE-C operation must be performed over a secure connection";
-      return StatObjectResponse(error::Error(msg));
+      return error::make<StatObjectResponse>(msg);
     }
 
     i++;
@@ -164,13 +164,13 @@ minio::s3::StatObjectResponse minio::s3::Client::CalculatePartCount(
       if (!source.version_id.empty()) msg += "?versionId=" + source.version_id;
       msg += ": size " + std::to_string(size) + " must be greater than " +
              std::to_string(utils::kMinPartSize);
-      return StatObjectResponse(error::Error(msg));
+      return error::make<StatObjectResponse>(msg);
     }
 
     object_size += size;
     if (object_size > utils::kMaxObjectSize) {
-      return StatObjectResponse(error::Error("destination object size must be less than " +
-                          std::to_string(utils::kMaxObjectSize)));
+      return error::make<StatObjectResponse>("destination object size must be less than " +
+                          std::to_string(utils::kMaxObjectSize));
     }
 
     if (size > utils::kMaxPartSize) {
@@ -192,7 +192,7 @@ minio::s3::StatObjectResponse minio::s3::Client::CalculatePartCount(
                " for multipart split upload of " + std::to_string(size) +
                ", last part size is less than " +
                std::to_string(utils::kMinPartSize);
-        return StatObjectResponse(error::Error(msg));
+        return error::make<StatObjectResponse>(msg);
       }
 
       part_count += count;
@@ -201,9 +201,9 @@ minio::s3::StatObjectResponse minio::s3::Client::CalculatePartCount(
     }
 
     if (part_count > utils::kMaxMultipartCount) {
-      return StatObjectResponse(error::Error(
+      return error::make<StatObjectResponse>(
           "Compose sources create more than allowed multipart count " +
-          std::to_string(utils::kMaxMultipartCount)));
+          std::to_string(utils::kMaxMultipartCount));
     }
   }
 
@@ -375,9 +375,9 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
       }
 
       if (bytes_read != part_size) {
-        return PutObjectResponse(error::Error("not enough data in the stream; expected: " +
+        return error::make<PutObjectResponse>("not enough data in the stream; expected: " +
                             std::to_string(part_size) +
-                            ", got: " + std::to_string(bytes_read) + " bytes"));
+                            ", got: " + std::to_string(bytes_read) + " bytes");
       }
     } else {
       char* b = buf;
@@ -521,7 +521,7 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
   }
 
   if (args.sse != nullptr && args.sse->TlsRequired() && !base_url_.https) {
-    return ComposeObjectResponse(error::Error("SSE operation must be performed over a secure connection"));
+    return error::make<ComposeObjectResponse>("SSE operation must be performed over a secure connection");
   }
 
   std::string upload_id;
@@ -545,11 +545,11 @@ minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
   }
 
   if (args.sse != nullptr && args.sse->TlsRequired() && !base_url_.https) {
-    return CopyObjectResponse(error::Error("SSE operation must be performed over a secure connection"));
+    return error::make<CopyObjectResponse>("SSE operation must be performed over a secure connection");
   }
 
   if (args.source.ssec != nullptr && !base_url_.https) {
-    return CopyObjectResponse(error::Error("SSE-C operation must be performed over a secure connection"));
+    return error::make<CopyObjectResponse>("SSE-C operation must be performed over a secure connection");
   }
 
   std::string etag;
@@ -567,16 +567,16 @@ minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
       size > utils::kMaxPartSize) {
     if (args.metadata_directive != nullptr &&
         *args.metadata_directive == Directive::kCopy) {
-      return CopyObjectResponse(error::Error(
+      return error::make<CopyObjectResponse>(
           "COPY metadata directive is not applicable to source object size "
-          "greater than 5 GiB"));
+          "greater than 5 GiB");
     }
 
     if (args.tagging_directive != nullptr &&
         *args.tagging_directive == Directive::kCopy) {
-      return CopyObjectResponse(error::Error(
+      return error::make<CopyObjectResponse>(
           "COPY tagging directive is not applicable to source object size "
-          "greater than 5 GiB"));
+          "greater than 5 GiB");
     }
 
     ComposeSource src;
@@ -650,7 +650,7 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
   }
 
   if (args.ssec != nullptr && !base_url_.https) {
-    return DownloadObjectResponse(error::Error("SSE-C operation must be performed over a secure connection"));
+    return error::make<DownloadObjectResponse>("SSE-C operation must be performed over a secure connection");
   }
 
   std::string etag;
@@ -673,7 +673,7 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
       args.filename + "." + curlpp::escape(etag) + ".part.minio";
   std::ofstream fout(temp_filename, std::ios::trunc | std::ios::out);
   if (!fout.is_open()) {
-    return DownloadObjectResponse(error::Error("unable to open file " + temp_filename));
+    return error::make<DownloadObjectResponse>("unable to open file " + temp_filename);
   }
 
   std::string region;
@@ -719,7 +719,7 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(PutObjectArgs args) {
   }
 
   if (args.sse != nullptr && args.sse->TlsRequired() && !base_url_.https) {
-    return PutObjectResponse(error::Error("SSE operation must be performed over a secure connection"));
+    return error::make<PutObjectResponse>("SSE operation must be performed over a secure connection");
   }
 
   std::string upload_id;
@@ -751,8 +751,8 @@ minio::s3::UploadObjectResponse minio::s3::Client::UploadObject(
   try {
     file.open(args.filename);
   } catch (std::system_error& err) {
-    return UploadObjectResponse(error::Error("unable to open file " + args.filename + "; " +
-                        err.code().message()));
+    return error::make<UploadObjectResponse>("unable to open file " + args.filename + "; " +
+                        err.code().message());
   }
 
   PutObjectArgs po_args(file, args.object_size, 0);

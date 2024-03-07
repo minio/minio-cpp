@@ -469,7 +469,9 @@ minio::error::Error minio::s3::LifecycleRule::Validate() const {
         "specified in a rule");
   }
 
-  if (!filter) return error::Error("valid filter must be provided");
+  if (!filter) {
+    return error::Error("valid filter must be provided");
+  }
 
   if (expiration_expired_object_delete_marker) {
     if (expiration_date || expiration_days) {

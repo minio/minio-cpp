@@ -46,6 +46,13 @@ class Error {
 };  // class Error
 
 const static Error SUCCESS;
+
+template <
+  typename T_RESULT,
+  typename... TA
+> inline T_RESULT make(TA&&... args) {
+  return T_RESULT{Error(std::forward<TA>(args)...)};
+}
 }  // namespace error
 }  // namespace minio
 

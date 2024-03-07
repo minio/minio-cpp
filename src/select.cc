@@ -80,7 +80,9 @@ minio::error::Error minio::s3::SelectHandler::DecodeHeader(
     std::string name = data.substr(0, length);
     data.erase(0, length);
 
-    if (data[0] != 7) return error::Error("header value type is not 7");
+    if (data[0] != 7) {
+      return error::Error("header value type is not 7");
+    }
     data.erase(0, 1);
 
     length = data[0] << 8 | data[1];
@@ -108,7 +110,7 @@ bool minio::s3::SelectHandler::process(const http::DataFunctionArgs& /* args */,
       done_ = true;
       std::string msg("prelude CRC mismatch; expected: ");
       msg += std::to_string(expected) + ", got: " + std::to_string(got);
-      result_func_(SelectResult(error::Error(msg)));
+      result_func_(error::make<SelectResult>(msg));
       return false;
     }
     total_length_ = utils::Int(prelude_.substr(0, 4));
@@ -126,7 +128,7 @@ bool minio::s3::SelectHandler::process(const http::DataFunctionArgs& /* args */,
       done_ = true;
       std::string msg("message CRC mismatch; expected: ");
       msg += std::to_string(expected) + ", got: " + std::to_string(got);
-      result_func_(SelectResult(error::Error(msg)));
+      result_func_(error::make<SelectResult>(msg));
       return false;
     }
   }
@@ -143,8 +145,8 @@ bool minio::s3::SelectHandler::process(const http::DataFunctionArgs& /* args */,
 
   if (headers[":message-type"] == "error") {
     done_ = true;
-    result_func_(SelectResult(error::Error(headers[":error-code"] + ": " +
-                                           headers[":error-message"])));
+    result_func_(error::make<SelectResult>(headers[":error-code"] + ": " +
+                                           headers[":error-message"]));
     return false;
   }
 
@@ -167,8 +169,7 @@ bool minio::s3::SelectHandler::process(const http::DataFunctionArgs& /* args */,
     pugi::xml_parse_result result = xdoc.load_string(payload.data());
     if (!result) {
       done_ = true;
-      result_func_(
-          SelectResult(error::Error("unable to parse XML; " + payload)));
+      result_func_(error::make<SelectResult>("unable to parse XML; " + payload));
       return false;
     }
 
@@ -208,8 +209,8 @@ bool minio::s3::SelectHandler::process(const http::DataFunctionArgs& /* args */,
   }
 
   done_ = true;
-  result_func_(SelectResult(
-      error::Error("unknown event-type " + headers[":event-type"])));
+  result_func_(error::make<SelectResult>(
+      std::string("unknown event-type ") + headers[":event-type"]));
   return false;
 }
 

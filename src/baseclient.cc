@@ -86,7 +86,7 @@ minio::s3::Response minio::s3::BaseClient::GetErrorResponse(
     http::Response resp, std::string_view resource, http::Method method,
     const std::string& bucket_name, const std::string& object_name) {
   if (!resp.error.empty()) {
-    return Response(error::Error(resp.error));
+    return error::make<Response>(resp.error);
   }
 
   if (!resp.body.empty()) {
@@ -97,10 +97,10 @@ minio::s3::Response minio::s3::BaseClient::GetErrorResponse(
       }
     }
 
-    Response response(
-        error::Error("invalid response received; status code: " +
+    auto response = error::make<Response>(
+                    "invalid response received; status code: " +
                      std::to_string(resp.status_code) +
-                     "; content-type: " + utils::Join(values, ",")));
+                     "; content-type: " + utils::Join(values, ","));
     response.status_code = resp.status_code;
     response.headers = resp.headers;
     return response;
@@ -152,12 +152,13 @@ minio::s3::Response minio::s3::BaseClient::GetErrorResponse(
       response.message =
           "The specified method is not allowed against this resource";
       break;
-    default:
-      Response response(error::Error("server failed with HTTP status code " +
-                                     std::to_string(resp.status_code)));
+    default: {
+      auto response = error::make<Response>("server failed with HTTP status code " +
+                                     std::to_string(resp.status_code));
       response.status_code = resp.status_code;
       response.headers = resp.headers;
       return response;
+    }
   }
 
   response.resource = resource;
@@ -216,7 +217,7 @@ minio::s3::GetRegionResponse minio::s3::BaseClient::GetRegion(
   std::string base_region = base_url_.region;
   if (!region.empty()) {
     if (!base_region.empty() && base_region != region) {
-      return GetRegionResponse(error::Error("region must be " + base_region + ", but passed " + region));
+      return error::make<GetRegionResponse>("region must be " + base_region + ", but passed " + region);
     }
 
     return GetRegionResponse(region);
@@ -247,7 +248,7 @@ minio::s3::GetRegionResponse minio::s3::BaseClient::GetRegion(
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(resp.data.data());
   if (!result) {
-    return GetRegionResponse(error::Error("unable to parse XML"));
+    return error::make<GetRegionResponse>("unable to parse XML");
   }
   auto text = xdoc.select_node("/LocationConstraint/text()");
   std::string value = text.node().value();
@@ -382,7 +383,7 @@ minio::s3::BaseClient::CreateMultipartUpload(CreateMultipartUploadArgs args) {
     pugi::xml_document xdoc;
     pugi::xml_parse_result result = xdoc.load_string(resp.data.data());
     if (!result) {
-      return CreateMultipartUploadResponse(error::Error("unable to parse XML"));
+      return error::make<CreateMultipartUploadResponse>("unable to parse XML");
     }
     auto text =
         xdoc.select_node("/InitiateMultipartUploadResult/UploadId/text()");
@@ -807,7 +808,7 @@ minio::s3::BaseClient::GetBucketVersioning(GetBucketVersioningArgs args) {
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(resp.data.data());
   if (!result) {
-    return GetBucketVersioningResponse(error::Error("unable to parse XML"));
+    return error::make<GetBucketVersioningResponse>("unable to parse XML");
   }
 
   auto root = xdoc.select_node("/VersioningConfiguration");
@@ -833,7 +834,7 @@ minio::s3::GetObjectResponse minio::s3::BaseClient::GetObject(
   }
 
   if (args.ssec != nullptr && !base_url_.https) {
-    return GetObjectResponse(error::Error("SSE-C operation must be performed over a secure connection"));
+    return error::make<GetObjectResponse>("SSE-C operation must be performed over a secure connection");
   }
 
   std::string region;
@@ -884,7 +885,7 @@ minio::s3::BaseClient::GetObjectLockConfig(GetObjectLockConfigArgs args) {
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(resp.data.data());
   if (!result) {
-    return GetObjectLockConfigResponse(error::Error("unable to parse XML"));
+    return error::make<GetObjectLockConfigResponse>("unable to parse XML");
   }
   ObjectLockConfig config;
 
@@ -945,7 +946,7 @@ minio::s3::GetObjectRetentionResponse minio::s3::BaseClient::GetObjectRetention(
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(resp.data.data());
   if (!result) {
-    return GetObjectRetentionResponse(error::Error("unable to parse XML"));
+    return error::make<GetObjectRetentionResponse>("unable to parse XML");
   }
 
   auto text = xdoc.select_node("/Retention/Mode/text()");
@@ -1033,11 +1034,11 @@ minio::s3::BaseClient::GetPresignedObjectUrl(GetPresignedObjectUrlArgs args) {
 minio::s3::GetPresignedPostFormDataResponse
 minio::s3::BaseClient::GetPresignedPostFormData(PostPolicy policy) {
   if (!policy) {
-    return GetPresignedPostFormDataResponse(error::Error("valid policy must be provided"));
+    return error::make<GetPresignedPostFormDataResponse>("valid policy must be provided");
   }
 
   if (provider_ == nullptr) {
-    return GetPresignedPostFormDataResponse(error::Error("Anonymous access does not require presigned post form-data"));
+    return error::make<GetPresignedPostFormDataResponse>("Anonymous access does not require presigned post form-data");
   }
 
   std::string region;
@@ -1091,7 +1092,7 @@ minio::s3::BaseClient::IsObjectLegalHoldEnabled(
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(resp.data.data());
   if (!result) {
-    return IsObjectLegalHoldEnabledResponse(error::Error("unable to parse XML"));
+    return error::make<IsObjectLegalHoldEnabledResponse>("unable to parse XML");
   }
   auto text = xdoc.select_node("/LegalHold/Status/text()");
   std::string value = text.node().value();
@@ -1121,7 +1122,7 @@ minio::s3::BaseClient::ListenBucketNotification(
   }
 
   if (!base_url_.aws_domain_suffix.empty()) {
-    return ListenBucketNotificationResponse(error::Error("ListenBucketNotification API is not supported in Amazon S3"));
+    return error::make<ListenBucketNotificationResponse>("ListenBucketNotification API is not supported in Amazon S3");
   }
 
   std::string region;
@@ -1285,7 +1286,7 @@ minio::s3::MakeBucketResponse minio::s3::BaseClient::MakeBucket(
   std::string region = args.region;
   std::string base_region = base_url_.region;
   if (!base_region.empty() && !region.empty() && base_region != region) {
-    return MakeBucketResponse(error::Error("region must be " + base_region + ", but passed " + region));
+    return error::make<MakeBucketResponse>("region must be " + base_region + ", but passed " + region);
   }
 
   if (region.empty()) {
@@ -1448,7 +1449,7 @@ minio::s3::BaseClient::SelectObjectContent(SelectObjectContentArgs args) {
   }
 
   if (args.ssec != nullptr && !base_url_.https) {
-    return SelectObjectContentResponse(error::Error("SSE-C operation must be performed over a secure connection"));
+    return error::make<SelectObjectContentResponse>("SSE-C operation must be performed over a secure connection");
   }
 
   std::string region;
@@ -1815,7 +1816,7 @@ minio::s3::StatObjectResponse minio::s3::BaseClient::StatObject(
   }
 
   if (args.ssec != nullptr && !base_url_.https) {
-    return StatObjectResponse(error::Error("SSE-C operation must be performed over a secure connection"));
+    return error::make<StatObjectResponse>("SSE-C operation must be performed over a secure connection");
   }
 
   std::string region;

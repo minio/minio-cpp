@@ -293,7 +293,7 @@ minio::error::Error minio::s3::CopyObjectArgs::Validate() const {
   if (error::Error err = ObjectArgs::Validate()) {
     return err;
   }
-  if (error::Error err = source.Validate()) {
+  if (error::Error err = source.Validate()) { 
     return err;
   }
   if (source.offset != nullptr || source.length != nullptr) {
