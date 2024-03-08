@@ -73,18 +73,7 @@ struct GetRegionResponse : public Response {
   ~GetRegionResponse() = default;
 };  // struct GetRegionResponse
 
-struct MakeBucketResponse : public Response {
-  MakeBucketResponse() = default;
-  ~MakeBucketResponse() = default;
-
-  explicit MakeBucketResponse(error::Error err) : Response(std::move(err)) {}
-
-  explicit MakeBucketResponse(const Response& resp) : Response(resp) {}
-
-  MakeBucketResponse& operator =(const Response& resp) {
-    return static_cast<MakeBucketResponse&>(Response::operator =(resp));
-  }
-}; // struct MakeBucketResponse
+using MakeBucketResponse = Response;
 
 struct ListBucketsResponse : public Response {
   std::list<Bucket> buckets;
@@ -115,31 +104,9 @@ struct BucketExistsResponse : public Response {
   ~BucketExistsResponse() = default;
 };  // struct BucketExistsResponse
 
-struct RemoveBucketResponse : public Response {
-  RemoveBucketResponse() = default;
-  ~RemoveBucketResponse() = default;
+using RemoveBucketResponse = Response;
 
-  explicit RemoveBucketResponse(error::Error err) : Response(std::move(err)) {}
-
-  explicit RemoveBucketResponse(const Response& resp) : Response(resp) {}
-
-  RemoveBucketResponse& operator =(const Response& resp) {
-    return static_cast<RemoveBucketResponse&>(Response::operator =(resp));
-  }
-}; // struct RemoveBucketResponse
-
-struct AbortMultipartUploadResponse : public Response {
-  AbortMultipartUploadResponse() = default;
-  ~AbortMultipartUploadResponse() = default;
-
-  explicit AbortMultipartUploadResponse(error::Error err) : Response(std::move(err)) {}
-
-  explicit AbortMultipartUploadResponse(const Response& resp) : Response(resp) {}
-
-  AbortMultipartUploadResponse& operator =(const Response& resp) {
-    return static_cast<AbortMultipartUploadResponse&>(Response::operator =(resp));
-  }
-}; // struct AbortMultipartUploadResponse
+using AbortMultipartUploadResponse = Response;
 
 struct CompleteMultipartUploadResponse : public Response {
   std::string location;
