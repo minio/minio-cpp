@@ -669,7 +669,9 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
     soargs.version_id = args.version_id;
     soargs.ssec = args.ssec;
     StatObjectResponse resp = StatObject(soargs);
-    if (!resp) return resp;
+    if (!resp) {
+      return DownloadObjectResponse(resp);
+    }
     etag = resp.etag;
     size = resp.size;
   }
@@ -687,7 +689,7 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return DownloadObjectResponse(resp);
   }
 
   Request req(http::Method::kGet, region, base_url_, args.extra_headers,
@@ -709,7 +711,7 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
   if (response) {
     std::filesystem::rename(temp_filename, args.filename);
   }
-  return response;
+  return DownloadObjectResponse(response);
 }
 
 minio::s3::ListObjectsResult minio::s3::Client::ListObjects(
