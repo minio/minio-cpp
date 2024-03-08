@@ -276,7 +276,7 @@ minio::s3::BaseClient::AbortMultipartUpload(AbortMultipartUploadArgs args) {
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return AbortMultipartUploadResponse(resp);
   }
 
   Request req(http::Method::kDelete, region, base_url_, args.extra_headers,
@@ -285,7 +285,7 @@ minio::s3::BaseClient::AbortMultipartUpload(AbortMultipartUploadArgs args) {
   req.object_name = args.object;
   req.query_params.Add("uploadId", args.upload_id);
 
-  return Execute(req);
+  return AbortMultipartUploadResponse(Execute(req));
 }
 
 minio::s3::BucketExistsResponse minio::s3::BaseClient::BucketExists(
@@ -1323,7 +1323,7 @@ minio::s3::MakeBucketResponse minio::s3::BaseClient::MakeBucket(
   if (resp) {
     region_map_[args.bucket] = region;
   }
-  return resp;
+  return MakeBucketResponse(resp);
 }
 
 minio::s3::PutObjectResponse minio::s3::BaseClient::PutObject(
@@ -1370,14 +1370,14 @@ minio::s3::RemoveBucketResponse minio::s3::BaseClient::RemoveBucket(
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return RemoveBucketResponse(resp);
   }
 
   Request req(http::Method::kDelete, region, base_url_, args.extra_headers,
               args.extra_query_params);
   req.bucket_name = args.bucket;
 
-  return Execute(req);
+  return RemoveBucketResponse(Execute(req));
 }
 
 minio::s3::RemoveObjectResponse minio::s3::BaseClient::RemoveObject(
