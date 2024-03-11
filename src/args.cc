@@ -336,7 +336,7 @@ minio::error::Error minio::s3::ComposeSource::BuildHeaders(
     }
   }
 
-  object_size_ = object_size;
+  object_size_ = static_cast<long>(object_size);
   headers_ = CopyHeaders();
   if (!headers_.Contains("x-amz-copy-source-if-match")) {
     headers_.Add("x-amz-copy-source-if-match", etag);
@@ -399,7 +399,7 @@ minio::error::Error minio::s3::UploadObjectArgs::Validate() {
 
   std::filesystem::path file_path = filename;
   size_t obj_size = std::filesystem::file_size(file_path);
-  object_size = obj_size;
+  object_size = static_cast<long>(obj_size);
   return utils::CalcPartInfo(object_size, part_size, part_count);
 }
 

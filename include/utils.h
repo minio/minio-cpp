@@ -129,13 +129,13 @@ class Time {
   Time() = default;
 
   Time(std::time_t tv_sec, long tv_usec, bool utc) : utc_(utc) {
-    tv_.tv_sec = tv_sec;
-    tv_.tv_usec = tv_usec;
+    tv_.tv_sec = static_cast<decltype(tv_.tv_sec)>(tv_sec);
+    tv_.tv_usec = static_cast<decltype(tv_.tv_usec)>(tv_usec);
   }
 
   ~Time() = default;
 
-  void Add(time_t seconds) { tv_.tv_sec += seconds; }
+  void Add(std::time_t seconds) { tv_.tv_sec += static_cast<decltype(tv_.tv_sec)>(seconds); }
 
   std::tm* ToUTC() const;
 
