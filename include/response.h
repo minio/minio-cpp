@@ -60,21 +60,37 @@ struct Response {
   error::Error err_;
 };  // struct Response
 
-#define MINIO_S3_DERIVE_FROM_RESPONSE(DerivedName)                              \
-                                                                                \
-  struct DerivedName : public Response {                                        \
-                                                                                \
-    DerivedName() = default;                                                    \
-    ~DerivedName() = default;                                                   \
-                                                                                \
-    DerivedName(const DerivedName&) = default;                                  \
-    DerivedName& operator =(const DerivedName&) = default;                      \
-                                                                                \
-    DerivedName(DerivedName&&) = default;                                       \
-    DerivedName& operator =(DerivedName&&) = default;                           \
-                                                                                \
-    explicit DerivedName(error::Error err) : Response(std::move(err)) {}        \
-    explicit DerivedName(const Response& resp) : Response(resp) {}              \
+#define MINIO_S3_DERIVE_FROM_RESPONSE(DerivedName)                                                  \
+  struct DerivedName : public Response {                                                            \
+    DerivedName() = default;                                                                        \
+    ~DerivedName() = default;                                                                       \
+                                                                                                    \
+    DerivedName(const DerivedName&) = default;                                                      \
+    DerivedName& operator =(const DerivedName&) = default;                                          \
+                                                                                                    \
+    DerivedName(DerivedName&&) = default;                                                           \
+    DerivedName& operator =(DerivedName&&) = default;                                               \
+                                                                                                    \
+    explicit DerivedName(error::Error err) : Response(std::move(err)) {}                            \
+    explicit DerivedName(const Response& resp) : Response(resp) {}                                  \
+  };
+
+#define MINIO_S3_DERIVE_FROM_PUT_OBJECT_RESPONSE(DerivedName)                                       \
+  struct DerivedName : public PutObjectResponse {                                                   \
+    DerivedName() = default;                                                                        \
+    ~DerivedName() = default;                                                                       \
+                                                                                                    \
+    DerivedName(const DerivedName&) = default;                                                      \
+    DerivedName& operator =(const DerivedName&) = default;                                          \
+                                                                                                    \
+    DerivedName(DerivedName&&) = default;                                                           \
+    DerivedName& operator =(DerivedName&&) = default;                                               \
+                                                                                                    \
+    explicit DerivedName(error::Error err) : PutObjectResponse(std::move(err)) {}                   \
+    explicit DerivedName(const PutObjectResponse& resp) : PutObjectResponse(resp) {}                \
+    explicit DerivedName(const Response& resp) : PutObjectResponse(resp) {}                         \
+                                                                                                    \
+    explicit DerivedName(const CompleteMultipartUploadResponse& resp) : PutObjectResponse(resp) {}  \
   };
 
 struct GetRegionResponse : public Response {
@@ -175,9 +191,8 @@ struct PutObjectResponse : public Response {
   ~PutObjectResponse() = default;
 };  // struct PutObjectResponse
 
-using UploadPartResponse = PutObjectResponse;
-
-using UploadPartCopyResponse = PutObjectResponse;
+MINIO_S3_DERIVE_FROM_PUT_OBJECT_RESPONSE(UploadPartResponse)
+MINIO_S3_DERIVE_FROM_PUT_OBJECT_RESPONSE(UploadPartCopyResponse)
 
 struct StatObjectResponse : public Response {
   std::string version_id;
@@ -267,11 +282,9 @@ struct ListObjectsResponse : public Response {
   static ListObjectsResponse ParseXML(std::string_view data, bool version);
 };  // struct ListObjectsResponse
 
-using CopyObjectResponse = PutObjectResponse;
-
-using ComposeObjectResponse = PutObjectResponse;
-
-using UploadObjectResponse = PutObjectResponse;
+MINIO_S3_DERIVE_FROM_PUT_OBJECT_RESPONSE(CopyObjectResponse)
+MINIO_S3_DERIVE_FROM_PUT_OBJECT_RESPONSE(ComposeObjectResponse)
+MINIO_S3_DERIVE_FROM_PUT_OBJECT_RESPONSE(UploadObjectResponse)
 
 struct DeletedObject : public Response {
   std::string name;
@@ -559,6 +572,7 @@ struct GetPresignedPostFormDataResponse : public Response {
   ~GetPresignedPostFormDataResponse() = default;
 };  // struct GetPresignedPostFormDataResponse
 
+#undef MINIO_S3_DERIVE_FROM_PUT_OBJECT_RESPONSE
 #undef MINIO_S3_DERIVE_FROM_RESPONSE
 }  // namespace s3
 }  // namespace minio

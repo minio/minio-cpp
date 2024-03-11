@@ -1920,7 +1920,7 @@ minio::s3::UploadPartResponse minio::s3::BaseClient::UploadPart(
   api_args.progress_userdata = args.progress_userdata;
   api_args.query_params = query_params;
 
-  return PutObject(api_args);
+  return UploadPartResponse(PutObject(api_args));
 }
 
 minio::s3::UploadPartCopyResponse minio::s3::BaseClient::UploadPartCopy(

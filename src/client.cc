@@ -232,7 +232,7 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
     coargs.sse = args.sse;
     coargs.source = source;
 
-    return CopyObject(coargs);
+    return ComposeObjectResponse(CopyObject(coargs));
   }
 
   utils::Multimap headers = args.Headers();
@@ -295,7 +295,9 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
       upc_args.upload_id = upload_id;
       upc_args.part_number = part_number;
       UploadPartCopyResponse resp = UploadPartCopy(upc_args);
-      if (!resp) return resp;
+      if (!resp) {
+        return ComposeObjectResponse(resp);
+      }
       parts.push_back(Part{part_number, resp.etag});
     } else {
       while (size > 0) {
@@ -319,7 +321,9 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
         upc_args.upload_id = upload_id;
         upc_args.part_number = part_number;
         UploadPartCopyResponse resp = UploadPartCopy(upc_args);
-        if (!resp) return resp;
+        if (!resp) {
+          return ComposeObjectResponse(resp);
+        }
         parts.push_back(Part{part_number, resp.etag});
 
         offset = start_bytes;
@@ -607,7 +611,7 @@ minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
     coargs.sse = args.sse;
     coargs.sources.push_back(src);
 
-    return ComposeObject(coargs);
+    return CopyObjectResponse(ComposeObject(coargs));
   }
 
   utils::Multimap headers;
@@ -781,7 +785,7 @@ minio::s3::UploadObjectResponse minio::s3::Client::UploadObject(
 
   PutObjectResponse resp = PutObject(std::move(po_args));
   file.close();
-  return resp;
+  return UploadObjectResponse(resp);
 }
 
 minio::s3::RemoveObjectsResult minio::s3::Client::RemoveObjects(
