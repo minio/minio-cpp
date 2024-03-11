@@ -68,7 +68,7 @@ struct GetRegionResponse : public Response {
   GetRegionResponse(error::Error err) : Response(std::move(err)) {}
 
   GetRegionResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~GetRegionResponse() = default;
 };  // struct GetRegionResponse
@@ -84,7 +84,7 @@ struct ListBucketsResponse : public Response {
   ListBucketsResponse(error::Error err) : Response(std::move(err)) {}
 
   ListBucketsResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~ListBucketsResponse() = default;
 
@@ -99,7 +99,7 @@ struct BucketExistsResponse : public Response {
   BucketExistsResponse(error::Error err) : Response(std::move(err)) {}
 
   BucketExistsResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~BucketExistsResponse() = default;
 };  // struct BucketExistsResponse
@@ -119,7 +119,7 @@ struct CompleteMultipartUploadResponse : public Response {
       : Response(std::move(err)) {}
 
   CompleteMultipartUploadResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~CompleteMultipartUploadResponse() = default;
 
@@ -136,7 +136,7 @@ struct CreateMultipartUploadResponse : public Response {
   CreateMultipartUploadResponse(error::Error err) : Response(std::move(err)) {}
 
   CreateMultipartUploadResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~CreateMultipartUploadResponse() = default;
 };  // struct CreateMultipartUploadResponse
@@ -150,7 +150,7 @@ struct PutObjectResponse : public Response {
   PutObjectResponse(error::Error err) : Response(std::move(err)) {}
 
   PutObjectResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   PutObjectResponse(const CompleteMultipartUploadResponse& resp)
       : Response(resp), etag(resp.etag), version_id(resp.version_id) {}
@@ -178,7 +178,7 @@ struct StatObjectResponse : public Response {
   StatObjectResponse(error::Error err) : Response(std::move(err)) {}
 
   StatObjectResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~StatObjectResponse() = default;
 };  // struct StatObjectResponse
@@ -209,7 +209,7 @@ struct Item : public Response {
   Item(error::Error err) : Response(std::move(err)) {}
 
   Item(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~Item() = default;
 };  // struct Item
@@ -245,7 +245,7 @@ struct ListObjectsResponse : public Response {
   ListObjectsResponse(error::Error err) : Response(std::move(err)) {}
 
   ListObjectsResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~ListObjectsResponse() = default;
 
@@ -276,7 +276,7 @@ struct DeleteError : public Response {
   DeleteError(error::Error err) : Response(std::move(err)) {}
 
   DeleteError(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~DeleteError() = default;
 };  // struct DeleteError
@@ -290,7 +290,7 @@ struct RemoveObjectsResponse : public Response {
   RemoveObjectsResponse(error::Error err) : Response(std::move(err)) {}
 
   RemoveObjectsResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~RemoveObjectsResponse() = default;
 
@@ -311,7 +311,7 @@ struct GetBucketPolicyResponse : public Response {
   GetBucketPolicyResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketPolicyResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~GetBucketPolicyResponse() = default;
 };  // struct GetBucketPolicyResponse
@@ -329,7 +329,7 @@ struct GetBucketNotificationResponse : public Response {
   GetBucketNotificationResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketNotificationResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~GetBucketNotificationResponse() = default;
 
@@ -348,7 +348,7 @@ struct GetBucketEncryptionResponse : public Response {
   GetBucketEncryptionResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketEncryptionResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~GetBucketEncryptionResponse() = default;
 
@@ -366,7 +366,7 @@ struct GetBucketVersioningResponse : public Response {
   GetBucketVersioningResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketVersioningResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~GetBucketVersioningResponse() = default;
 
@@ -394,7 +394,7 @@ struct GetBucketReplicationResponse : public Response {
   GetBucketReplicationResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketReplicationResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~GetBucketReplicationResponse() = default;
 
@@ -414,7 +414,7 @@ struct GetBucketLifecycleResponse : public Response {
   GetBucketLifecycleResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketLifecycleResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   static GetBucketLifecycleResponse ParseXML(std::string_view data);
 };  // struct GetBucketLifecycleResponse
@@ -432,7 +432,7 @@ struct GetBucketTagsResponse : public Response {
   GetBucketTagsResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketTagsResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~GetBucketTagsResponse() = default;
 
@@ -452,7 +452,7 @@ struct GetObjectLockConfigResponse : public Response {
   GetObjectLockConfigResponse(error::Error err) : Response(std::move(err)) {}
 
   GetObjectLockConfigResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~GetObjectLockConfigResponse() = default;
 };  // struct GetObjectLockConfigResponse
@@ -470,7 +470,7 @@ struct GetObjectTagsResponse : public Response {
   GetObjectTagsResponse(error::Error err) : Response(std::move(err)) {}
 
   GetObjectTagsResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~GetObjectTagsResponse() = default;
 
@@ -492,7 +492,7 @@ struct IsObjectLegalHoldEnabledResponse : public Response {
       : Response(std::move(err)) {}
 
   IsObjectLegalHoldEnabledResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~IsObjectLegalHoldEnabledResponse() = default;
 };  // struct IsObjectLegalHoldEnabledResponse
@@ -506,7 +506,7 @@ struct GetObjectRetentionResponse : public Response {
   GetObjectRetentionResponse(error::Error err) : Response(std::move(err)) {}
 
   GetObjectRetentionResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~GetObjectRetentionResponse() = default;
 };  // struct GetObjectRetentionResponse
@@ -521,7 +521,7 @@ struct GetPresignedObjectUrlResponse : public Response {
   GetPresignedObjectUrlResponse(error::Error err) : Response(std::move(err)) {}
 
   GetPresignedObjectUrlResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~GetPresignedObjectUrlResponse() = default;
 };  // struct GetPresignedObjectUrlResponse
@@ -536,7 +536,7 @@ struct GetPresignedPostFormDataResponse : public Response {
       : Response(std::move(err)) {}
 
   GetPresignedPostFormDataResponse(const Response& resp)
-      : Response(resp) {}  // PWTODO: what is it supposed to do?!
+      : Response(resp) {}
 
   ~GetPresignedPostFormDataResponse() = default;
 };  // struct GetPresignedPostFormDataResponse
