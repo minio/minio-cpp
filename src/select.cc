@@ -154,7 +154,7 @@ bool minio::s3::SelectHandler::process(const http::DataFunctionArgs& /* args */,
     return false;
   }
 
-  long payload_length = total_length_ - header_length - 16;
+  long payload_length = static_cast<long>(total_length_ - header_length - 16);
   if (headers[":event-type"] == "Cont" || payload_length < 1) {
     Reset();
     return true;
