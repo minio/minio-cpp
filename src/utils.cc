@@ -13,6 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifdef _WIN32
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #include "utils.h"
 
 #include <memory>
@@ -578,8 +582,8 @@ minio::error::Error minio::utils::CalcPartInfo(long object_size,
   }
 
   if (static_cast<long>(part_size) > object_size) part_size = object_size;
-  part_count =
-      (part_size > 0) ? ((object_size + part_size - 1) / part_size) : 1;
+  part_count = static_cast<long>(
+      (part_size > 0) ? ((object_size + part_size - 1) / part_size) : 1);
   if (part_count > kMaxMultipartCount) {
     return error::Error(
         "object size " + std::to_string(object_size) + " and part size " +
