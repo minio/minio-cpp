@@ -14,22 +14,22 @@
 // limitations under the License.
 
 #ifdef _WIN32
-#include <ws2def.h>
-#include <ws2tcpip.h>
-#else
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <sys/socket.h>
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #endif
-
-#include <INIReader.h>
 
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <INIReader.h>
 
 #include "providers.h"
 #include "signer.h"
 #include "utils.h"
+
+#ifndef _WIN32
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#endif
 
 minio::error::Error minio::creds::checkLoopbackHost(const std::string& host) {
   struct addrinfo hints = {};
