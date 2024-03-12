@@ -684,7 +684,8 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(PutObjectArgs args) {
   }
 
   std::string upload_id;
-  auto buf = std::make_unique<char[]>((args.part_count > 0) ? args.part_size : args.part_size + 1);
+  auto buf = std::make_unique<char[]>(
+      (args.part_count > 0) ? args.part_size : args.part_size + 1);
   PutObjectResponse resp = PutObject(args, upload_id, buf.get());
   buf.reset();
 
