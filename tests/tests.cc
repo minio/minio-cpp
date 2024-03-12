@@ -38,7 +38,8 @@ class RandomBuf : public std::streambuf {
     if (size_ == 0) return EOF;
 
     size_t size = std::min<size_t>(size_, buf_.size());
-    setg(&buf_[0], &buf_[0], &buf_[size]);
+    auto* const data = buf_.data();
+    setg(data, data, data + size);
     for (size_t i = 0; i < size; ++i) buf_[i] = charset[pick(rg)];
     size_ -= size;
     return 0;
