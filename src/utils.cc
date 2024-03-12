@@ -561,7 +561,7 @@ minio::error::Error minio::utils::CalcPartInfo(long object_size,
   }
 
   if (object_size >= 0) {
-    if (object_size > static_cast<long>(kMaxObjectSize)) {
+    if (static_cast<unsigned long long>(object_size) > kMaxObjectSize) {
       return error::Error("object size " + std::to_string(object_size) +
                           " is not supported; maximum allowed 5TiB");
     }
