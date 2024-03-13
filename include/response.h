@@ -67,8 +67,7 @@ struct GetRegionResponse : public Response {
 
   GetRegionResponse(error::Error err) : Response(std::move(err)) {}
 
-  GetRegionResponse(const Response& resp)
-      : Response(resp) {}
+  GetRegionResponse(const Response& resp) : Response(resp) {}
 
   ~GetRegionResponse() = default;
 };  // struct GetRegionResponse
@@ -83,8 +82,7 @@ struct ListBucketsResponse : public Response {
 
   ListBucketsResponse(error::Error err) : Response(std::move(err)) {}
 
-  ListBucketsResponse(const Response& resp)
-      : Response(resp) {}
+  ListBucketsResponse(const Response& resp) : Response(resp) {}
 
   ~ListBucketsResponse() = default;
 
@@ -98,8 +96,7 @@ struct BucketExistsResponse : public Response {
 
   BucketExistsResponse(error::Error err) : Response(std::move(err)) {}
 
-  BucketExistsResponse(const Response& resp)
-      : Response(resp) {}
+  BucketExistsResponse(const Response& resp) : Response(resp) {}
 
   ~BucketExistsResponse() = default;
 };  // struct BucketExistsResponse
@@ -118,8 +115,7 @@ struct CompleteMultipartUploadResponse : public Response {
   CompleteMultipartUploadResponse(error::Error err)
       : Response(std::move(err)) {}
 
-  CompleteMultipartUploadResponse(const Response& resp)
-      : Response(resp) {}
+  CompleteMultipartUploadResponse(const Response& resp) : Response(resp) {}
 
   ~CompleteMultipartUploadResponse() = default;
 
@@ -135,8 +131,7 @@ struct CreateMultipartUploadResponse : public Response {
 
   CreateMultipartUploadResponse(error::Error err) : Response(std::move(err)) {}
 
-  CreateMultipartUploadResponse(const Response& resp)
-      : Response(resp) {}
+  CreateMultipartUploadResponse(const Response& resp) : Response(resp) {}
 
   ~CreateMultipartUploadResponse() = default;
 };  // struct CreateMultipartUploadResponse
@@ -149,8 +144,7 @@ struct PutObjectResponse : public Response {
 
   PutObjectResponse(error::Error err) : Response(std::move(err)) {}
 
-  PutObjectResponse(const Response& resp)
-      : Response(resp) {}
+  PutObjectResponse(const Response& resp) : Response(resp) {}
 
   PutObjectResponse(const CompleteMultipartUploadResponse& resp)
       : Response(resp), etag(resp.etag), version_id(resp.version_id) {}
@@ -177,8 +171,7 @@ struct StatObjectResponse : public Response {
 
   StatObjectResponse(error::Error err) : Response(std::move(err)) {}
 
-  StatObjectResponse(const Response& resp)
-      : Response(resp) {}
+  StatObjectResponse(const Response& resp) : Response(resp) {}
 
   ~StatObjectResponse() = default;
 };  // struct StatObjectResponse
@@ -208,8 +201,7 @@ struct Item : public Response {
 
   Item(error::Error err) : Response(std::move(err)) {}
 
-  Item(const Response& resp)
-      : Response(resp) {}
+  Item(const Response& resp) : Response(resp) {}
 
   ~Item() = default;
 };  // struct Item
@@ -244,8 +236,7 @@ struct ListObjectsResponse : public Response {
 
   ListObjectsResponse(error::Error err) : Response(std::move(err)) {}
 
-  ListObjectsResponse(const Response& resp)
-      : Response(resp) {}
+  ListObjectsResponse(const Response& resp) : Response(resp) {}
 
   ~ListObjectsResponse() = default;
 
@@ -275,8 +266,7 @@ struct DeleteError : public Response {
 
   DeleteError(error::Error err) : Response(std::move(err)) {}
 
-  DeleteError(const Response& resp)
-      : Response(resp) {}
+  DeleteError(const Response& resp) : Response(resp) {}
 
   ~DeleteError() = default;
 };  // struct DeleteError
@@ -289,8 +279,7 @@ struct RemoveObjectsResponse : public Response {
 
   RemoveObjectsResponse(error::Error err) : Response(std::move(err)) {}
 
-  RemoveObjectsResponse(const Response& resp)
-      : Response(resp) {}
+  RemoveObjectsResponse(const Response& resp) : Response(resp) {}
 
   ~RemoveObjectsResponse() = default;
 
@@ -310,8 +299,7 @@ struct GetBucketPolicyResponse : public Response {
 
   GetBucketPolicyResponse(error::Error err) : Response(std::move(err)) {}
 
-  GetBucketPolicyResponse(const Response& resp)
-      : Response(resp) {}
+  GetBucketPolicyResponse(const Response& resp) : Response(resp) {}
 
   ~GetBucketPolicyResponse() = default;
 };  // struct GetBucketPolicyResponse
@@ -328,8 +316,7 @@ struct GetBucketNotificationResponse : public Response {
 
   GetBucketNotificationResponse(error::Error err) : Response(std::move(err)) {}
 
-  GetBucketNotificationResponse(const Response& resp)
-      : Response(resp) {}
+  GetBucketNotificationResponse(const Response& resp) : Response(resp) {}
 
   ~GetBucketNotificationResponse() = default;
 
@@ -347,8 +334,7 @@ struct GetBucketEncryptionResponse : public Response {
 
   GetBucketEncryptionResponse(error::Error err) : Response(std::move(err)) {}
 
-  GetBucketEncryptionResponse(const Response& resp)
-      : Response(resp) {}
+  GetBucketEncryptionResponse(const Response& resp) : Response(resp) {}
 
   ~GetBucketEncryptionResponse() = default;
 
@@ -365,8 +351,7 @@ struct GetBucketVersioningResponse : public Response {
 
   GetBucketVersioningResponse(error::Error err) : Response(std::move(err)) {}
 
-  GetBucketVersioningResponse(const Response& resp)
-      : Response(resp) {}
+  GetBucketVersioningResponse(const Response& resp) : Response(resp) {}
 
   ~GetBucketVersioningResponse() = default;
 
@@ -393,8 +378,7 @@ struct GetBucketReplicationResponse : public Response {
 
   GetBucketReplicationResponse(error::Error err) : Response(std::move(err)) {}
 
-  GetBucketReplicationResponse(const Response& resp)
-      : Response(resp) {}
+  GetBucketReplicationResponse(const Response& resp) : Response(resp) {}
 
   ~GetBucketReplicationResponse() = default;
 
@@ -413,8 +397,7 @@ struct GetBucketLifecycleResponse : public Response {
 
   GetBucketLifecycleResponse(error::Error err) : Response(std::move(err)) {}
 
-  GetBucketLifecycleResponse(const Response& resp)
-      : Response(resp) {}
+  GetBucketLifecycleResponse(const Response& resp) : Response(resp) {}
 
   static GetBucketLifecycleResponse ParseXML(std::string_view data);
 };  // struct GetBucketLifecycleResponse
@@ -431,8 +414,7 @@ struct GetBucketTagsResponse : public Response {
 
   GetBucketTagsResponse(error::Error err) : Response(std::move(err)) {}
 
-  GetBucketTagsResponse(const Response& resp)
-      : Response(resp) {}
+  GetBucketTagsResponse(const Response& resp) : Response(resp) {}
 
   ~GetBucketTagsResponse() = default;
 
@@ -451,8 +433,7 @@ struct GetObjectLockConfigResponse : public Response {
 
   GetObjectLockConfigResponse(error::Error err) : Response(std::move(err)) {}
 
-  GetObjectLockConfigResponse(const Response& resp)
-      : Response(resp) {}
+  GetObjectLockConfigResponse(const Response& resp) : Response(resp) {}
 
   ~GetObjectLockConfigResponse() = default;
 };  // struct GetObjectLockConfigResponse
@@ -469,8 +450,7 @@ struct GetObjectTagsResponse : public Response {
 
   GetObjectTagsResponse(error::Error err) : Response(std::move(err)) {}
 
-  GetObjectTagsResponse(const Response& resp)
-      : Response(resp) {}
+  GetObjectTagsResponse(const Response& resp) : Response(resp) {}
 
   ~GetObjectTagsResponse() = default;
 
@@ -491,8 +471,7 @@ struct IsObjectLegalHoldEnabledResponse : public Response {
   IsObjectLegalHoldEnabledResponse(error::Error err)
       : Response(std::move(err)) {}
 
-  IsObjectLegalHoldEnabledResponse(const Response& resp)
-      : Response(resp) {}
+  IsObjectLegalHoldEnabledResponse(const Response& resp) : Response(resp) {}
 
   ~IsObjectLegalHoldEnabledResponse() = default;
 };  // struct IsObjectLegalHoldEnabledResponse
@@ -505,8 +484,7 @@ struct GetObjectRetentionResponse : public Response {
 
   GetObjectRetentionResponse(error::Error err) : Response(std::move(err)) {}
 
-  GetObjectRetentionResponse(const Response& resp)
-      : Response(resp) {}
+  GetObjectRetentionResponse(const Response& resp) : Response(resp) {}
 
   ~GetObjectRetentionResponse() = default;
 };  // struct GetObjectRetentionResponse
@@ -520,8 +498,7 @@ struct GetPresignedObjectUrlResponse : public Response {
 
   GetPresignedObjectUrlResponse(error::Error err) : Response(std::move(err)) {}
 
-  GetPresignedObjectUrlResponse(const Response& resp)
-      : Response(resp) {}
+  GetPresignedObjectUrlResponse(const Response& resp) : Response(resp) {}
 
   ~GetPresignedObjectUrlResponse() = default;
 };  // struct GetPresignedObjectUrlResponse
@@ -535,8 +512,7 @@ struct GetPresignedPostFormDataResponse : public Response {
   GetPresignedPostFormDataResponse(error::Error err)
       : Response(std::move(err)) {}
 
-  GetPresignedPostFormDataResponse(const Response& resp)
-      : Response(resp) {}
+  GetPresignedPostFormDataResponse(const Response& resp) : Response(resp) {}
 
   ~GetPresignedPostFormDataResponse() = default;
 };  // struct GetPresignedPostFormDataResponse

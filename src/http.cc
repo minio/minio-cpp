@@ -322,7 +322,8 @@ minio::http::Response minio::http::Request::execute() {
         headers.Add("Content-Length", std::to_string(body.size()));
       }
       request.setOpt(new curlpp::Options::ReadStream(&body_stream));
-      request.setOpt(new curlpp::Options::InfileSize(static_cast<long>(body.size())));
+      request.setOpt(
+          new curlpp::Options::InfileSize(static_cast<long>(body.size())));
       request.setOpt(new curlpp::Options::Upload(true));
       break;
   }

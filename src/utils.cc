@@ -104,10 +104,8 @@ bool minio::utils::StringToBool(const std::string& str) {
 
 std::string minio::utils::Trim(std::string_view str, char ch) {
   std::size_t start, len;
-  for (start = 0; start < str.size() && str[start] == ch; start++)
-    ;
-  for (len = str.size() - start; len > 0 && str[start + len - 1] == ch; len--)
-    ;
+  for (start = 0; start < str.size() && str[start] == ch; start++);
+  for (len = str.size() - start; len > 0 && str[start + len - 1] == ch; len--);
   return std::string(str.substr(start, len));
 }
 

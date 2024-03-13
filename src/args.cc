@@ -221,8 +221,7 @@ minio::error::Error minio::s3::GetObjectArgs::Validate() const {
 
 minio::s3::ListObjectsV1Args::ListObjectsV1Args() {}
 
-minio::s3::ListObjectsV1Args::ListObjectsV1Args(
-    ListObjectsArgs args) {
+minio::s3::ListObjectsV1Args::ListObjectsV1Args(ListObjectsArgs args) {
   this->extra_headers = args.extra_headers;
   this->extra_query_params = args.extra_query_params;
   this->bucket = args.bucket;
@@ -236,8 +235,7 @@ minio::s3::ListObjectsV1Args::ListObjectsV1Args(
 
 minio::s3::ListObjectsV2Args::ListObjectsV2Args() {}
 
-minio::s3::ListObjectsV2Args::ListObjectsV2Args(
-    ListObjectsArgs args) {
+minio::s3::ListObjectsV2Args::ListObjectsV2Args(ListObjectsArgs args) {
   this->extra_headers = args.extra_headers;
   this->extra_query_params = args.extra_query_params;
   this->bucket = args.bucket;

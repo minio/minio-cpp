@@ -17,11 +17,13 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #endif
 
-#include <fstream>
-#include <nlohmann/json.hpp>
+#include "providers.h"
+
 #include <INIReader.h>
 
-#include "providers.h"
+#include <fstream>
+#include <nlohmann/json.hpp>
+
 #include "signer.h"
 #include "utils.h"
 

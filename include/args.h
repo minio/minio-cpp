@@ -273,7 +273,7 @@ struct PutObjectArgs : public PutObjectBaseArgs {
   ~PutObjectArgs() = default;
 
   error::Error Validate();  // PWTODO: the validator modifies the object
-};                          // struct PutObjectArgs
+};  // struct PutObjectArgs
 
 using CopySource = ObjectConditionalReadArgs;
 
@@ -319,7 +319,7 @@ struct UploadObjectArgs : public PutObjectBaseArgs {
   ~UploadObjectArgs() = default;
 
   error::Error Validate();  // PWTODO: the validator modifies the object
-};                          // struct UploadObjectArgs
+};  // struct UploadObjectArgs
 
 struct RemoveObjectsApiArgs : public BucketArgs {
   bool bypass_governance_mode = false;

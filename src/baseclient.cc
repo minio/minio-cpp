@@ -316,12 +316,8 @@ minio::s3::BaseClient::CompleteMultipartUpload(
   std::stringstream ss;
   ss << "<CompleteMultipartUpload>";
   for (auto& part : args.parts) {
-    ss << "<Part>"
-       << "<PartNumber>" << part.number << "</PartNumber>"
-       << "<ETag>"
-       << "\"" << part.etag << "\""
-       << "</ETag>"
-       << "</Part>";
+    ss << "<Part>" << "<PartNumber>" << part.number << "</PartNumber>"
+       << "<ETag>" << "\"" << part.etag << "\"" << "</ETag>" << "</Part>";
   }
   ss << "</CompleteMultipartUpload>";
   std::string body = ss.str();
@@ -1191,9 +1187,8 @@ minio::s3::MakeBucketResponse minio::s3::BaseClient::MakeBucket(
   std::string body;
   if (region != "us-east-1") {
     std::stringstream ss;
-    ss << "<CreateBucketConfiguration>"
-       << "<LocationConstraint>" << region << "</LocationConstraint>"
-       << "</CreateBucketConfiguration>";
+    ss << "<CreateBucketConfiguration>" << "<LocationConstraint>" << region
+       << "</LocationConstraint>" << "</CreateBucketConfiguration>";
     body = ss.str();
     req.body = body;
   }
@@ -1488,10 +1483,8 @@ minio::s3::SetBucketTagsResponse minio::s3::BaseClient::SetBucketTags(
   if (!args.tags.empty()) {
     ss << "<TagSet>";
     for (auto& [key, value] : args.tags) {
-      ss << "<Tag>"
-         << "<Key>" << key << "</Key>"
-         << "<Value>" << value << "</Value>"
-         << "</Tag>";
+      ss << "<Tag>" << "<Key>" << key << "</Key>" << "<Value>" << value
+         << "</Value>" << "</Tag>";
     }
     ss << "</TagSet>";
   }
@@ -1599,10 +1592,9 @@ minio::s3::SetObjectRetentionResponse minio::s3::BaseClient::SetObjectRetention(
   }
 
   std::stringstream ss;
-  ss << "<Retention>"
-     << "<Mode>" << RetentionModeToString(args.retention_mode) << "</Mode>"
-     << "<RetainUntilDate>" << args.retain_until_date.ToISO8601UTC()
-     << "</RetainUntilDate>"
+  ss << "<Retention>" << "<Mode>" << RetentionModeToString(args.retention_mode)
+     << "</Mode>" << "<RetainUntilDate>"
+     << args.retain_until_date.ToISO8601UTC() << "</RetainUntilDate>"
      << "</Retention>";
 
   std::string body = ss.str();
@@ -1637,10 +1629,8 @@ minio::s3::SetObjectTagsResponse minio::s3::BaseClient::SetObjectTags(
   if (!args.tags.empty()) {
     ss << "<TagSet>";
     for (auto& [key, value] : args.tags) {
-      ss << "<Tag>"
-         << "<Key>" << key << "</Key>"
-         << "<Value>" << value << "</Value>"
-         << "</Tag>";
+      ss << "<Tag>" << "<Key>" << key << "</Key>" << "<Value>" << value
+         << "</Value>" << "</Tag>";
     }
     ss << "</TagSet>";
   }
