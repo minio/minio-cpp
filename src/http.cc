@@ -397,16 +397,14 @@ minio::http::Response minio::http::Request::execute() {
   return response;
 }
 
-minio::http::Response minio::http::Request::Execute() {
-  try {
-    return execute();
-  } catch (curlpp::LogicError& e) {
-    Response response;
-    response.error = std::string("curlpp::LogicError: ") + e.what();
-    return response;
-  } catch (curlpp::RuntimeError& e) {
-    Response response;
-    response.error = std::string("curlpp::RuntimeError: ") + e.what();
-    return response;
-  }
+minio::http::Response minio::http::Request::Execute() try {
+  return execute();
+} catch (curlpp::LogicError& e) {
+  Response response;
+  response.error = std::string("curlpp::LogicError: ") + e.what();
+  return response;
+} catch (curlpp::RuntimeError& e) {
+  Response response;
+  response.error = std::string("curlpp::RuntimeError: ") + e.what();
+  return response;
 }
