@@ -201,11 +201,11 @@ class Tests {
         throw std::runtime_error("BucketExists(): expected: true; got: false");
       }
       RemoveBucket(bucket_name);
-    } catch (const MakeBucketError& err) {
-      throw err;
-    } catch (const std::runtime_error& err) {
+    } catch (const MakeBucketError&) {
+      throw;
+    } catch (const std::runtime_error&) {
       RemoveBucket(bucket_name);
-      throw err;
+      throw;
     }
   }
 
@@ -238,9 +238,9 @@ class Tests {
             "; got: " + std::to_string(c));
       }
       for (auto& bucket_name : bucket_names) RemoveBucket(bucket_name);
-    } catch (const std::runtime_error& err) {
+    } catch (const std::runtime_error&) {
       for (auto& bucket_name : bucket_names) RemoveBucket(bucket_name);
-      throw err;
+      throw;
     }
   }
 
@@ -272,9 +272,9 @@ class Tests {
             "; got: " + std::to_string(resp.size));
       }
       RemoveObject(bucket_name_, object_name);
-    } catch (const std::runtime_error& err) {
+    } catch (const std::runtime_error&) {
       RemoveObject(bucket_name_, object_name);
-      throw err;
+      throw;
     }
   }
 
@@ -334,9 +334,9 @@ class Tests {
       }
       std::filesystem::remove(filename);
       RemoveObject(bucket_name_, object_name);
-    } catch (const std::runtime_error& err) {
+    } catch (const std::runtime_error&) {
       RemoveObject(bucket_name_, object_name);
-      throw err;
+      throw;
     }
   }
 
@@ -374,9 +374,9 @@ class Tests {
                                  "; got: " + content);
       }
       RemoveObject(bucket_name_, object_name);
-    } catch (const std::runtime_error& err) {
+    } catch (const std::runtime_error&) {
       RemoveObject(bucket_name_, object_name);
-      throw err;
+      throw;
     }
   }
 
@@ -419,9 +419,9 @@ class Tests {
             "; got: " + std::to_string(c));
       }
       RemoveObjects(object_names);
-    } catch (const std::runtime_error& err) {
+    } catch (const std::runtime_error&) {
       RemoveObjects(object_names);
-      throw err;
+      throw;
     }
   }
 
@@ -491,10 +491,10 @@ class Tests {
       }
       RemoveObject(bucket_name_, src_object_name);
       RemoveObject(bucket_name_, object_name);
-    } catch (const std::runtime_error& err) {
+    } catch (const std::runtime_error&) {
       RemoveObject(bucket_name_, src_object_name);
       RemoveObject(bucket_name_, object_name);
-      throw err;
+      throw;
     }
   }
 
@@ -536,9 +536,9 @@ class Tests {
         object_names.push_back(object_name);
       }
       RemoveObjects(object_names);
-    } catch (const std::runtime_error& err) {
+    } catch (const std::runtime_error&) {
       RemoveObjects(object_names);
-      throw err;
+      throw;
     }
   }
 
@@ -595,9 +595,9 @@ class Tests {
         throw std::runtime_error("expected: " + data + ", got: " + records);
       }
       RemoveObject(bucket_name_, object_name);
-    } catch (const std::runtime_error& err) {
+    } catch (const std::runtime_error&) {
       RemoveObject(bucket_name_, object_name);
-      throw err;
+      throw;
     }
   }
 
@@ -664,9 +664,9 @@ class Tests {
       }
 
       RemoveObject(bucket_name_, object_name);
-    } catch (const std::runtime_error& err) {
+    } catch (const std::runtime_error&) {
       RemoveObject(bucket_name_, object_name);
-      throw err;
+      throw;
     }
   }
 };  // class Tests
