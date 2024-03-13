@@ -27,7 +27,7 @@ namespace s3 {
 enum class RetentionMode { kGovernance, kCompliance };
 
 // StringToRetentionMode converts string to retention mode enum.
-RetentionMode StringToRetentionMode(std::string_view str) throw();
+RetentionMode StringToRetentionMode(std::string_view str) noexcept;
 
 constexpr bool IsRetentionModeValid(RetentionMode retention) {
   switch (retention) {
@@ -39,7 +39,7 @@ constexpr bool IsRetentionModeValid(RetentionMode retention) {
 }
 
 // RetentionModeToString converts retention mode enum to string.
-constexpr const char* RetentionModeToString(RetentionMode retention) throw() {
+constexpr const char* RetentionModeToString(RetentionMode retention) noexcept {
   switch (retention) {
     case RetentionMode::kGovernance:
       return "GOVERNANCE";
@@ -57,7 +57,7 @@ constexpr const char* RetentionModeToString(RetentionMode retention) throw() {
 enum class LegalHold { kOn, kOff };
 
 // StringToLegalHold converts string to legal hold enum.
-LegalHold StringToLegalHold(std::string_view str) throw();
+LegalHold StringToLegalHold(std::string_view str) noexcept;
 
 constexpr bool IsLegalHoldValid(LegalHold legal_hold) {
   switch (legal_hold) {
@@ -69,7 +69,7 @@ constexpr bool IsLegalHoldValid(LegalHold legal_hold) {
 }
 
 // LegalHoldToString converts legal hold enum to string.
-constexpr const char* LegalHoldToString(LegalHold legal_hold) throw() {
+constexpr const char* LegalHoldToString(LegalHold legal_hold) noexcept {
   switch (legal_hold) {
     case LegalHold::kOn:
       return "ON";
@@ -87,10 +87,10 @@ constexpr const char* LegalHoldToString(LegalHold legal_hold) throw() {
 enum class Directive { kCopy, kReplace };
 
 // StringToDirective converts string to directive enum.
-Directive StringToDirective(std::string_view str) throw();
+Directive StringToDirective(std::string_view str) noexcept;
 
 // DirectiveToString converts directive enum to string.
-constexpr const char* DirectiveToString(Directive directive) throw() {
+constexpr const char* DirectiveToString(Directive directive) noexcept {
   switch (directive) {
     case Directive::kCopy:
       return "COPY";
@@ -108,7 +108,7 @@ constexpr const char* DirectiveToString(Directive directive) throw() {
 enum class CompressionType { kNone, kGZip, kBZip2 };
 
 // CompressionTypeToString converts compression type enum to string.
-constexpr const char* CompressionTypeToString(CompressionType ctype) throw() {
+constexpr const char* CompressionTypeToString(CompressionType ctype) noexcept {
   switch (ctype) {
     case CompressionType::kNone:
       return "NONE";
@@ -128,7 +128,7 @@ constexpr const char* CompressionTypeToString(CompressionType ctype) throw() {
 enum class FileHeaderInfo { kUse, kIgnore, kNone };
 
 // FileHeaderInfoToString converts file header info enum to string.
-constexpr const char* FileHeaderInfoToString(FileHeaderInfo info) throw() {
+constexpr const char* FileHeaderInfoToString(FileHeaderInfo info) noexcept {
   switch (info) {
     case FileHeaderInfo::kUse:
       return "USE";
@@ -148,7 +148,7 @@ constexpr const char* FileHeaderInfoToString(FileHeaderInfo info) throw() {
 enum class JsonType { kDocument, kLines };
 
 // JsonTypeToString converts JSON type enum to string.
-constexpr const char* JsonTypeToString(JsonType jtype) throw() {
+constexpr const char* JsonTypeToString(JsonType jtype) noexcept {
   switch (jtype) {
     case JsonType::kDocument:
       return "DOCUMENT";
@@ -166,7 +166,7 @@ constexpr const char* JsonTypeToString(JsonType jtype) throw() {
 enum class QuoteFields { kAlways, kAsNeeded };
 
 // QuoteFieldsToString converts quote fields enum to string.
-constexpr const char* QuoteFieldsToString(QuoteFields qtype) throw() {
+constexpr const char* QuoteFieldsToString(QuoteFields qtype) noexcept {
   switch (qtype) {
     case QuoteFields::kAlways:
       return "ALWAYS";

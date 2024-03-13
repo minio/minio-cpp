@@ -16,7 +16,7 @@
 #include "types.h"
 
 minio::s3::RetentionMode minio::s3::StringToRetentionMode(
-    std::string_view str) throw() {
+    std::string_view str) noexcept {
   if (str == "GOVERNANCE") return RetentionMode::kGovernance;
   if (str == "COMPLIANCE") return RetentionMode::kCompliance;
 
@@ -28,7 +28,7 @@ minio::s3::RetentionMode minio::s3::StringToRetentionMode(
 }
 
 minio::s3::LegalHold minio::s3::StringToLegalHold(
-    std::string_view str) throw() {
+    std::string_view str) noexcept {
   if (str == "ON") return LegalHold::kOn;
   if (str == "OFF") return LegalHold::kOff;
 
@@ -40,7 +40,7 @@ minio::s3::LegalHold minio::s3::StringToLegalHold(
 }
 
 minio::s3::Directive minio::s3::StringToDirective(
-    std::string_view str) throw() {
+    std::string_view str) noexcept {
   if (str == "COPY") return Directive::kCopy;
   if (str == "REPLACE") return Directive::kReplace;
 

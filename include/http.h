@@ -33,7 +33,7 @@ namespace http {
 enum class Method { kGet, kHead, kPost, kPut, kDelete };
 
 // MethodToString converts http Method enum to string.
-constexpr const char* MethodToString(Method method) throw() {
+constexpr const char* MethodToString(Method method) noexcept {
   switch (method) {
     case Method::kGet:
       return "GET";
