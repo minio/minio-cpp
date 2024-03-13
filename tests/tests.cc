@@ -436,7 +436,9 @@ class Tests {
       std::string object_name = RandObjectName();
       std::string data = "PutObject()";
       std::stringstream ss(data);
-      minio::s3::PutObjectArgs args(ss, static_cast<long>(data.length()), 0); // PWTODO: PutObjectArgs should accept size_t instead of long
+      minio::s3::PutObjectArgs args(
+          ss, static_cast<long>(data.length()),
+          0);  // PWTODO: PutObjectArgs should accept size_t instead of long
       args.bucket = bucket_name_;
       args.object = object_name;
       minio::s3::PutObjectResponse resp = client_.PutObject(args);
