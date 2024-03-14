@@ -178,8 +178,7 @@ class Time {
 #endif
 
   friend std::ostream& operator<<(std::ostream& s, const Time& v) {
-    // PWTODO: which variant should be selected?
-    return s << v.ToAmzDate();
+    return s << v.ToISO8601UTC();
   }
 };  // class Time
 
