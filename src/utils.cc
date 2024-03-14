@@ -282,8 +282,7 @@ std::string minio::utils::FormatTime(const std::tm* time, const char* format) {
 }
 
 std::tm* minio::utils::Time::ToUTC() const {
-  std::tm* t = new std::tm;  // PWTODO: why a dynamic object? Can it lead to
-                             // memory leaks?
+  std::tm* t = new std::tm;
   const time_t secs = tv_.tv_sec;
   *t = utc_ ? *std::localtime(&secs) : *std::gmtime(&secs);
   return t;

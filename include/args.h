@@ -272,7 +272,7 @@ struct PutObjectArgs : public PutObjectBaseArgs {
   PutObjectArgs(std::istream &stream, long object_size, long part_size);
   ~PutObjectArgs() = default;
 
-  error::Error Validate();  // PWTODO: the validator modifies the object
+  error::Error Validate();
 };                          // struct PutObjectArgs
 
 using CopySource = ObjectConditionalReadArgs;
@@ -318,7 +318,7 @@ struct UploadObjectArgs : public PutObjectBaseArgs {
   UploadObjectArgs() = default;
   ~UploadObjectArgs() = default;
 
-  error::Error Validate();  // PWTODO: the validator modifies the object
+  error::Error Validate();
 };                          // struct UploadObjectArgs
 
 struct RemoveObjectsApiArgs : public BucketArgs {
