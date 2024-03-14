@@ -374,7 +374,6 @@ minio::utils::Time minio::utils::Time::FromISO8601UTC(const char* value) {
 }
 
 int minio::utils::Time::Compare(const Time& rhs) const {
-  // PWTODO: what to do with the utc field?
   if (tv_.tv_sec != rhs.tv_.tv_sec) {
     return (tv_.tv_sec < rhs.tv_.tv_sec) ? -1 : 1;
   }
