@@ -454,8 +454,7 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
         }
 
         http::ProgressFunctionArgs actual_args;
-        actual_args.upload_total_bytes = static_cast<double>(
-            object_size);
+        actual_args.upload_total_bytes = static_cast<double>(object_size);
         actual_args.uploaded_bytes = uploaded_bytes + args.uploaded_bytes;
         actual_args.userdata = progress_userdata;
         progressfunc(actual_args);
@@ -469,11 +468,9 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
 
     if (UploadPartResponse resp = UploadPart(up_args)) {
       if (args.progressfunc != nullptr) {
-        uploaded_bytes += static_cast<double>(
-            data.length());
+        uploaded_bytes += static_cast<double>(data.length());
         http::ProgressFunctionArgs actual_args;
-        actual_args.upload_total_bytes = static_cast<double>(
-            object_size);
+        actual_args.upload_total_bytes = static_cast<double>(object_size);
         actual_args.uploaded_bytes = uploaded_bytes;
         actual_args.userdata = args.progress_userdata;
         args.progressfunc(actual_args);
