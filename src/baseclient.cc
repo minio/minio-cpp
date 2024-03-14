@@ -1181,10 +1181,10 @@ minio::s3::BaseClient::ListenBucketNotification(
       }
 
       if (records.size() <= 0) continue;
-      /*PWTODO: there is no such conversion. How did it go in the original
-         version? if (!func(records)) { return
-         ListenBucketNotificationResponse(false);
-            }*/
+
+      if (!func(records)) {
+        return false;
+      }
     }
   };
 
