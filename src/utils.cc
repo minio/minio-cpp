@@ -20,6 +20,7 @@
 #include "utils.h"
 
 #include <memory>
+#include <time.h>
 
 const std::string WEEK_DAYS[] = {"Sun", "Mon", "Tue", "Wed",
                                  "Thu", "Fri", "Sat"};
@@ -275,18 +276,29 @@ std::string minio::utils::Md5sumHash(std::string_view str) {
   return minio::utils::Base64Encode(hash);
 }
 
-std::string minio::utils::FormatTime(const std::tm* time, const char* format) {
+std::string minio::utils::FormatTime(const std::tm& time, const char* format) {
   char buf[128];
-  std::strftime(buf, 128, format, time);
+  std::strftime(buf, 128, format, &time);
   return std::string(buf);
 }
 
-std::tm* minio::utils::Time::ToUTC() const {
-  std::tm* t = new std::tm;  // PWTODO: why a dynamic object? Can it lead to
-                             // memory leaks?
+std::tm minio::utils::Time::ToUTC() const {
+  std::tm result{};
   const time_t secs = tv_.tv_sec;
-  *t = utc_ ? *std::localtime(&secs) : *std::gmtime(&secs);
-  return t;
+#ifdef _WIN32
+  if (utc_) {
+    localtime_s(&result, &secs);  
+  } else {
+    gmtime_s(&result, &secs);
+  }
+#else
+  if (utc_) {
+    localtime_r(&secs, &result);
+  } else {
+    gmtime_r(&secs, &result);
+  }
+#endif
+  return result;
 }
 
 minio::utils::Time minio::utils::Time::Now() {
@@ -297,22 +309,22 @@ minio::utils::Time minio::utils::Time::Now() {
 }
 
 std::string minio::utils::Time::ToSignerDate() const {
-  std::unique_ptr<std::tm> utc(ToUTC());
-  std::string result = FormatTime(utc.get(), "%Y%m%d");
+  const auto utc = ToUTC();
+  std::string result = FormatTime(utc, "%Y%m%d");
   return result;
 }
 
 std::string minio::utils::Time::ToAmzDate() const {
-  std::unique_ptr<std::tm> utc(ToUTC());
-  std::string result = FormatTime(utc.get(), "%Y%m%dT%H%M%SZ");
+  const auto utc = ToUTC();
+  std::string result = FormatTime(utc, "%Y%m%dT%H%M%SZ");
   return result;
 }
 
 std::string minio::utils::Time::ToHttpHeaderValue() const {
-  std::unique_ptr<std::tm> utc(ToUTC());
+  const auto utc = ToUTC();
   std::stringstream ss;
-  ss << WEEK_DAYS[utc->tm_wday] << ", " << FormatTime(utc.get(), "%d ")
-     << MONTHS[utc->tm_mon] << FormatTime(utc.get(), " %Y %H:%M:%S GMT");
+  ss << WEEK_DAYS[utc.tm_wday] << ", " << FormatTime(utc, "%d ")
+     << MONTHS[utc.tm_mon] << FormatTime(utc, " %Y %H:%M:%S GMT");
   return ss.str();
 }
 
@@ -357,9 +369,9 @@ std::string minio::utils::Time::ToISO8601UTC() const {
   snprintf(buf, 64, "%03ld", (long int)tv_.tv_usec);
   std::string usec_str(buf);
   if (usec_str.size() > 3) usec_str = usec_str.substr(0, 3);
-  std::unique_ptr<std::tm> utc(ToUTC());
+  const auto utc = ToUTC();
   std::string result =
-      FormatTime(utc.get(), "%Y-%m-%dT%H:%M:%S.") + usec_str + "Z";
+      FormatTime(utc, "%Y-%m-%dT%H:%M:%S.") + usec_str + "Z";
   return result;
 }
 
