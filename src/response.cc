@@ -576,7 +576,7 @@ minio::s3::GetBucketReplicationResponse::ParseXML(std::string_view data) {
         if (filter.node().select_node("And/Tag")) {
           auto tags = root.node().select_nodes("And/Tag");
           for (auto& tag : tags) {
-            (void)tag;  // PWTODO: why isn't it used?
+            (void)tag;
             text = filter.node().select_node("Key/text()");
             std::string key = text.node().value();
 
@@ -694,7 +694,7 @@ minio::s3::GetBucketLifecycleResponse::ParseXML(std::string_view data) {
       if (filter.node().select_node("And/Tag")) {
         auto tags = root.node().select_nodes("And/Tag");
         for (auto& tag : tags) {
-          (void)tag;  // PWTODO: why isn't it used?
+          (void)tag;
           text = filter.node().select_node("Key/text()");
           std::string key = text.node().value();
 
