@@ -661,7 +661,6 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
   }
 
   std::string etag;
-  size_t size;
   {
     StatObjectArgs soargs;
     soargs.bucket = args.bucket;
