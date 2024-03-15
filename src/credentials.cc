@@ -45,6 +45,6 @@ minio::creds::Credentials minio::creds::Credentials::ParseXML(
   text = credentials.node().select_node("Expiration/text()");
   auto expiration = utils::Time::FromISO8601UTC(text.node().value());
 
-  return Credentials{error::SUCCESS, access_key, secret_key, session_token,
-                     expiration};
+  return Credentials(error::SUCCESS, std::move(access_key), std::move(secret_key), 
+      std::move(session_token), expiration);
 }

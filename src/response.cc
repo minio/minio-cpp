@@ -94,7 +94,7 @@ minio::s3::ListBucketsResponse minio::s3::ListBucketsResponse::ParseXML(
       creation_date = utils::Time::FromISO8601UTC(value.c_str());
     }
 
-    buckets.push_back(Bucket{name, creation_date});
+    buckets.push_back(Bucket(std::move(name), std::move(creation_date)));
   }
 
   return ListBucketsResponse(buckets);

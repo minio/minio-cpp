@@ -105,7 +105,7 @@ minio::http::Url minio::http::Url::Parse(std::string value) {
   if (!https && port == 80) port = 0;
   if (https && port == 443) port = 0;
 
-  return Url{https, host, port, path, query_string};
+  return Url(https, std::move(host), port, std::move(path), std::move(query_string));
 }
 
 minio::error::Error minio::http::Response::ReadStatusCode() {
@@ -248,7 +248,7 @@ size_t minio::http::Response::ResponseCallback(curlpp::Multi* const requests,
 
     // If data function is set and the request is successful, send data.
     if (datafunc != nullptr && status_code >= 200 && status_code <= 299) {
-      DataFunctionArgs args{request, this, response_, userdata};
+        DataFunctionArgs args(request, this, std::string(this->response_), userdata);
       if (!datafunc(args)) requests->remove(request);
     } else {
       body = response_;
@@ -259,7 +259,7 @@ size_t minio::http::Response::ResponseCallback(curlpp::Multi* const requests,
 
   // If data function is set and the request is successful, send data.
   if (datafunc != nullptr && status_code >= 200 && status_code <= 299) {
-    DataFunctionArgs args{request, this, std::string(buffer, length), userdata};
+    DataFunctionArgs args(request, this, std::string(buffer, length), userdata);
     if (!datafunc(args)) requests->remove(request);
   } else {
     body.append(buffer, length);

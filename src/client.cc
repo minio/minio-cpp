@@ -294,11 +294,13 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
       upc_args.headers = headers;
       upc_args.upload_id = upload_id;
       upc_args.part_number = part_number;
-      UploadPartCopyResponse resp = UploadPartCopy(upc_args);
-      if (!resp) {
-        return ComposeObjectResponse(resp);
+      {
+          UploadPartCopyResponse resp = UploadPartCopy(upc_args);
+          if (!resp) {
+              return ComposeObjectResponse(resp);
+          }
+          parts.push_back(Part(part_number, std::move(resp.etag)));
       }
-      parts.push_back(Part{part_number, resp.etag});
     } else {
       while (size > 0) {
         part_number++;
@@ -320,12 +322,13 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
         upc_args.headers = headerscopy;
         upc_args.upload_id = upload_id;
         upc_args.part_number = part_number;
-        UploadPartCopyResponse resp = UploadPartCopy(upc_args);
-        if (!resp) {
-          return ComposeObjectResponse(resp);
+        {
+            UploadPartCopyResponse resp = UploadPartCopy(upc_args);
+            if (!resp) {
+                return ComposeObjectResponse(resp);
+            }
+            parts.push_back(Part(part_number, std::move(resp.etag)));
         }
-        parts.push_back(Part{part_number, resp.etag});
-
         offset = start_bytes;
         size -= (end_bytes - start_bytes);
       }
@@ -483,7 +486,7 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
         up_args.headers = ssec->Headers();
       }
     }
-
+    
     if (UploadPartResponse resp = UploadPart(up_args)) {
       if (args.progressfunc != nullptr) {
         uploaded_bytes += static_cast<double>(
@@ -495,7 +498,7 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
         actual_args.userdata = args.progress_userdata;
         args.progressfunc(actual_args);
       }
-      parts.push_back(Part{part_number, resp.etag});
+      parts.push_back(Part(part_number, std::move(resp.etag)));
     } else {
       return resp;
     }
