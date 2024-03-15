@@ -16,7 +16,7 @@
 #include "client.h"
 #include "select.h"
 
-int main(int /*argc*/, char* /*argv*/[]) {
+int main() {
   // Create S3 base URL.
   minio::s3::BaseUrl base_url("play.min.io");
 
