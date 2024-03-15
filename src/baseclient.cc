@@ -282,7 +282,8 @@ minio::s3::BucketExistsResponse minio::s3::BaseClient::BucketExists(
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return (resp.code == "NoSuchBucket") ? BucketExistsResponse(false) : BucketExistsResponse(resp);
+    return (resp.code == "NoSuchBucket") ? BucketExistsResponse(false)
+                                         : BucketExistsResponse(resp);
   }
 
   Request req(http::Method::kHead, region, base_url_, args.extra_headers,
@@ -291,7 +292,8 @@ minio::s3::BucketExistsResponse minio::s3::BaseClient::BucketExists(
   if (Response resp = Execute(req)) {
     return true;
   } else {
-    return (resp.code == "NoSuchBucket") ? BucketExistsResponse(false) : BucketExistsResponse(resp);
+    return (resp.code == "NoSuchBucket") ? BucketExistsResponse(false)
+                                         : BucketExistsResponse(resp);
   }
 }
 
