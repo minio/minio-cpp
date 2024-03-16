@@ -657,7 +657,7 @@ minio::error::Error minio::s3::PostPolicy::FormData(
     conditions.push_back(
         {"content-length-range", lower_limit_.Get(), upper_limit_.Get()});
   }
-  utils::Time date = utils::Time::Now();
+  utils::UtcTime date = utils::UtcTime::Now();
   std::string credential = getCredentialString(access_key, date, region);
   std::string amz_date = date.ToAmzDate();
   conditions.push_back({eq_, "$x-amz-algorithm", algorithm_});
@@ -692,7 +692,7 @@ std::string minio::s3::PostPolicy::trimDollar(std::string value) {
 }
 
 std::string minio::s3::PostPolicy::getCredentialString(std::string access_key,
-                                                       utils::Time date,
+                                                       utils::UtcTime date,
                                                        std::string region) {
   return access_key + "/" + date.ToSignerDate() + "/" + region +
          "/s3/aws4_request";

@@ -235,7 +235,7 @@ minio::creds::Credentials minio::creds::AssumeRoleProvider::Fetch() {
 
   if (creds_) return creds_;
 
-  utils::Time date = utils::Time::Now();
+  utils::UtcTime date = utils::UtcTime::Now();
   utils::Multimap headers;
   headers.Add("Content-Type", "application/x-www-form-urlencoded");
   headers.Add("Host", sts_endpoint_.host);
@@ -304,7 +304,7 @@ minio::creds::WebIdentityClientGrantsProvider::Fetch() {
       if (!role_session_name_.empty()) {
         map.Add("RoleSessionName", role_session_name_);
       } else {
-        map.Add("RoleSessionName", utils::Time::Now().ToISO8601UTC());
+        map.Add("RoleSessionName", utils::UtcTime::Now().ToISO8601UTC());
       }
     }
   } else {
@@ -434,7 +434,7 @@ minio::creds::Credentials minio::creds::IamAwsProvider::fetch(http::Url url) {
   std::string expiration = json["Expiration"];
   return Credentials{error::SUCCESS, json["AccessKeyId"],
                      json["SecretAccessKey"], json["Token"],
-                     utils::Time::FromISO8601UTC(expiration.c_str())};
+                     utils::UtcTime::FromISO8601UTC(expiration.c_str())};
 }
 
 minio::error::Error minio::creds::IamAwsProvider::getRoleName(

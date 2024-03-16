@@ -118,28 +118,26 @@ error::Error CalcPartInfo(long object_size, size_t& part_size,
                           long& part_count);
 
 /**
- * Time represents date and time with timezone.
+ * UtcTime represents date and time in UTC timezone.
  */
-class Time {
+class UtcTime {
  private:
-  struct timeval tv_ = {};
-  bool utc_ = false;
+  std::time_t secs_ = {};
+  long usecs_ = 0L;
+
+  std::tm* getBrokenDownTime() const;
 
  public:
-  Time() = default;
+  UtcTime() = default;
 
-  Time(std::time_t tv_sec, long tv_usec, bool utc) : utc_(utc) {
-    tv_.tv_sec = static_cast<decltype(tv_.tv_sec)>(tv_sec);
-    tv_.tv_usec = static_cast<decltype(tv_.tv_usec)>(tv_usec);
-  }
+  UtcTime(std::time_t secs) : secs_(secs) {}
+  UtcTime(std::time_t secs, long usecs) : secs_(secs), usecs_(usecs) {}
 
-  ~Time() = default;
+  ~UtcTime() = default;
 
-  void Add(std::time_t seconds) {
-    tv_.tv_sec += static_cast<decltype(tv_.tv_sec)>(seconds);
-  }
+  void Add(std::time_t seconds) { secs_ += seconds; }
 
-  std::tm* ToUTC() const;
+  void ToLocalTime(std::tm& time);
 
   std::string ToSignerDate() const;
 
@@ -147,40 +145,40 @@ class Time {
 
   std::string ToHttpHeaderValue() const;
 
-  static Time FromHttpHeaderValue(const char* value);
+  static UtcTime FromHttpHeaderValue(const char* value);
 
   std::string ToISO8601UTC() const;
 
-  static Time FromISO8601UTC(const char* value);
+  static UtcTime FromISO8601UTC(const char* value);
 
-  static Time Now();
+  static UtcTime Now();
 
-  explicit operator bool() const { return tv_.tv_sec != 0 && tv_.tv_usec != 0; }
+  explicit operator bool() const { return secs_ != 0 && usecs_ != 0; }
 
-  int Compare(const Time& rhs) const;
+  int Compare(const UtcTime& rhs) const;
 
-  bool Equal(const Time& rhs) const { return Compare(rhs) == 0; }
+  bool Equal(const UtcTime& rhs) const { return Compare(rhs) == 0; }
 
-  bool operator==(const Time& rhs) const { return Equal(rhs); }
+  bool operator==(const UtcTime& rhs) const { return Equal(rhs); }
 
-  bool operator!=(const Time& rhs) const { return !operator==(rhs); }
+  bool operator!=(const UtcTime& rhs) const { return !operator==(rhs); }
 
-  bool operator<(const Time& rhs) const { return Compare(rhs) < 0; }
+  bool operator<(const UtcTime& rhs) const { return Compare(rhs) < 0; }
 
-  bool operator>(const Time& rhs) const { return Compare(rhs) > 0; }
+  bool operator>(const UtcTime& rhs) const { return Compare(rhs) > 0; }
 
-  bool operator<=(const Time& rhs) const { return !operator>(rhs); }
+  bool operator<=(const UtcTime& rhs) const { return !operator>(rhs); }
 
-  bool operator>=(const Time& rhs) const { return !operator<(rhs); }
+  bool operator>=(const UtcTime& rhs) const { return !operator<(rhs); }
 
 #if __cplusplus >= 202002L
-  auto operator<=>(const Time& rhs) const { return Compare(rhs); }
+  auto operator<=>(const UtcTime& rhs) const { return Compare(rhs); }
 #endif
 
-  friend std::ostream& operator<<(std::ostream& s, const Time& v) {
+  friend std::ostream& operator<<(std::ostream& s, const UtcTime& v) {
     return s << v.ToISO8601UTC();
   }
-};  // class Time
+};  // class UtcTime
 
 /**
  * Multimap represents dictionary of keys and their multiple values.

@@ -307,7 +307,7 @@ using SelectResultFunction = std::function<bool(SelectResult)>;
 
 struct Bucket {
   std::string name;
-  utils::Time creation_date;
+  utils::UtcTime creation_date;
 
   Bucket() = default;
   ~Bucket() = default;
@@ -316,7 +316,7 @@ struct Bucket {
 struct Part {
   unsigned int number;
   std::string etag;
-  utils::Time last_modified = {};
+  utils::UtcTime last_modified = {};
   size_t size = 0;
 
   Part() = default;
@@ -325,7 +325,7 @@ struct Part {
 
 struct Retention {
   RetentionMode mode;
-  utils::Time retain_until_date;
+  utils::UtcTime retain_until_date;
 
   Retention() = default;
   ~Retention() = default;
@@ -687,7 +687,7 @@ struct ReplicationConfig {
 
 struct LifecycleRule {
   Integer abort_incomplete_multipart_upload_days_after_initiation;
-  utils::Time expiration_date;
+  utils::UtcTime expiration_date;
   Integer expiration_days;
   Boolean expiration_expired_object_delete_marker;
   Filter filter;
@@ -696,7 +696,7 @@ struct LifecycleRule {
   Integer noncurrent_version_transition_noncurrent_days;
   std::string noncurrent_version_transition_storage_class;
   bool status = false;
-  utils::Time transition_date;
+  utils::UtcTime transition_date;
   Integer transition_days;
   std::string transition_storage_class;
 

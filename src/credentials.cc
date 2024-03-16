@@ -17,9 +17,9 @@
 
 #include <pugixml.hpp>
 
-bool minio::creds::expired(const utils::Time& expiration) {
+bool minio::creds::expired(const utils::UtcTime& expiration) {
   if (!expiration) return false;
-  utils::Time now = utils::Time::Now();
+  utils::UtcTime now = utils::UtcTime::Now();
   now.Add(10);
   return expiration < now;
 }
@@ -42,7 +42,7 @@ minio::creds::Credentials minio::creds::Credentials::ParseXML(
   std::string session_token = text.node().value();
 
   text = credentials.node().select_node("Expiration/text()");
-  auto expiration = utils::Time::FromISO8601UTC(text.node().value());
+  auto expiration = utils::UtcTime::FromISO8601UTC(text.node().value());
 
   return Credentials{error::SUCCESS, access_key, secret_key, session_token,
                      expiration};

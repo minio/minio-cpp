@@ -113,7 +113,7 @@ struct Request {
   void* progress_userdata = nullptr;
 
   std::string sha256;
-  utils::Time date;
+  utils::UtcTime date;
 
   bool debug = false;
   bool ignore_cert_check = false;

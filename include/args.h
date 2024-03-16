@@ -83,8 +83,8 @@ struct ObjectConditionalReadArgs : public ObjectReadArgs {
   size_t *length = nullptr;
   std::string match_etag;
   std::string not_match_etag;
-  utils::Time modified_since;
-  utils::Time unmodified_since;
+  utils::UtcTime modified_since;
+  utils::UtcTime unmodified_since;
 
   ObjectConditionalReadArgs() = default;
   ~ObjectConditionalReadArgs() = default;
@@ -488,7 +488,7 @@ using GetObjectRetentionArgs = ObjectVersionArgs;
 
 struct SetObjectRetentionArgs : public ObjectVersionArgs {
   RetentionMode retention_mode;
-  utils::Time retain_until_date;
+  utils::UtcTime retain_until_date;
 
   SetObjectRetentionArgs() = default;
   ~SetObjectRetentionArgs() = default;
@@ -502,7 +502,7 @@ inline constexpr unsigned int kDefaultExpirySeconds =
 struct GetPresignedObjectUrlArgs : public ObjectVersionArgs {
   http::Method method;
   unsigned int expiry_seconds = kDefaultExpirySeconds;
-  utils::Time request_time;
+  utils::UtcTime request_time;
 
   GetPresignedObjectUrlArgs() = default;
   ~GetPresignedObjectUrlArgs() = default;
@@ -514,7 +514,7 @@ struct PostPolicy {
   std::string bucket;
   std::string region;
 
-  PostPolicy(std::string bucket, utils::Time expiration)
+  PostPolicy(std::string bucket, utils::UtcTime expiration)
       : bucket(std::move(bucket)), expiration_(std::move(expiration)) {}
 
   ~PostPolicy() = default;
@@ -538,14 +538,15 @@ struct PostPolicy {
   static constexpr const char *starts_with_ = "starts-with";
   static constexpr const char *algorithm_ = "AWS4-HMAC-SHA256";
 
-  utils::Time expiration_;
+  utils::UtcTime expiration_;
   std::map<std::string, std::map<std::string, std::string>> conditions_;
   Integer lower_limit_;
   Integer upper_limit_;
 
   static std::string trimDollar(std::string value);
   static std::string getCredentialString(std::string access_key,
-                                         utils::Time date, std::string region);
+                                         utils::UtcTime date,
+                                         std::string region);
   static bool isReservedElement(std::string element);
 };  // struct PostPolicy
 }  // namespace s3

@@ -281,60 +281,65 @@ std::string minio::utils::FormatTime(const std::tm* time, const char* format) {
   return std::string(buf);
 }
 
-std::tm* minio::utils::Time::ToUTC() const {
-  std::tm* t = new std::tm;
-  const time_t secs = tv_.tv_sec;
-  *t = utc_ ? *std::localtime(&secs) : *std::gmtime(&secs);
-  return t;
+std::tm* minio::utils::UtcTime::getBrokenDownTime() const {
+  const time_t secs = secs_;
+  return std::localtime(&secs);
 }
 
-minio::utils::Time minio::utils::Time::Now() {
-  auto usec = std::chrono::system_clock::now().time_since_epoch() /
-              std::chrono::microseconds(1);
-  return Time(static_cast<long>(usec / 1000000),
-              static_cast<long>(usec % 1000000), false);
+minio::utils::UtcTime minio::utils::UtcTime::Now() {
+  auto usec_now = std::chrono::system_clock::now().time_since_epoch() /
+                  std::chrono::microseconds(1);
+  auto secs_local = static_cast<time_t>(usec_now / 1000000);
+  auto secs_utc = std::mktime(std::gmtime(&secs_local));
+  return UtcTime(secs_utc, static_cast<long>(usec_now % 1000000));
 }
 
-std::string minio::utils::Time::ToSignerDate() const {
-  std::unique_ptr<std::tm> utc(ToUTC());
-  std::string result = FormatTime(utc.get(), "%Y%m%d");
-  return result;
+void minio::utils::UtcTime::ToLocalTime(std::tm& time) {
+  auto usec_now = std::chrono::system_clock::now().time_since_epoch() /
+                  std::chrono::microseconds(1);
+  auto secs_local = static_cast<time_t>(usec_now / 1000000);
+  auto secs_utc = std::mktime(std::gmtime(&secs_local));
+  auto secs = secs_ + (secs_local - secs_utc);
+  time = *std::localtime(&secs);
 }
 
-std::string minio::utils::Time::ToAmzDate() const {
-  std::unique_ptr<std::tm> utc(ToUTC());
-  std::string result = FormatTime(utc.get(), "%Y%m%dT%H%M%SZ");
-  return result;
+std::string minio::utils::UtcTime::ToSignerDate() const {
+  return FormatTime(getBrokenDownTime(), "%Y%m%d");
 }
 
-std::string minio::utils::Time::ToHttpHeaderValue() const {
-  std::unique_ptr<std::tm> utc(ToUTC());
+std::string minio::utils::UtcTime::ToAmzDate() const {
+  return FormatTime(getBrokenDownTime(), "%Y%m%dT%H%M%SZ");
+}
+
+std::string minio::utils::UtcTime::ToHttpHeaderValue() const {
+  auto tm = getBrokenDownTime();
   std::stringstream ss;
-  ss << WEEK_DAYS[utc->tm_wday] << ", " << FormatTime(utc.get(), "%d ")
-     << MONTHS[utc->tm_mon] << FormatTime(utc.get(), " %Y %H:%M:%S GMT");
+  ss << WEEK_DAYS[tm->tm_wday] << ", " << FormatTime(tm, "%d ")
+     << MONTHS[tm->tm_mon] << FormatTime(tm, " %Y %H:%M:%S GMT");
   return ss.str();
 }
 
-minio::utils::Time minio::utils::Time::FromHttpHeaderValue(const char* value) {
+minio::utils::UtcTime minio::utils::UtcTime::FromHttpHeaderValue(
+    const char* value) {
   std::string s(value);
-  if (s.size() != 29) return Time();
+  if (s.size() != 29) return UtcTime();
 
   // Parse week day.
   auto pos =
       std::find(std::begin(WEEK_DAYS), std::end(WEEK_DAYS), s.substr(0, 3));
-  if (pos == std::end(WEEK_DAYS)) return Time();
-  if (s.at(3) != ',') return Time();
-  if (s.at(4) != ' ') return Time();
+  if (pos == std::end(WEEK_DAYS)) return UtcTime();
+  if (s.at(3) != ',') return UtcTime();
+  if (s.at(4) != ' ') return UtcTime();
   auto week_day = pos - std::begin(WEEK_DAYS);
 
   // Parse day.
   std::tm day{};
   strptime(s.substr(5, 2).c_str(), "%d", &day);
-  if (s.at(7) != ' ') return Time();
+  if (s.at(7) != ' ') return UtcTime();
 
   // Parse month.
   pos = std::find(std::begin(MONTHS), std::end(MONTHS), s.substr(8, 3));
-  if (pos == std::end(MONTHS)) return Time();
+  if (pos == std::end(MONTHS)) return UtcTime();
   auto month = pos - std::begin(MONTHS);
 
   // Parse rest of values.
@@ -346,38 +351,37 @@ minio::utils::Time minio::utils::Time::FromHttpHeaderValue(const char* value) {
   // Validate week day.
   std::time_t time = std::mktime(&ltm);
   std::tm* t = std::localtime(&time);
-  if (week_day != t->tm_wday) return Time();
+  if (week_day != t->tm_wday) return UtcTime();
 
-  return Time(std::mktime(t), 0, true);
+  return UtcTime(std::mktime(t));
 }
 
-std::string minio::utils::Time::ToISO8601UTC() const {
+std::string minio::utils::UtcTime::ToISO8601UTC() const {
   char buf[64];
-  snprintf(buf, 64, "%03ld", (long int)tv_.tv_usec);
+  snprintf(buf, 64, "%03ld", (long int)usecs_);
   std::string usec_str(buf);
   if (usec_str.size() > 3) usec_str = usec_str.substr(0, 3);
-  std::unique_ptr<std::tm> utc(ToUTC());
-  std::string result =
-      FormatTime(utc.get(), "%Y-%m-%dT%H:%M:%S.") + usec_str + "Z";
-  return result;
+  return FormatTime(getBrokenDownTime(), "%Y-%m-%dT%H:%M:%S.") + usec_str + "Z";
 }
 
-minio::utils::Time minio::utils::Time::FromISO8601UTC(const char* value) {
+minio::utils::UtcTime minio::utils::UtcTime::FromISO8601UTC(const char* value) {
   std::tm t{};
   char* rv = strptime(value, "%Y-%m-%dT%H:%M:%S", &t);
+  std::time_t secs = std::mktime(&t);
+
   unsigned long ul = 0;
   sscanf(rv, ".%lu", &ul);
-  long tv_usec = (long)ul;
-  std::time_t time = std::mktime(&t);
-  return Time(time, tv_usec, true);
+  long usecs = (long)ul;
+
+  return UtcTime(secs, usecs);
 }
 
-int minio::utils::Time::Compare(const Time& rhs) const {
-  if (tv_.tv_sec != rhs.tv_.tv_sec) {
-    return (tv_.tv_sec < rhs.tv_.tv_sec) ? -1 : 1;
+int minio::utils::UtcTime::Compare(const UtcTime& rhs) const {
+  if (secs_ != rhs.secs_) {
+    return (secs_ < rhs.secs_) ? -1 : 1;
   }
-  if (tv_.tv_usec != rhs.tv_.tv_usec) {
-    return (tv_.tv_usec < rhs.tv_.tv_usec) ? -1 : 1;
+  if (usecs_ != rhs.usecs_) {
+    return (usecs_ < rhs.usecs_) ? -1 : 1;
   }
   return 0;
 }

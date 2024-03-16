@@ -27,7 +27,7 @@ int main() {
   minio::s3::Client client(base_url, &provider);
 
   // Create get presigned post form data arguments.
-  minio::utils::Time expiration = minio::utils::Time::Now();
+  minio::utils::UtcTime expiration = minio::utils::UtcTime::Now();
   expiration.Add(60 * 60 * 24);  // 1 day from now.
   minio::s3::PostPolicy policy("my-bucket", expiration);
   policy.AddStartsWithCondition("key", "my/object/prefix/");
