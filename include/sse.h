@@ -26,60 +26,37 @@ class Sse {
   utils::Multimap copy_headers_;
 
  public:
-  Sse() {}
+  Sse();
+  virtual ~Sse();
 
-  virtual ~Sse() {}
+  utils::Multimap Headers() const;
+  utils::Multimap CopyHeaders() const;
 
-  utils::Multimap Headers() { return headers_; }
-
-  utils::Multimap CopyHeaders() { return copy_headers_; }
-
-  virtual bool TlsRequired() = 0;
+  virtual bool TlsRequired() const = 0;
 };  // class Sse
 
 class SseCustomerKey : public Sse {
  public:
-  SseCustomerKey(std::string_view key) {
-    std::string b64key = utils::Base64Encode(key);
-    std::string md5key = utils::Md5sumHash(key);
+  SseCustomerKey(std::string_view key);
+  virtual ~SseCustomerKey();
 
-    this->headers_.Add("X-Amz-Server-Side-Encryption-Customer-Algorithm",
-                       "AES256");
-    this->headers_.Add("X-Amz-Server-Side-Encryption-Customer-Key", b64key);
-    this->headers_.Add("X-Amz-Server-Side-Encryption-Customer-Key-MD5", md5key);
-
-    this->copy_headers_.Add(
-        "X-Amz-Copy-Source-Server-Side-Encryption-Customer-Algorithm",
-        "AES256");
-    this->copy_headers_.Add(
-        "X-Amz-Copy-Source-Server-Side-Encryption-Customer-Key", b64key);
-    this->copy_headers_.Add(
-        "X-Amz-Copy-Source-Server-Side-Encryption-Customer-Key-MD5", md5key);
-  }
-
-  bool TlsRequired() { return true; }
+  virtual bool TlsRequired() const override;
 };  // class SseCustomerKey
 
 class SseKms : public Sse {
  public:
-  SseKms(std::string_view key, std::string_view context) {
-    this->headers_.Add("X-Amz-Server-Side-Encryption-Aws-Kms-Key-Id",
-                       std::string(key));
-    this->headers_.Add("X-Amz-Server-Side-Encryption", "aws:kms");
-    if (!context.empty()) {
-      this->headers_.Add("X-Amz-Server-Side-Encryption-Context",
-                         utils::Base64Encode(context));
-    }
-  }
+  SseKms(std::string_view key, std::string_view context);
+  virtual ~SseKms();
 
-  bool TlsRequired() { return true; }
+  virtual bool TlsRequired() const override;
 };  // class SseKms
 
 class SseS3 : public Sse {
  public:
-  SseS3() { this->headers_.Add("X-Amz-Server-Side-Encryption", "AES256"); }
+  SseS3();
+  virtual ~SseS3();
 
-  bool TlsRequired() { return false; }
+  virtual bool TlsRequired() const override;
 };  // class SseS3
 }  // namespace s3
 }  // namespace minio

@@ -35,6 +35,7 @@
 #include <iostream>
 #include <list>
 #include <map>
+#include <ostream>
 #include <regex>
 #include <set>
 #include <sstream>
@@ -48,11 +49,12 @@ inline constexpr unsigned long long kMaxObjectSize = 5497558138880ULL;  // 5TiB
 inline constexpr unsigned long long kMaxPartSize = 5368709120UL;        // 5GiB
 inline constexpr unsigned int kMinPartSize = 5 * 1024 * 1024;           // 5MiB
 
+// GetEnv copies the environment variable name into var
 bool GetEnv(std::string& var, const char* name);
 
 std::string GetHomeDir();
 
-std::string Printable(std::string s);
+std::string Printable(const std::string& s);
 
 unsigned long CRC32(std::string_view str);
 
@@ -62,10 +64,10 @@ unsigned int Int(std::string_view str);
 std::string FormatTime(const std::tm* time, const char* format);
 
 // StringToBool converts string to bool.
-bool StringToBool(std::string str);
+bool StringToBool(const std::string& str);
 
 // BoolToString converts bool to string.
-inline const char* const BoolToString(bool b) { return b ? "true" : "false"; }
+inline const char* BoolToString(bool b) { return b ? "true" : "false"; }
 
 // Trim trims leading and trailing character of a string.
 std::string Trim(std::string_view str, char ch = ' ');
@@ -75,7 +77,7 @@ std::string Trim(std::string_view str, char ch = ' ');
 bool CheckNonEmptyString(std::string_view str);
 
 // ToLower converts string to lower case.
-std::string ToLower(std::string str);
+std::string ToLower(const std::string& str);
 
 // StartsWith returns whether str starts with prefix or not.
 bool StartsWith(std::string_view str, std::string_view prefix);
@@ -90,13 +92,15 @@ bool Contains(std::string_view str, char ch);
 bool Contains(std::string_view str, std::string_view substr);
 
 // Join returns a string of joined values by delimiter.
-std::string Join(std::list<std::string> values, std::string delimiter);
+std::string Join(const std::list<std::string>& values,
+                 const std::string& delimiter);
 
 // Join returns a string of joined values by delimiter.
-std::string Join(std::vector<std::string> values, std::string delimiter);
+std::string Join(const std::vector<std::string>& values,
+                 const std::string& delimiter);
 
 // EncodePath does URL encoding of path. It also normalizes multiple slashes.
-std::string EncodePath(std::string& path);
+std::string EncodePath(const std::string& path);
 
 // Sha256hash computes SHA-256 of data and return hash as hex encoded value.
 std::string Sha256Hash(std::string_view str);
@@ -118,44 +122,64 @@ error::Error CalcPartInfo(long object_size, size_t& part_size,
  */
 class Time {
  private:
-  struct timeval tv_ = {0, 0};
+  struct timeval tv_ = {};
   bool utc_ = false;
 
  public:
-  Time() {}
+  Time() = default;
 
-  Time(std::time_t tv_sec, long tv_usec, bool utc) {
-    this->tv_.tv_sec = tv_sec;
-    this->tv_.tv_usec = tv_usec;
-    this->utc_ = utc;
+  Time(std::time_t tv_sec, long tv_usec, bool utc) : utc_(utc) {
+    tv_.tv_sec = static_cast<decltype(tv_.tv_sec)>(tv_sec);
+    tv_.tv_usec = static_cast<decltype(tv_.tv_usec)>(tv_usec);
   }
 
-  void Add(time_t seconds) { tv_.tv_sec += seconds; }
+  ~Time() = default;
 
-  std::tm* ToUTC();
+  void Add(std::time_t seconds) {
+    tv_.tv_sec += static_cast<decltype(tv_.tv_sec)>(seconds);
+  }
 
-  std::string ToSignerDate();
+  std::tm* ToUTC() const;
 
-  std::string ToAmzDate();
+  std::string ToSignerDate() const;
 
-  std::string ToHttpHeaderValue();
+  std::string ToAmzDate() const;
+
+  std::string ToHttpHeaderValue() const;
 
   static Time FromHttpHeaderValue(const char* value);
 
-  std::string ToISO8601UTC();
+  std::string ToISO8601UTC() const;
 
   static Time FromISO8601UTC(const char* value);
 
-  static Time Now() {
-    Time t;
-    auto usec = std::chrono::system_clock::now().time_since_epoch() /
-                std::chrono::microseconds(1);
-    t.tv_.tv_sec = static_cast<long>(usec / 1000000);
-    t.tv_.tv_usec = static_cast<long>(usec % 1000000);
-    return t;
-  }
+  static Time Now();
 
-  operator bool() const { return tv_.tv_sec != 0 && tv_.tv_usec != 0; }
+  explicit operator bool() const { return tv_.tv_sec != 0 && tv_.tv_usec != 0; }
+
+  int Compare(const Time& rhs) const;
+
+  bool Equal(const Time& rhs) const { return Compare(rhs) == 0; }
+
+  bool operator==(const Time& rhs) const { return Equal(rhs); }
+
+  bool operator!=(const Time& rhs) const { return !operator==(rhs); }
+
+  bool operator<(const Time& rhs) const { return Compare(rhs) < 0; }
+
+  bool operator>(const Time& rhs) const { return Compare(rhs) > 0; }
+
+  bool operator<=(const Time& rhs) const { return !operator>(rhs); }
+
+  bool operator>=(const Time& rhs) const { return !operator<(rhs); }
+
+#if __cplusplus >= 202002L
+  auto operator<=>(const Time& rhs) const { return Compare(rhs); }
+#endif
+
+  friend std::ostream& operator<<(std::ostream& s, const Time& v) {
+    return s << v.ToISO8601UTC();
+  }
 };  // class Time
 
 /**
@@ -167,32 +191,35 @@ class Multimap {
   std::map<std::string, std::set<std::string>> keys_;
 
  public:
-  Multimap() {}
-
-  Multimap(const Multimap& headers) { this->AddAll(headers); }
+  Multimap() = default;
+  Multimap(const Multimap& headers) = default;
+  Multimap& operator=(const Multimap& headers) = default;
+  Multimap(Multimap&& headers) = default;
+  Multimap& operator=(Multimap&& headers) = default;
+  ~Multimap() = default;
 
   void Add(std::string key, std::string value);
 
   void AddAll(const Multimap& headers);
 
-  std::list<std::string> ToHttpHeaders();
+  std::list<std::string> ToHttpHeaders() const;
 
-  std::string ToQueryString();
+  std::string ToQueryString() const;
 
-  operator bool() const { return !map_.empty(); }
+  explicit operator bool() const { return !map_.empty(); }
 
-  bool Contains(std::string_view key);
+  bool Contains(std::string_view key) const;
 
-  std::list<std::string> Get(std::string_view key);
+  std::list<std::string> Get(std::string_view key) const;
 
-  std::string GetFront(std::string_view key);
+  std::string GetFront(std::string_view key) const;
 
-  std::list<std::string> Keys();
+  std::list<std::string> Keys() const;
 
   void GetCanonicalHeaders(std::string& signed_headers,
-                           std::string& canonical_headers);
+                           std::string& canonical_headers) const;
 
-  std::string GetCanonicalQueryString();
+  std::string GetCanonicalQueryString() const;
 };  // class Multimap
 
 /**
@@ -200,21 +227,13 @@ class Multimap {
  */
 struct CharBuffer : std::streambuf {
   CharBuffer(char* buf, size_t size) { this->setg(buf, buf, buf + size); }
+  virtual ~CharBuffer();
 
-  pos_type seekoff(off_type off, std::ios_base::seekdir dir,
-                   std::ios_base::openmode which = std::ios_base::in) override {
-    if (dir == std::ios_base::cur)
-      gbump(off);
-    else if (dir == std::ios_base::end)
-      setg(eback(), egptr() + off, egptr());
-    else if (dir == std::ios_base::beg)
-      setg(eback(), eback() + off, egptr());
-    return gptr() - eback();
-  }
+  virtual pos_type seekpos(pos_type sp, std::ios_base::openmode which) override;
 
-  pos_type seekpos(pos_type sp, std::ios_base::openmode which) override {
-    return seekoff(sp - pos_type(off_type(0)), std::ios_base::beg, which);
-  }
+  virtual pos_type seekoff(
+      off_type off, std::ios_base::seekdir dir,
+      std::ios_base::openmode which = std::ios_base::in) override;
 };  // struct CharBuffer
 }  // namespace utils
 }  // namespace minio

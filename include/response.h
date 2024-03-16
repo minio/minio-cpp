@@ -35,39 +35,23 @@ struct Response {
   std::string bucket_name;
   std::string object_name;
 
-  Response() {}
+  Response();
+  Response(error::Error err) : err_(std::move(err)) {}
 
-  Response(error::Error err) { this->err_ = err; }
+  Response(const Response& resp) = default;
+  Response& operator=(const Response& resp) = default;
 
-  Response(const Response& resp) {
-    this->err_ = resp.err_;
+  Response(Response&& resp) = default;
+  Response& operator=(Response&& resp) = default;
 
-    this->status_code = resp.status_code;
-    this->headers = resp.headers;
-    this->data = resp.data;
-    this->code = resp.code;
-    this->message = resp.message;
-    this->resource = resp.resource;
-    this->request_id = resp.request_id;
-    this->host_id = resp.host_id;
-    this->bucket_name = resp.bucket_name;
-    this->object_name = resp.object_name;
-  }
+  ~Response();
 
-  operator bool() const {
+  explicit operator bool() const {
     return !err_ && code.empty() && message.empty() &&
-           (status_code == 0 || status_code >= 200 && status_code <= 299);
+           (status_code == 0 || (status_code >= 200 && status_code <= 299));
   }
 
-  error::Error Error() {
-    if (err_) return err_;
-    if (!code.empty()) return error::Error(code + ": " + message);
-    if (status_code && (status_code < 200 || status_code > 299)) {
-      return error::Error("failed with HTTP status code " +
-                          std::to_string(status_code));
-    }
-    return error::SUCCESS;
-  }
+  error::Error Error() const;
 
   static Response ParseXML(std::string_view data, int status_code,
                            utils::Multimap headers);
@@ -79,11 +63,13 @@ struct Response {
 struct GetRegionResponse : public Response {
   std::string region;
 
-  GetRegionResponse(std::string region) { this->region = region; }
+  GetRegionResponse(std::string region) : region(std::move(region)) {}
 
-  GetRegionResponse(error::Error err) : Response(err) {}
+  GetRegionResponse(error::Error err) : Response(std::move(err)) {}
 
   GetRegionResponse(const Response& resp) : Response(resp) {}
+
+  ~GetRegionResponse() = default;
 };  // struct GetRegionResponse
 
 using MakeBucketResponse = Response;
@@ -91,11 +77,14 @@ using MakeBucketResponse = Response;
 struct ListBucketsResponse : public Response {
   std::list<Bucket> buckets;
 
-  ListBucketsResponse(std::list<Bucket> buckets) { this->buckets = buckets; }
+  ListBucketsResponse(std::list<Bucket> buckets)
+      : buckets(std::move(buckets)) {}
 
-  ListBucketsResponse(error::Error err) : Response(err) {}
+  ListBucketsResponse(error::Error err) : Response(std::move(err)) {}
 
   ListBucketsResponse(const Response& resp) : Response(resp) {}
+
+  ~ListBucketsResponse() = default;
 
   static ListBucketsResponse ParseXML(std::string_view data);
 };  // struct ListBucketsResponse
@@ -103,11 +92,13 @@ struct ListBucketsResponse : public Response {
 struct BucketExistsResponse : public Response {
   bool exist = false;
 
-  BucketExistsResponse(bool exist) { this->exist = exist; }
+  BucketExistsResponse(bool exist) : exist(exist) {}
 
-  BucketExistsResponse(error::Error err) : Response(err) {}
+  BucketExistsResponse(error::Error err) : Response(std::move(err)) {}
 
   BucketExistsResponse(const Response& resp) : Response(resp) {}
+
+  ~BucketExistsResponse() = default;
 };  // struct BucketExistsResponse
 
 using RemoveBucketResponse = Response;
@@ -119,11 +110,14 @@ struct CompleteMultipartUploadResponse : public Response {
   std::string etag;
   std::string version_id;
 
-  CompleteMultipartUploadResponse() {}
+  CompleteMultipartUploadResponse() = default;
 
-  CompleteMultipartUploadResponse(error::Error err) : Response(err) {}
+  CompleteMultipartUploadResponse(error::Error err)
+      : Response(std::move(err)) {}
 
   CompleteMultipartUploadResponse(const Response& resp) : Response(resp) {}
+
+  ~CompleteMultipartUploadResponse() = default;
 
   static CompleteMultipartUploadResponse ParseXML(std::string_view data,
                                                   std::string version_id);
@@ -132,30 +126,30 @@ struct CompleteMultipartUploadResponse : public Response {
 struct CreateMultipartUploadResponse : public Response {
   std::string upload_id;
 
-  CreateMultipartUploadResponse(std::string upload_id) {
-    this->upload_id = upload_id;
-  }
+  CreateMultipartUploadResponse(std::string upload_id)
+      : upload_id(std::move(upload_id)) {}
 
-  CreateMultipartUploadResponse(error::Error err) : Response(err) {}
+  CreateMultipartUploadResponse(error::Error err) : Response(std::move(err)) {}
 
   CreateMultipartUploadResponse(const Response& resp) : Response(resp) {}
+
+  ~CreateMultipartUploadResponse() = default;
 };  // struct CreateMultipartUploadResponse
 
 struct PutObjectResponse : public Response {
   std::string etag;
   std::string version_id;
 
-  PutObjectResponse() {}
+  PutObjectResponse() = default;
+
+  PutObjectResponse(error::Error err) : Response(std::move(err)) {}
 
   PutObjectResponse(const Response& resp) : Response(resp) {}
 
   PutObjectResponse(const CompleteMultipartUploadResponse& resp)
-      : Response(resp) {
-    this->etag = resp.etag;
-    this->version_id = resp.version_id;
-  }
+      : Response(resp), etag(resp.etag), version_id(resp.version_id) {}
 
-  PutObjectResponse(error::Error err) : Response(err) {}
+  ~PutObjectResponse() = default;
 };  // struct PutObjectResponse
 
 using UploadPartResponse = PutObjectResponse;
@@ -173,11 +167,13 @@ struct StatObjectResponse : public Response {
   bool delete_marker;
   utils::Multimap user_metadata;
 
-  StatObjectResponse() {}
+  StatObjectResponse() = default;
 
-  StatObjectResponse(error::Error err) : Response(err) {}
+  StatObjectResponse(error::Error err) : Response(std::move(err)) {}
 
   StatObjectResponse(const Response& resp) : Response(resp) {}
+
+  ~StatObjectResponse() = default;
 };  // struct StatObjectResponse
 
 using RemoveObjectResponse = Response;
@@ -201,11 +197,13 @@ struct Item : public Response {
   bool is_delete_marker = false;
   std::string encoding_type;
 
-  Item() {}
+  Item() = default;
 
-  Item(error::Error err) : Response(err) {}
+  Item(error::Error err) : Response(std::move(err)) {}
 
   Item(const Response& resp) : Response(resp) {}
+
+  ~Item() = default;
 };  // struct Item
 
 struct ListObjectsResponse : public Response {
@@ -234,11 +232,13 @@ struct ListObjectsResponse : public Response {
   std::string version_id_marker;
   std::string next_version_id_marker;
 
-  ListObjectsResponse() {}
+  ListObjectsResponse() = default;
 
-  ListObjectsResponse(error::Error err) : Response(err) {}
+  ListObjectsResponse(error::Error err) : Response(std::move(err)) {}
 
   ListObjectsResponse(const Response& resp) : Response(resp) {}
+
+  ~ListObjectsResponse() = default;
 
   static ListObjectsResponse ParseXML(std::string_view data, bool version);
 };  // struct ListObjectsResponse
@@ -254,27 +254,34 @@ struct DeletedObject : public Response {
   std::string version_id;
   bool delete_marker;
   std::string delete_marker_version_id;
+
+  DeletedObject() = default;
+  ~DeletedObject() = default;
 };  // struct DeletedObject
 
 struct DeleteError : public Response {
   std::string version_id;
 
-  DeleteError() {}
+  DeleteError() = default;
 
-  DeleteError(error::Error err) : Response(err) {}
+  DeleteError(error::Error err) : Response(std::move(err)) {}
 
   DeleteError(const Response& resp) : Response(resp) {}
+
+  ~DeleteError() = default;
 };  // struct DeleteError
 
 struct RemoveObjectsResponse : public Response {
   std::list<DeletedObject> objects;
   std::list<DeleteError> errors;
 
-  RemoveObjectsResponse() {}
+  RemoveObjectsResponse() = default;
 
-  RemoveObjectsResponse(error::Error err) : Response(err) {}
+  RemoveObjectsResponse(error::Error err) : Response(std::move(err)) {}
 
   RemoveObjectsResponse(const Response& resp) : Response(resp) {}
+
+  ~RemoveObjectsResponse() = default;
 
   static RemoveObjectsResponse ParseXML(std::string_view data);
 };  // struct RemoveObjectsResponse
@@ -288,11 +295,13 @@ using DeleteBucketPolicyResponse = Response;
 struct GetBucketPolicyResponse : public Response {
   std::string policy;
 
-  GetBucketPolicyResponse(std::string policy) { this->policy = policy; }
+  GetBucketPolicyResponse(std::string policy) : policy(std::move(policy)) {}
 
-  GetBucketPolicyResponse(error::Error err) : Response(err) {}
+  GetBucketPolicyResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketPolicyResponse(const Response& resp) : Response(resp) {}
+
+  ~GetBucketPolicyResponse() = default;
 };  // struct GetBucketPolicyResponse
 
 using SetBucketPolicyResponse = Response;
@@ -302,13 +311,14 @@ using DeleteBucketNotificationResponse = Response;
 struct GetBucketNotificationResponse : public Response {
   NotificationConfig config;
 
-  GetBucketNotificationResponse(NotificationConfig config) {
-    this->config = config;
-  }
+  GetBucketNotificationResponse(NotificationConfig config)
+      : config(std::move(config)) {}
 
-  GetBucketNotificationResponse(error::Error err) : Response(err) {}
+  GetBucketNotificationResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketNotificationResponse(const Response& resp) : Response(resp) {}
+
+  ~GetBucketNotificationResponse() = default;
 
   static GetBucketNotificationResponse ParseXML(std::string_view data);
 };  // struct GetBucketNotificationResponse
@@ -320,11 +330,13 @@ using DeleteBucketEncryptionResponse = Response;
 struct GetBucketEncryptionResponse : public Response {
   SseConfig config;
 
-  GetBucketEncryptionResponse(SseConfig config) { this->config = config; }
+  GetBucketEncryptionResponse(SseConfig config) : config(std::move(config)) {}
 
-  GetBucketEncryptionResponse(error::Error err) : Response(err) {}
+  GetBucketEncryptionResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketEncryptionResponse(const Response& resp) : Response(resp) {}
+
+  ~GetBucketEncryptionResponse() = default;
 
   static GetBucketEncryptionResponse ParseXML(std::string_view data);
 };  // struct GetBucketEncryptionResponse
@@ -335,18 +347,21 @@ struct GetBucketVersioningResponse : public Response {
   Boolean status;
   Boolean mfa_delete;
 
-  GetBucketVersioningResponse() {}
+  GetBucketVersioningResponse() = default;
 
-  GetBucketVersioningResponse(error::Error err) : Response(err) {}
+  GetBucketVersioningResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketVersioningResponse(const Response& resp) : Response(resp) {}
 
-  std::string Status() {
+  ~GetBucketVersioningResponse() = default;
+
+  std::string Status() const {
     if (!status) return "Off";
     return status.Get() ? "Enabled" : "Suspended";
   }
-  std::string MfaDelete() {
-    if (!mfa_delete) return "";
+
+  std::string MfaDelete() const {
+    if (!mfa_delete) return {};
     return mfa_delete.Get() ? "Enabled" : "Disabled";
   }
 };  // struct GetBucketVersioningResponse
@@ -358,13 +373,14 @@ using DeleteBucketReplicationResponse = Response;
 struct GetBucketReplicationResponse : public Response {
   ReplicationConfig config;
 
-  GetBucketReplicationResponse(ReplicationConfig config) {
-    this->config = config;
-  }
+  GetBucketReplicationResponse(ReplicationConfig config)
+      : config(std::move(config)) {}
 
-  GetBucketReplicationResponse(error::Error err) : Response(err) {}
+  GetBucketReplicationResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketReplicationResponse(const Response& resp) : Response(resp) {}
+
+  ~GetBucketReplicationResponse() = default;
 
   static GetBucketReplicationResponse ParseXML(std::string_view data);
 };  // struct GetBucketReplicationResponse
@@ -376,9 +392,10 @@ using DeleteBucketLifecycleResponse = Response;
 struct GetBucketLifecycleResponse : public Response {
   LifecycleConfig config;
 
-  GetBucketLifecycleResponse(LifecycleConfig config) { this->config = config; }
+  GetBucketLifecycleResponse(LifecycleConfig config)
+      : config(std::move(config)) {}
 
-  GetBucketLifecycleResponse(error::Error err) : Response(err) {}
+  GetBucketLifecycleResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketLifecycleResponse(const Response& resp) : Response(resp) {}
 
@@ -392,13 +409,14 @@ using DeleteBucketTagsResponse = Response;
 struct GetBucketTagsResponse : public Response {
   std::map<std::string, std::string> tags;
 
-  GetBucketTagsResponse(std::map<std::string, std::string> tags) {
-    this->tags = tags;
-  }
+  GetBucketTagsResponse(std::map<std::string, std::string> tags)
+      : tags(std::move(tags)) {}
 
-  GetBucketTagsResponse(error::Error err) : Response(err) {}
+  GetBucketTagsResponse(error::Error err) : Response(std::move(err)) {}
 
   GetBucketTagsResponse(const Response& resp) : Response(resp) {}
+
+  ~GetBucketTagsResponse() = default;
 
   static GetBucketTagsResponse ParseXML(std::string_view data);
 };  // struct GetBucketTagsResponse
@@ -410,13 +428,14 @@ using DeleteObjectLockConfigResponse = Response;
 struct GetObjectLockConfigResponse : public Response {
   ObjectLockConfig config;
 
-  GetObjectLockConfigResponse(ObjectLockConfig config) {
-    this->config = config;
-  }
+  GetObjectLockConfigResponse(ObjectLockConfig config)
+      : config(std::move(config)) {}
 
-  GetObjectLockConfigResponse(error::Error err) : Response(err) {}
+  GetObjectLockConfigResponse(error::Error err) : Response(std::move(err)) {}
 
   GetObjectLockConfigResponse(const Response& resp) : Response(resp) {}
+
+  ~GetObjectLockConfigResponse() = default;
 };  // struct GetObjectLockConfigResponse
 
 using SetObjectLockConfigResponse = Response;
@@ -426,13 +445,14 @@ using DeleteObjectTagsResponse = Response;
 struct GetObjectTagsResponse : public Response {
   std::map<std::string, std::string> tags;
 
-  GetObjectTagsResponse(std::map<std::string, std::string> tags) {
-    this->tags = tags;
-  }
+  GetObjectTagsResponse(std::map<std::string, std::string> tags)
+      : tags(std::move(tags)) {}
 
-  GetObjectTagsResponse(error::Error err) : Response(err) {}
+  GetObjectTagsResponse(error::Error err) : Response(std::move(err)) {}
 
   GetObjectTagsResponse(const Response& resp) : Response(resp) {}
+
+  ~GetObjectTagsResponse() = default;
 
   static GetObjectTagsResponse ParseXML(std::string_view data);
 };  // struct GetObjectTagsResponse
@@ -446,22 +466,27 @@ using DisableObjectLegalHoldResponse = Response;
 struct IsObjectLegalHoldEnabledResponse : public Response {
   bool enabled = false;
 
-  IsObjectLegalHoldEnabledResponse(bool enabled) { this->enabled = enabled; }
+  IsObjectLegalHoldEnabledResponse(bool enabled) : enabled(enabled) {}
 
-  IsObjectLegalHoldEnabledResponse(error::Error err) : Response(err) {}
+  IsObjectLegalHoldEnabledResponse(error::Error err)
+      : Response(std::move(err)) {}
 
   IsObjectLegalHoldEnabledResponse(const Response& resp) : Response(resp) {}
+
+  ~IsObjectLegalHoldEnabledResponse() = default;
 };  // struct IsObjectLegalHoldEnabledResponse
 
 struct GetObjectRetentionResponse : public Response {
   RetentionMode retention_mode;
   utils::Time retain_until_date;
 
-  GetObjectRetentionResponse() {}
+  GetObjectRetentionResponse() = default;
 
-  GetObjectRetentionResponse(error::Error err) : Response(err) {}
+  GetObjectRetentionResponse(error::Error err) : Response(std::move(err)) {}
 
   GetObjectRetentionResponse(const Response& resp) : Response(resp) {}
+
+  ~GetObjectRetentionResponse() = default;
 };  // struct GetObjectRetentionResponse
 
 using SetObjectRetentionResponse = Response;
@@ -469,24 +494,27 @@ using SetObjectRetentionResponse = Response;
 struct GetPresignedObjectUrlResponse : public Response {
   std::string url;
 
-  GetPresignedObjectUrlResponse(std::string url) { this->url = url; }
+  GetPresignedObjectUrlResponse(std::string url) : url(std::move(url)) {}
 
-  GetPresignedObjectUrlResponse(error::Error err) : Response(err) {}
+  GetPresignedObjectUrlResponse(error::Error err) : Response(std::move(err)) {}
 
   GetPresignedObjectUrlResponse(const Response& resp) : Response(resp) {}
+
+  ~GetPresignedObjectUrlResponse() = default;
 };  // struct GetPresignedObjectUrlResponse
 
 struct GetPresignedPostFormDataResponse : public Response {
   std::map<std::string, std::string> form_data;
 
-  GetPresignedPostFormDataResponse(
-      std::map<std::string, std::string> form_data) {
-    this->form_data = form_data;
-  }
+  GetPresignedPostFormDataResponse(std::map<std::string, std::string> form_data)
+      : form_data(std::move(form_data)) {}
 
-  GetPresignedPostFormDataResponse(error::Error err) : Response(err) {}
+  GetPresignedPostFormDataResponse(error::Error err)
+      : Response(std::move(err)) {}
 
   GetPresignedPostFormDataResponse(const Response& resp) : Response(resp) {}
+
+  ~GetPresignedPostFormDataResponse() = default;
 };  // struct GetPresignedPostFormDataResponse
 }  // namespace s3
 }  // namespace minio

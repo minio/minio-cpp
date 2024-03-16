@@ -16,7 +16,7 @@
 #include "types.h"
 
 minio::s3::RetentionMode minio::s3::StringToRetentionMode(
-    std::string_view str) throw() {
+    std::string_view str) noexcept {
   if (str == "GOVERNANCE") return RetentionMode::kGovernance;
   if (str == "COMPLIANCE") return RetentionMode::kCompliance;
 
@@ -28,7 +28,7 @@ minio::s3::RetentionMode minio::s3::StringToRetentionMode(
 }
 
 minio::s3::LegalHold minio::s3::StringToLegalHold(
-    std::string_view str) throw() {
+    std::string_view str) noexcept {
   if (str == "ON") return LegalHold::kOn;
   if (str == "OFF") return LegalHold::kOff;
 
@@ -40,7 +40,7 @@ minio::s3::LegalHold minio::s3::StringToLegalHold(
 }
 
 minio::s3::Directive minio::s3::StringToDirective(
-    std::string_view str) throw() {
+    std::string_view str) noexcept {
   if (str == "COPY") return Directive::kCopy;
   if (str == "REPLACE") return Directive::kReplace;
 
@@ -50,7 +50,7 @@ minio::s3::Directive minio::s3::StringToDirective(
   return Directive::kCopy;  // never reaches here.
 }
 
-std::string minio::s3::SelectRequest::ToXML() {
+std::string minio::s3::SelectRequest::ToXML() const {
   std::stringstream ss;
   ss << "<SelectObjectContentRequest>";
 
@@ -59,8 +59,8 @@ std::string minio::s3::SelectRequest::ToXML() {
 
   ss << "<InputSerialization>";
 
-  if (csv_input != NULL) {
-    if (csv_input->compression_type != NULL) {
+  if (csv_input != nullptr) {
+    if (csv_input->compression_type != nullptr) {
       ss << "<CompressionType>"
          << CompressionTypeToString(*csv_input->compression_type)
          << "</CompressionType>";
@@ -77,7 +77,7 @@ std::string minio::s3::SelectRequest::ToXML() {
       ss << "<FieldDelimiter>" << csv_input->field_delimiter
          << "</FieldDelimiter>";
     }
-    if (csv_input->file_header_info != NULL) {
+    if (csv_input->file_header_info != nullptr) {
       ss << "<FileHeaderInfo>"
          << FileHeaderInfoToString(*csv_input->file_header_info)
          << "</FileHeaderInfo>";
@@ -93,27 +93,27 @@ std::string minio::s3::SelectRequest::ToXML() {
     ss << "</CSV>";
   }
 
-  if (json_input != NULL) {
-    if (json_input->compression_type != NULL) {
+  if (json_input != nullptr) {
+    if (json_input->compression_type != nullptr) {
       ss << "<CompressionType>"
          << CompressionTypeToString(*json_input->compression_type)
          << "</CompressionType>";
     }
 
     ss << "<JSON>";
-    if (json_input->json_type != NULL) {
+    if (json_input->json_type != nullptr) {
       ss << "<Type>" << JsonTypeToString(*json_input->json_type) << "</Type>";
     }
     ss << "</JSON>";
   }
 
-  if (parquet_input != NULL) ss << "<Parquet></Parquet>";
+  if (parquet_input != nullptr) ss << "<Parquet></Parquet>";
 
   ss << "</InputSerialization>";
 
   ss << "<OutputSerialization>";
 
-  if (csv_output != NULL) {
+  if (csv_output != nullptr) {
     ss << "<CSV>";
     if (csv_output->field_delimiter) {
       ss << "<FieldDelimiter>" << csv_output->field_delimiter
@@ -127,7 +127,7 @@ std::string minio::s3::SelectRequest::ToXML() {
       ss << "<QuoteEscapeCharacter>" << csv_output->quote_escape_character
          << "</QuoteEscapeCharacter>";
     }
-    if (csv_output->quote_fields != NULL) {
+    if (csv_output->quote_fields != nullptr) {
       ss << "<QuoteFields>" << QuoteFieldsToString(*csv_output->quote_fields)
          << "</QuoteFields>";
     }
@@ -138,7 +138,7 @@ std::string minio::s3::SelectRequest::ToXML() {
     ss << "</CSV>";
   }
 
-  if (json_output != NULL) {
+  if (json_output != nullptr) {
     ss << "<JSON>";
     if (json_output->record_delimiter) {
       ss << "<RecordDelimiter>" << json_output->record_delimiter
@@ -152,12 +152,12 @@ std::string minio::s3::SelectRequest::ToXML() {
   if (request_progress) {
     ss << "<RequestProgress><Enabled>true</Enabled></RequestProgress>";
   }
-  if (scan_start_range != NULL || scan_end_range != NULL) {
+  if (scan_start_range != nullptr || scan_end_range != nullptr) {
     ss << "<ScanRange>";
-    if (scan_start_range != NULL) {
+    if (scan_start_range != nullptr) {
       ss << "<Start>" << *scan_start_range << "</Start>";
     }
-    if (scan_end_range != NULL) {
+    if (scan_end_range != nullptr) {
       ss << "<End>" << *scan_end_range << "</End>";
     }
     ss << "</ScanRange>";
@@ -234,7 +234,7 @@ minio::s3::NotificationRecord minio::s3::NotificationRecord::ParseJSON(
   return record;
 }
 
-std::string minio::s3::NotificationConfig::ToXML() {
+std::string minio::s3::NotificationConfig::ToXML() const {
   std::stringstream ss;
   ss << "<NotificationConfiguration>";
 
@@ -309,7 +309,7 @@ std::string minio::s3::NotificationConfig::ToXML() {
   return ss.str();
 }
 
-std::string minio::s3::ReplicationConfig::ToXML() {
+std::string minio::s3::ReplicationConfig::ToXML() const {
   auto status_xml = [](bool status) -> std::string {
     std::stringstream ss;
     ss << "<Status>" << (status ? "Enabled" : "Disabled") << "</Status>";
@@ -455,7 +455,7 @@ std::string minio::s3::ReplicationConfig::ToXML() {
   return ss.str();
 }
 
-minio::error::Error minio::s3::LifecycleRule::Validate() {
+minio::error::Error minio::s3::LifecycleRule::Validate() const {
   if (!abort_incomplete_multipart_upload_days_after_initiation &&
       !expiration_date && !expiration_days &&
       !expiration_expired_object_delete_marker &&
@@ -492,7 +492,7 @@ minio::error::Error minio::s3::LifecycleRule::Validate() {
   return error::SUCCESS;
 }
 
-std::string minio::s3::LifecycleConfig::ToXML() {
+std::string minio::s3::LifecycleConfig::ToXML() const {
   std::stringstream ss;
 
   ss << "<LifecycleConfiguration>";
@@ -502,8 +502,7 @@ std::string minio::s3::LifecycleConfig::ToXML() {
 
     if (rule.abort_incomplete_multipart_upload_days_after_initiation) {
       ss << "<AbortIncompleteMultipartUpload><DaysAfterInitiation>"
-         << std::to_string(
-                rule.abort_incomplete_multipart_upload_days_after_initiation)
+         << rule.abort_incomplete_multipart_upload_days_after_initiation
          << "</DaysAfterInitiation></AbortIncompleteMultipartUpload>";
     }
 
@@ -514,11 +513,11 @@ std::string minio::s3::LifecycleConfig::ToXML() {
         ss << "<Date>" << rule.expiration_date.ToISO8601UTC() << "</Date>";
       }
       if (rule.expiration_days) {
-        ss << "<Days>" << std::to_string(rule.expiration_days) << "</Days>";
+        ss << "<Days>" << rule.expiration_days << "</Days>";
       }
       if (rule.expiration_expired_object_delete_marker) {
         ss << "<ExpiredObjectDeleteMarker>"
-           << utils::BoolToString(rule.expiration_expired_object_delete_marker)
+           << rule.expiration_expired_object_delete_marker
            << "</ExpiredObjectDeleteMarker>";
       }
       ss << "</Expiration>";
@@ -584,7 +583,7 @@ std::string minio::s3::LifecycleConfig::ToXML() {
         ss << "<Date>" << rule.transition_date.ToISO8601UTC() << "</Date>";
       }
       if (rule.transition_days) {
-        ss << "<Days>" << std::to_string(rule.transition_days) << "</Days>";
+        ss << "<Days>" << rule.transition_days << "</Days>";
       }
       if (!rule.transition_storage_class.empty()) {
         ss << "<StorageClass>" << rule.transition_storage_class
@@ -601,9 +600,10 @@ std::string minio::s3::LifecycleConfig::ToXML() {
   return ss.str();
 }
 
-minio::error::Error minio::s3::ObjectLockConfig::Validate() {
+minio::error::Error minio::s3::ObjectLockConfig::Validate() const {
   if (IsRetentionModeValid(retention_mode)) {
-    if (!(retention_duration_days ^ retention_duration_years)) {
+    if (!(static_cast<bool>(retention_duration_days) ^
+          static_cast<bool>(retention_duration_years))) {
       return error::Error(
           "retention mode must be provided with retention duration days or "
           "years");
@@ -615,4 +615,17 @@ minio::error::Error minio::s3::ObjectLockConfig::Validate() {
   }
 
   return error::SUCCESS;
+}
+
+minio::s3::SseConfig minio::s3::SseConfig::S3() {
+  SseConfig config;
+  config.sse_algorithm = "AES256";
+  return config;
+}
+
+minio::s3::SseConfig minio::s3::SseConfig::Kms(std::string masterkeyid) {
+  SseConfig config;
+  config.sse_algorithm = "aws:kms";
+  config.kms_master_key_id = masterkeyid;
+  return config;
 }

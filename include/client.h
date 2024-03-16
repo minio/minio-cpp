@@ -30,7 +30,7 @@ class Client;
 
 class ListObjectsResult {
  private:
-  Client* client_ = NULL;
+  Client* client_ = nullptr;
   ListObjectsArgs args_;
   bool failed_ = false;
   ListObjectsResponse resp_;
@@ -40,9 +40,12 @@ class ListObjectsResult {
 
  public:
   ListObjectsResult(error::Error err);
-  ListObjectsResult(Client* client, ListObjectsArgs args);
+  ListObjectsResult(Client* const client, const ListObjectsArgs& args);
+  ListObjectsResult(Client* const client, ListObjectsArgs&& args);
+  ~ListObjectsResult() = default;
+
   Item& operator*() const { return *itr_; }
-  operator bool() const { return itr_ != resp_.contents.end(); }
+  explicit operator bool() const { return itr_ != resp_.contents.end(); }
   ListObjectsResult& operator++() {
     itr_++;
     if (!failed_ && itr_ == resp_.contents.end() && resp_.is_truncated) {
@@ -59,7 +62,7 @@ class ListObjectsResult {
 
 class RemoveObjectsResult {
  private:
-  Client* client_ = NULL;
+  Client* client_ = nullptr;
   RemoveObjectsArgs args_;
   bool done_ = false;
   RemoveObjectsResponse resp_;
@@ -69,9 +72,12 @@ class RemoveObjectsResult {
 
  public:
   RemoveObjectsResult(error::Error err);
-  RemoveObjectsResult(Client* client, RemoveObjectsArgs args);
+  RemoveObjectsResult(Client* const client, const RemoveObjectsArgs& args);
+  RemoveObjectsResult(Client* const client, RemoveObjectsArgs&& args);
+  ~RemoveObjectsResult() = default;
+
   DeleteError& operator*() const { return *itr_; }
-  operator bool() const { return itr_ != resp_.errors.end(); }
+  explicit operator bool() const { return itr_ != resp_.errors.end(); }
   RemoveObjectsResult& operator++() {
     itr_++;
     if (!done_ && itr_ == resp_.errors.end()) {
@@ -96,11 +102,13 @@ class Client : public BaseClient {
                                         std::list<ComposeSource> sources);
   ComposeObjectResponse ComposeObject(ComposeObjectArgs args,
                                       std::string& upload_id);
-  PutObjectResponse PutObject(PutObjectArgs& args, std::string& upload_id,
+  PutObjectResponse PutObject(PutObjectArgs args, std::string& upload_id,
                               char* buf);
 
  public:
-  Client(BaseUrl& base_url, creds::Provider* provider = NULL);
+  Client(BaseUrl& base_url, creds::Provider* const provider = nullptr);
+  ~Client() = default;
+
   ComposeObjectResponse ComposeObject(ComposeObjectArgs args);
   CopyObjectResponse CopyObject(CopyObjectArgs args);
   DownloadObjectResponse DownloadObject(DownloadObjectArgs args);

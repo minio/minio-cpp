@@ -16,8 +16,8 @@
 #include "baseclient.h"
 
 minio::utils::Multimap minio::s3::GetCommonListObjectsQueryParams(
-    std::string& delimiter, std::string& encoding_type, unsigned int max_keys,
-    std::string& prefix) {
+    const std::string& delimiter, const std::string& encoding_type,
+    unsigned int max_keys, const std::string& prefix) {
   utils::Multimap query_params;
   query_params.Add("delimiter", delimiter);
   query_params.Add("max-keys", std::to_string(max_keys > 0 ? max_keys : 1000));
@@ -26,15 +26,13 @@ minio::utils::Multimap minio::s3::GetCommonListObjectsQueryParams(
   return query_params;
 }
 
-minio::s3::BaseClient::BaseClient(BaseUrl& base_url, creds::Provider* provider)
-    : base_url_(base_url) {
+minio::s3::BaseClient::BaseClient(BaseUrl base_url, creds::Provider* provider)
+    : base_url_(std::move(base_url)), provider_(provider) {
   if (!base_url_) {
-    std::cerr << "valid base url must be provided; "
-              << base_url_.Error().String() << std::endl;
+    std::cerr << "valid base url must be provided; " << base_url_.Error()
+              << std::endl;
     std::terminate();
   }
-
-  this->provider_ = provider;
 }
 
 minio::error::Error minio::s3::BaseClient::SetAppInfo(
@@ -50,8 +48,8 @@ minio::error::Error minio::s3::BaseClient::SetAppInfo(
 
 void minio::s3::BaseClient::HandleRedirectResponse(
     std::string& code, std::string& message, int status_code,
-    http::Method method, utils::Multimap headers, std::string& bucket_name,
-    bool retry) {
+    http::Method method, const utils::Multimap& headers,
+    const std::string& bucket_name, bool retry) {
   switch (status_code) {
     case 301:
       code = "PermanentRedirect";
@@ -66,12 +64,12 @@ void minio::s3::BaseClient::HandleRedirectResponse(
       message = "Bad request";
       break;
     default:
-      code = "";
-      message = "";
+      code.clear();
+      message.clear();
       break;
   }
 
-  std::string region = headers.GetFront("x-amz-bucket-region");
+  const std::string region = headers.GetFront("x-amz-bucket-region");
 
   if (!message.empty() && !region.empty()) {
     message += "; use region " + region;
@@ -80,13 +78,13 @@ void minio::s3::BaseClient::HandleRedirectResponse(
   if (retry && !region.empty() && method == http::Method::kHead &&
       !bucket_name.empty() && !region_map_[bucket_name].empty()) {
     code = "RetryHead";
-    message = "";
+    message.clear();
   }
 }
 
 minio::s3::Response minio::s3::BaseClient::GetErrorResponse(
     http::Response resp, std::string_view resource, http::Method method,
-    std::string& bucket_name, std::string& object_name) {
+    const std::string& bucket_name, const std::string& object_name) {
   if (!resp.error.empty()) return error::Error(resp.error);
 
   if (!resp.body.empty()) {
@@ -212,7 +210,7 @@ minio::s3::Response minio::s3::BaseClient::Execute(Request& req) {
 }
 
 minio::s3::GetRegionResponse minio::s3::BaseClient::GetRegion(
-    std::string& bucket_name, std::string& region) {
+    const std::string& bucket_name, const std::string& region) {
   std::string base_region = base_url_.region;
   if (!region.empty()) {
     if (!base_region.empty() && base_region != region) {
@@ -225,7 +223,8 @@ minio::s3::GetRegionResponse minio::s3::BaseClient::GetRegion(
 
   if (!base_region.empty()) return base_region;
 
-  if (bucket_name.empty() || provider_ == NULL) return std::string("us-east-1");
+  if (bucket_name.empty() || provider_ == nullptr)
+    return std::string("us-east-1");
 
   std::string stored_region = region_map_[bucket_name];
   if (!stored_region.empty()) return stored_region;
@@ -283,7 +282,8 @@ minio::s3::BucketExistsResponse minio::s3::BaseClient::BucketExists(
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return (resp.code == "NoSuchBucket") ? false : resp;
+    return (resp.code == "NoSuchBucket") ? BucketExistsResponse(false)
+                                         : BucketExistsResponse(resp);
   }
 
   Request req(http::Method::kHead, region, base_url_, args.extra_headers,
@@ -292,7 +292,8 @@ minio::s3::BucketExistsResponse minio::s3::BaseClient::BucketExists(
   if (Response resp = Execute(req)) {
     return true;
   } else {
-    return (resp.code == "NoSuchBucket") ? false : resp;
+    return (resp.code == "NoSuchBucket") ? BucketExistsResponse(false)
+                                         : BucketExistsResponse(resp);
   }
 }
 
@@ -763,7 +764,7 @@ minio::s3::GetObjectResponse minio::s3::BaseClient::GetObject(
     GetObjectArgs args) {
   if (error::Error err = args.Validate()) return err;
 
-  if (args.ssec != NULL && !base_url_.https) {
+  if (args.ssec != nullptr && !base_url_.https) {
     return error::Error(
         "SSE-C operation must be performed over a secure connection");
   }
@@ -786,7 +787,7 @@ minio::s3::GetObjectResponse minio::s3::BaseClient::GetObject(
   req.userdata = args.userdata;
   req.progressfunc = args.progressfunc;
   req.progress_userdata = args.progress_userdata;
-  if (args.ssec != NULL) req.headers.AddAll(args.ssec->Headers());
+  if (args.ssec != nullptr) req.headers.AddAll(args.ssec->Headers());
 
   return Execute(req);
 }
@@ -820,7 +821,6 @@ minio::s3::BaseClient::GetObjectLockConfig(GetObjectLockConfigArgs args) {
   if (!rule) return config;
 
   auto text = rule.node().select_node("DefaultRetention/Mode/text()");
-  RetentionMode* mode = new RetentionMode;
   config.retention_mode = StringToRetentionMode(text.node().value());
 
   if (rule.node().select_node("DefaultRetention/Days")) {
@@ -927,7 +927,7 @@ minio::s3::BaseClient::GetPresignedObjectUrl(GetPresignedObjectUrlArgs args) {
     std::terminate();
   }
 
-  if (provider_ != NULL) {
+  if (provider_ != nullptr) {
     creds::Credentials creds = provider_->Fetch();
     if (!creds.session_token.empty()) {
       query_params.Add("X-Amz-Security-Token", creds.session_token);
@@ -952,7 +952,7 @@ minio::s3::BaseClient::GetPresignedPostFormData(PostPolicy policy) {
     return error::Error("valid policy must be provided");
   }
 
-  if (provider_ == NULL) {
+  if (provider_ == nullptr) {
     return error::Error(
         "Anonymous access does not require presigned post form-data");
   }
@@ -1322,7 +1322,7 @@ minio::s3::SelectObjectContentResponse
 minio::s3::BaseClient::SelectObjectContent(SelectObjectContentArgs args) {
   if (error::Error err = args.Validate()) return err;
 
-  if (args.ssec != NULL && !base_url_.https) {
+  if (args.ssec != nullptr && !base_url_.https) {
     return error::Error(
         "SSE-C operation must be performed over a secure connection");
   }
@@ -1668,7 +1668,7 @@ minio::s3::StatObjectResponse minio::s3::BaseClient::StatObject(
     StatObjectArgs args) {
   if (error::Error err = args.Validate()) return err;
 
-  if (args.ssec != NULL && !base_url_.https) {
+  if (args.ssec != nullptr && !base_url_.https) {
     return error::Error(
         "SSE-C operation must be performed over a secure connection");
   }

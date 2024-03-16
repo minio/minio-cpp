@@ -15,6 +15,20 @@
 
 #include "response.h"
 
+minio::s3::Response::Response() {}
+
+minio::s3::Response::~Response() {}
+
+minio::error::Error minio::s3::Response::Error() const {
+  if (err_) return err_;
+  if (!code.empty()) return error::Error(code + ": " + message);
+  if (status_code && (status_code < 200 || status_code > 299)) {
+    return error::Error("failed with HTTP status code " +
+                        std::to_string(status_code));
+  }
+  return error::SUCCESS;
+}
+
 minio::s3::Response minio::s3::Response::ParseXML(std::string_view data,
                                                   int status_code,
                                                   utils::Multimap headers) {
@@ -552,6 +566,7 @@ minio::s3::GetBucketReplicationResponse::ParseXML(std::string_view data) {
         if (filter.node().select_node("And/Tag")) {
           auto tags = root.node().select_nodes("And/Tag");
           for (auto& tag : tags) {
+            (void)tag;
             text = filter.node().select_node("Key/text()");
             std::string key = text.node().value();
 
@@ -668,6 +683,7 @@ minio::s3::GetBucketLifecycleResponse::ParseXML(std::string_view data) {
       if (filter.node().select_node("And/Tag")) {
         auto tags = root.node().select_nodes("And/Tag");
         for (auto& tag : tags) {
+          (void)tag;
           text = filter.node().select_node("Key/text()");
           std::string key = text.node().value();
 

@@ -33,7 +33,7 @@ namespace http {
 enum class Method { kGet, kHead, kPost, kPut, kDelete };
 
 // MethodToString converts http Method enum to string.
-constexpr const char* MethodToString(Method& method) throw() {
+constexpr const char* MethodToString(Method method) noexcept {
   switch (method) {
     case Method::kGet:
       return "GET";
@@ -51,109 +51,27 @@ constexpr const char* MethodToString(Method& method) throw() {
       std::terminate();
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 /**
  * Url represents HTTP URL and it's components.
  */
 struct Url {
-  bool https;
+  bool https = false;
   std::string host;
   unsigned int port = 0;
   std::string path;
   std::string query_string;
 
-  operator bool() const { return !host.empty(); }
+  Url() = default;
+  ~Url() = default;
 
-  std::string String() {
-    if (host.empty()) return "";
+  explicit operator bool() const { return !host.empty(); }
 
-    std::string url = (https ? "https://" : "http://") + host;
-    if (port) url += ":" + std::to_string(port);
-    if (!path.empty()) {
-      if (path.front() != '/') url += '/';
-      url += path;
-    }
-    if (!query_string.empty()) url += "?" + query_string;
-
-    return url;
-  }
-
-  std::string HostHeaderValue() {
-    if (!port) return host;
-    return host + ":" + std::to_string(port);
-  }
-
-  static Url Parse(std::string value) {
-    std::string scheme;
-    size_t pos = value.find("://");
-    if (pos != std::string::npos) {
-      scheme = value.substr(0, pos);
-      value.erase(0, pos + 3);
-    }
-    scheme = utils::ToLower(scheme);
-
-    if (!scheme.empty() && scheme != "http" && scheme != "https") return Url{};
-
-    bool https = (scheme.empty() || scheme == "https");
-
-    std::string host;
-    std::string path;
-    std::string query_string;
-    pos = value.find("/");
-    if (pos != std::string::npos) {
-      host = value.substr(0, pos);
-      value.erase(0, pos + 1);
-
-      pos = value.find("?");
-      if (pos != std::string::npos) {
-        path = value.substr(0, pos);
-        value.erase(0, pos + 1);
-        query_string = value;
-      } else {
-        path = value;
-      }
-    } else {
-      pos = value.find("?");
-      if (pos != std::string::npos) {
-        host = value.substr(0, pos);
-        value.erase(0, pos + 1);
-        query_string = value;
-      } else {
-        host = value;
-      }
-    }
-
-    if (host.empty()) return Url{};
-
-    unsigned int port = 0;
-    struct sockaddr_in6 dst;
-    if (inet_pton(AF_INET6, host.c_str(), &(dst.sin6_addr)) <= 0) {
-      if (host.front() != '[' || host.back() != ']') {
-        std::stringstream ss(host);
-        std::string portstr;
-        while (std::getline(ss, portstr, ':')) {
-        }
-
-        if (!portstr.empty()) {
-          try {
-            port = std::stoi(portstr);
-            host = host.substr(0, host.rfind(":" + portstr));
-          } catch (std::invalid_argument) {
-            port = 0;
-          }
-        }
-      }
-    } else {
-      host = "[" + host + "]";
-    }
-
-    if (!https && port == 80) port = 0;
-    if (https && port == 443) port = 0;
-
-    return Url{https, host, port, path, query_string};
-  }
+  std::string String() const;
+  std::string HostHeaderValue() const;
+  static Url Parse(std::string value);
 };  // struct Url
 
 struct DataFunctionArgs;
@@ -167,31 +85,37 @@ using ProgressFunction = std::function<void(ProgressFunctionArgs)>;
 struct Response;
 
 struct DataFunctionArgs {
-  curlpp::Easy* handle = NULL;
-  Response* response = NULL;
+  curlpp::Easy* handle = nullptr;
+  Response* response = nullptr;
   std::string datachunk;
-  void* userdata = NULL;
+  void* userdata = nullptr;
+
+  DataFunctionArgs() = default;
+  ~DataFunctionArgs() = default;
 };  // struct DataFunctionArgs
 
 struct ProgressFunctionArgs {
-  double download_total_bytes = 0;
-  double downloaded_bytes = 0;
-  double upload_total_bytes = 0;
-  double uploaded_bytes = 0;
-  double download_speed = 0;
-  double upload_speed = 0;
-  void* userdata = NULL;
+  double download_total_bytes = 0.0;
+  double downloaded_bytes = 0.0;
+  double upload_total_bytes = 0.0;
+  double uploaded_bytes = 0.0;
+  double download_speed = 0.0;
+  double upload_speed = 0.0;
+  void* userdata = nullptr;
+
+  ProgressFunctionArgs() = default;
+  ~ProgressFunctionArgs() = default;
 };  // struct ProgressFunctionArgs
 
 struct Request {
   Method method;
   http::Url url;
   utils::Multimap headers;
-  std::string_view body = "";
-  DataFunction datafunc = NULL;
-  void* userdata = NULL;
-  ProgressFunction progressfunc = NULL;
-  void* progress_userdata = NULL;
+  std::string_view body;
+  DataFunction datafunc = nullptr;
+  void* userdata = nullptr;
+  ProgressFunction progressfunc = nullptr;
+  void* progress_userdata = nullptr;
   bool debug = false;
   bool ignore_cert_check = false;
   std::string ssl_cert_file;
@@ -199,10 +123,13 @@ struct Request {
   std::string cert_file;
 
   Request(Method method, Url url);
+  ~Request() = default;
+
   Response Execute();
-  operator bool() const {
+
+  explicit operator bool() const {
     if (method < Method::kGet || method > Method::kDelete) return false;
-    return url;
+    return static_cast<bool>(url);
   }
 
  private:
@@ -211,25 +138,24 @@ struct Request {
 
 struct Response {
   std::string error;
-  DataFunction datafunc = NULL;
-  void* userdata = NULL;
+  DataFunction datafunc = nullptr;
+  void* userdata = nullptr;
   int status_code = 0;
   utils::Multimap headers;
   std::string body;
 
-  size_t ResponseCallback(curlpp::Multi* requests, curlpp::Easy* request,
-                          char* buffer, size_t size, size_t length);
-  operator bool() const {
+  Response() = default;
+  ~Response() = default;
+
+  size_t ResponseCallback(curlpp::Multi* const requests,
+                          curlpp::Easy* const request, const char* const buffer,
+                          size_t size, size_t length);
+
+  explicit operator bool() const {
     return error.empty() && status_code >= 200 && status_code <= 299;
   }
-  error::Error Error() {
-    if (!error.empty()) return error::Error(error);
-    if (status_code && (status_code < 200 || status_code > 299)) {
-      return error::Error("failed with HTTP status code " +
-                          std::to_string(status_code));
-    }
-    return error::SUCCESS;
-  }
+
+  error::Error Error() const;
 
  private:
   std::string response_;

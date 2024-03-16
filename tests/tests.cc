@@ -201,11 +201,11 @@ class Tests {
         throw std::runtime_error("BucketExists(): expected: true; got: false");
       }
       RemoveBucket(bucket_name);
-    } catch (const MakeBucketError& err) {
-      throw err;
-    } catch (const std::runtime_error& err) {
+    } catch (const MakeBucketError&) {
+      throw;
+    } catch (const std::runtime_error&) {
       RemoveBucket(bucket_name);
-      throw err;
+      throw;
     }
   }
 
@@ -225,7 +225,7 @@ class Tests {
         throw std::runtime_error("ListBuckets(): " + resp.Error().String());
       }
 
-      int c = 0;
+      std::size_t c = 0;
       for (auto& bucket : resp.buckets) {
         if (std::find(bucket_names.begin(), bucket_names.end(), bucket.name) !=
             bucket_names.end()) {
@@ -238,9 +238,9 @@ class Tests {
             "; got: " + std::to_string(c));
       }
       for (auto& bucket_name : bucket_names) RemoveBucket(bucket_name);
-    } catch (const std::runtime_error& err) {
+    } catch (const std::runtime_error&) {
       for (auto& bucket_name : bucket_names) RemoveBucket(bucket_name);
-      throw err;
+      throw;
     }
   }
 
@@ -251,7 +251,7 @@ class Tests {
 
     std::string data = "StatObject()";
     std::stringstream ss(data);
-    minio::s3::PutObjectArgs args(ss, data.length(), 0);
+    minio::s3::PutObjectArgs args(ss, static_cast<long>(data.length()), 0);
     args.bucket = bucket_name_;
     args.object = object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
@@ -272,9 +272,9 @@ class Tests {
             "; got: " + std::to_string(resp.size));
       }
       RemoveObject(bucket_name_, object_name);
-    } catch (const std::runtime_error& err) {
+    } catch (const std::runtime_error&) {
       RemoveObject(bucket_name_, object_name);
-      throw err;
+      throw;
     }
   }
 
@@ -284,7 +284,7 @@ class Tests {
     std::string object_name = RandObjectName();
     std::string data = "RemoveObject()";
     std::stringstream ss(data);
-    minio::s3::PutObjectArgs args(ss, data.length(), 0);
+    minio::s3::PutObjectArgs args(ss, static_cast<long>(data.length()), 0);
     args.bucket = bucket_name_;
     args.object = object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
@@ -301,7 +301,7 @@ class Tests {
 
     std::string data = "DownloadObject()";
     std::stringstream ss(data);
-    minio::s3::PutObjectArgs args(ss, data.length(), 0);
+    minio::s3::PutObjectArgs args(ss, static_cast<long>(data.length()), 0);
     args.bucket = bucket_name_;
     args.object = object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
@@ -334,9 +334,9 @@ class Tests {
       }
       std::filesystem::remove(filename);
       RemoveObject(bucket_name_, object_name);
-    } catch (const std::runtime_error& err) {
+    } catch (const std::runtime_error&) {
       RemoveObject(bucket_name_, object_name);
-      throw err;
+      throw;
     }
   }
 
@@ -347,7 +347,7 @@ class Tests {
 
     std::string data = "GetObject()";
     std::stringstream ss(data);
-    minio::s3::PutObjectArgs args(ss, data.length(), 0);
+    minio::s3::PutObjectArgs args(ss, static_cast<long>(data.length()), 0);
     args.bucket = bucket_name_;
     args.object = object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
@@ -374,9 +374,9 @@ class Tests {
                                  "; got: " + content);
       }
       RemoveObject(bucket_name_, object_name);
-    } catch (const std::runtime_error& err) {
+    } catch (const std::runtime_error&) {
       RemoveObject(bucket_name_, object_name);
-      throw err;
+      throw;
     }
   }
 
@@ -398,7 +398,7 @@ class Tests {
         object_names.push_back(object_name);
       }
 
-      int c = 0;
+      std::size_t c = 0;
       minio::s3::ListObjectsArgs args;
       args.bucket = bucket_name_;
       minio::s3::ListObjectsResult result = client_.ListObjects(args);
@@ -419,9 +419,9 @@ class Tests {
             "; got: " + std::to_string(c));
       }
       RemoveObjects(object_names);
-    } catch (const std::runtime_error& err) {
+    } catch (const std::runtime_error&) {
       RemoveObjects(object_names);
-      throw err;
+      throw;
     }
   }
 
@@ -436,7 +436,9 @@ class Tests {
       std::string object_name = RandObjectName();
       std::string data = "PutObject()";
       std::stringstream ss(data);
-      minio::s3::PutObjectArgs args(ss, data.length(), 0);
+      minio::s3::PutObjectArgs args(
+          ss, static_cast<long>(data.length()),
+          0);  // PWTODO: PutObjectArgs should accept size_t instead of long
       args.bucket = bucket_name_;
       args.object = object_name;
       minio::s3::PutObjectResponse resp = client_.PutObject(args);
@@ -450,7 +452,7 @@ class Tests {
       std::string object_name = RandObjectName();
       size_t size = 13930573;
       RandCharStream stream(size);
-      minio::s3::PutObjectArgs args(stream, size, 0);
+      minio::s3::PutObjectArgs args(stream, static_cast<long>(size), 0);
       args.bucket = bucket_name_;
       args.object = object_name;
       minio::s3::PutObjectResponse resp = client_.PutObject(args);
@@ -469,7 +471,7 @@ class Tests {
     std::string src_object_name = RandObjectName();
     std::string data = "CopyObject()";
     std::stringstream ss(data);
-    minio::s3::PutObjectArgs args(ss, data.length(), 0);
+    minio::s3::PutObjectArgs args(ss, static_cast<long>(data.length()), 0);
     args.bucket = bucket_name_;
     args.object = src_object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
@@ -491,10 +493,10 @@ class Tests {
       }
       RemoveObject(bucket_name_, src_object_name);
       RemoveObject(bucket_name_, object_name);
-    } catch (const std::runtime_error& err) {
+    } catch (const std::runtime_error&) {
       RemoveObject(bucket_name_, src_object_name);
       RemoveObject(bucket_name_, object_name);
-      throw err;
+      throw;
     }
   }
 
@@ -536,9 +538,9 @@ class Tests {
         object_names.push_back(object_name);
       }
       RemoveObjects(object_names);
-    } catch (const std::runtime_error& err) {
+    } catch (const std::runtime_error&) {
       RemoveObjects(object_names);
-      throw err;
+      throw;
     }
   }
 
@@ -554,7 +556,7 @@ class Tests {
         "1996,Jeep,Grand Cherokee,\"MUST SELL!\n"
         "air, moon roof, loaded\",4799.00\n";
     std::stringstream ss("Year,Make,Model,Description,Price\n" + data);
-    minio::s3::PutObjectArgs args(ss, ss.str().length(), 0);
+    minio::s3::PutObjectArgs args(ss, static_cast<long>(ss.str().length()), 0);
     args.bucket = bucket_name_;
     args.object = object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
@@ -595,9 +597,9 @@ class Tests {
         throw std::runtime_error("expected: " + data + ", got: " + records);
       }
       RemoveObject(bucket_name_, object_name);
-    } catch (const std::runtime_error& err) {
+    } catch (const std::runtime_error&) {
       RemoveObject(bucket_name_, object_name);
-      throw err;
+      throw;
     }
   }
 
@@ -628,7 +630,7 @@ class Tests {
     try {
       std::string data = "ListenBucketNotification()";
       std::stringstream ss(data);
-      minio::s3::PutObjectArgs args(ss, data.length(), 0);
+      minio::s3::PutObjectArgs args(ss, static_cast<long>(data.length()), 0);
       args.bucket = bucket_name_;
       args.object = object_name;
       minio::s3::PutObjectResponse resp = client_.PutObject(args);
@@ -664,14 +666,14 @@ class Tests {
       }
 
       RemoveObject(bucket_name_, object_name);
-    } catch (const std::runtime_error& err) {
+    } catch (const std::runtime_error&) {
       RemoveObject(bucket_name_, object_name);
-      throw err;
+      throw;
     }
   }
 };  // class Tests
 
-int main(int argc, char* argv[]) {
+int main(int /*argc*/, char* /*argv*/[]) {
   std::string host;
   if (!minio::utils::GetEnv(host, "SERVER_ENDPOINT")) {
     std::cerr << "SERVER_ENDPOINT environment variable must be set"
