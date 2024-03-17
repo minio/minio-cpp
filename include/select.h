@@ -16,8 +16,11 @@
 #ifndef _MINIO_S3_SELECT_H
 #define _MINIO_S3_SELECT_H
 
-#include <pugixml.hpp>
+#include <map>
+#include <string>
+#include <type_traits>
 
+#include "error.h"
 #include "http.h"
 #include "types.h"
 

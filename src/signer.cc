@@ -13,7 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <array>
+#include <cstdio>
+#include <string>
+#include <type_traits>
+
+#include <openssl/evp.h>
+#include <openssl/hmac.h>
+
+#include "http.h"
 #include "signer.h"
+#include "utils.h"
 
 const char* SIGN_V4_ALGORITHM = "AWS4-HMAC-SHA256";
 

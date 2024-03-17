@@ -13,7 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <map>
+#include <string>
+
+#include <pugixml.hpp>
+
+#include "error.h"
+#include "http.h"
 #include "select.h"
+#include "types.h"
+#include "utils.h"
 
 void minio::s3::SelectHandler::Reset() {
   prelude_.clear();

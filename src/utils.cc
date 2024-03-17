@@ -17,9 +17,44 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#include "utils.h"
+#include <corecrt.h>
+#include <cctype>
+#include <clocale>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+#include <exception>
+#include <ios>
+#include <iosfwd>
+#include <list>
+#include <locale>
+#include <map>
+#include <streambuf>
+#include <string>
+#include <type_traits>
+#include <vector>
+#include <sstream>
+#include <regex>
+#include <algorithm>
+#include <chrono>
+#include <iomanip>
+#include <ostream>
+#include <iostream>
 
-#include <memory>
+#include <openssl/buffer.h>
+#include <openssl/evp.h>
+#include <sys/types.h>
+#include <zlib.h>
+#include <curlpp/cURLpp.hpp>
+
+#include "error.h"
+#include "utils.h"
+#include <openssl/bio.h>
+#include <openssl/crypto.h>
+#include <openssl/ossl_typ.h>
+#include <zconf.h>
+
 
 const std::string WEEK_DAYS[] = {"Sun", "Mon", "Tue", "Wed",
                                  "Thu", "Fri", "Sat"};
@@ -370,7 +405,7 @@ minio::utils::UtcTime minio::utils::UtcTime::FromISO8601UTC(const char* value) {
   std::time_t secs = std::mktime(&t);
 
   unsigned long ul = 0;
-  sscanf(rv, ".%lu", &ul);
+  static_cast<void>(sscanf(rv, ".%lu", &ul));
   long usecs = (long)ul;
 
   return UtcTime(secs, usecs);

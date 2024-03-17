@@ -13,7 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <exception>
+#include <iosfwd>
+#include <iostream>
+#include <ostream>
+#include <regex>
+#include <sstream>
+#include <string>
+#include <type_traits>
+#include <vector>
+
+#include "credentials.h"
+#include "error.h"
+#include "http.h"
+#include "providers.h"
 #include "request.h"
+#include "signer.h"
+#include "utils.h"
 
 #define EMPTY_SHA256 \
   "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"

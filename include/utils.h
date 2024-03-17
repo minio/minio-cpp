@@ -20,33 +20,25 @@
 #include <pwd.h>
 #endif
 
-#include <openssl/buffer.h>
-#include <openssl/evp.h>
-#include <sys/types.h>
-#include <zlib.h>
-
-#include <array>
-#include <chrono>
-#include <cmath>
-#include <cstring>
-#include <ctime>
-#include <curlpp/cURLpp.hpp>
-#include <iomanip>
 #include <iostream>
 #include <list>
 #include <map>
-#include <ostream>
-#include <regex>
 #include <set>
-#include <sstream>
+#include <ios>
+#include <iosfwd>
+#include <streambuf>
+#include <string>
+#include <vector>
+
+#include <Winsock2.h> // NOTE: needed for struct timeval
 
 #include "error.h"
 
 namespace minio {
 namespace utils {
 inline constexpr unsigned int kMaxMultipartCount = 10000;  // 10000 parts
-inline constexpr unsigned long long kMaxObjectSize = 5497558138880ULL;  // 5TiB
-inline constexpr unsigned long long kMaxPartSize = 5368709120UL;        // 5GiB
+inline constexpr unsigned long long kMaxObjectSize = 5'497'558'138'880ULL;  // 5TiB
+inline constexpr unsigned long long kMaxPartSize = 5'368'709'120UL;        // 5GiB
 inline constexpr unsigned int kMinPartSize = 5 * 1024 * 1024;           // 5MiB
 
 // GetEnv copies the environment variable name into var
@@ -72,7 +64,7 @@ inline const char* BoolToString(bool b) { return b ? "true" : "false"; }
 // Trim trims leading and trailing character of a string.
 std::string Trim(std::string_view str, char ch = ' ');
 
-// CheckNonemptystring checks whether string is not empty after trimming
+// CheckNonEmptyString checks whether string is not empty after trimming
 // whitespaces.
 bool CheckNonEmptyString(std::string_view str);
 

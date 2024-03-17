@@ -13,9 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "credentials.h"
+#include <string>
+#include <type_traits>
 
 #include <pugixml.hpp>
+
+#include "credentials.h"
+#include "error.h"
+#include "utils.h"
 
 bool minio::creds::expired(const utils::UtcTime& expiration) {
   if (!expiration) return false;

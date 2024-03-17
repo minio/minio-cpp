@@ -16,11 +16,13 @@
 #ifndef _MINIO_CREDS_PROVIDERS_H
 #define _MINIO_CREDS_PROVIDERS_H
 
-#include <sys/types.h>
-
+#include <functional>
+#include <list>
 #include <string>
+#include <type_traits>
 
 #include "credentials.h"
+#include "error.h"
 #include "http.h"
 
 #define DEFAULT_DURATION_SECONDS (60 * 60 * 24)  // 1 day.

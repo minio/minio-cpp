@@ -13,7 +13,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <filesystem>
+#include <fstream>
+#include <iosfwd>
+#include <list>
+#include <memory>
+#include <string>
+#include <system_error>
+#include <type_traits>
+
+#include <curlpp/cURLpp.hpp>
+
+#include "args.h"
+#include "baseclient.h"
 #include "client.h"
+#include "error.h"
+#include "http.h"
+#include "providers.h"
+#include "request.h"
+#include "response.h"
+#include "sse.h"
+#include "types.h"
+#include "utils.h"
 
 minio::s3::ListObjectsResult::ListObjectsResult(error::Error err)
     : failed_(true) {

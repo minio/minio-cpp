@@ -17,21 +17,28 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #endif
 
-#include "providers.h"
+#include <fstream>
+#include <iosfwd>
+#include <list>
+#include <string>
+#include <type_traits>
 
 #include <INIReader.h>
-
-#include <fstream>
 #include <nlohmann/json.hpp>
-
-#include "signer.h"
-#include "utils.h"
+#include <WS2tcpip.h>
 
 #ifndef _WIN32
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/socket.h>
 #endif
+
+#include "credentials.h" 
+#include "signer.h"
+#include "utils.h"
+#include "providers.h"
+#include "error.h"
+#include "http.h"
 
 minio::error::Error minio::creds::checkLoopbackHost(const std::string& host) {
   struct addrinfo hints = {};

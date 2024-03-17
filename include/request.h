@@ -16,9 +16,13 @@
 #ifndef _MINIO_REQUEST_H
 #define _MINIO_REQUEST_H
 
-#include "credentials.h"
+#include <regex>
+#include <string>
+
+#include "error.h"
+#include "http.h"
 #include "providers.h"
-#include "signer.h"
+#include "utils.h"
 
 namespace minio {
 namespace s3 {

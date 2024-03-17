@@ -16,11 +16,13 @@
 #ifndef _MINIO_S3_CLIENT_H
 #define _MINIO_S3_CLIENT_H
 
-#include <fstream>
+#include <list>
+#include <string>
 
 #include "args.h"
 #include "baseclient.h"
-#include "config.h"
+#include "error.h"
+#include "providers.h"
 #include "request.h"
 #include "response.h"
 

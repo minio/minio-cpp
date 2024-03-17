@@ -13,7 +13,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <cstring>
+#include <exception>
+#include <functional>
+#include <iosfwd>
+#include <iostream>
+#include <list>
+#include <map>
+#include <ostream>
+#include <sstream>
+#include <string>
+#include <type_traits>
+
+#include <nlohmann/json.hpp>
+#include <pugixml.hpp>
+
+#include "args.h"
 #include "baseclient.h"
+#include "config.h"
+#include "credentials.h"
+#include "error.h"
+#include "http.h"
+#include "providers.h"
+#include "request.h"
+#include "response.h"
+#include "select.h"
+#include "signer.h"
+#include "types.h"
+#include "utils.h"
 
 minio::utils::Multimap minio::s3::GetCommonListObjectsQueryParams(
     const std::string& delimiter, const std::string& encoding_type,
@@ -955,7 +982,7 @@ minio::s3::BaseClient::GetPresignedPostFormData(PostPolicy policy) {
 
   if (provider_ == nullptr) {
     return error::Error(
-        "Anonymous access does not require presigned post form-data");
+        "Anonymous access does not require pre-signed post form-data");
   }
 
   std::string region;

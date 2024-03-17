@@ -13,9 +13,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "http.h"
+#include <exception>
+#include <functional>
+#include <iosfwd>
+#include <iostream>
+#include <list>
+#include <ostream>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <type_traits>
 
+#include <curl/curl.h>
+#include <curlpp/cURLpp.hpp>
+#include <curlpp/Easy.hpp>
+#include <curlpp/Exception.hpp>
 #include <curlpp/Infos.hpp>
+#include <curlpp/Multi.hpp>
+#include <curlpp/Options.hpp>
+#include <ws2def.h> // NOTE needed for AF_INET6
+#include <ws2ipdef.h> // NOTE needed for sockaddr_in6
+
+#ifdef _WIN32
+#include <ws2tcpip.h>
+#else
+#include <arpa/inet.h>
+#endif
+
+#include "error.h"
+#include "http.h"
+#include "utils.h"
 
 std::string minio::http::Url::String() const {
   if (host.empty()) return {};

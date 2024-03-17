@@ -16,10 +16,19 @@
 #ifndef _MINIO_S3_TYPES_H
 #define _MINIO_S3_TYPES_H
 
+#include <exception>
+#include <functional>
+#include <iosfwd>
 #include <iostream>
-#include <nlohmann/json.hpp>
+#include <list>
+#include <map>
 #include <ostream>
+#include <string>
+#include <type_traits>
 
+#include <nlohmann/json.hpp>
+
+#include "error.h"
 #include "utils.h"
 
 namespace minio {

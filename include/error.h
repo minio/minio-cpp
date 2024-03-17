@@ -16,8 +16,9 @@
 #ifndef _MINIO_ERROR_H
 #define _MINIO_ERROR_H
 
-#include <ostream>
 #include <string>
+
+#include <iosfwd>
 
 namespace minio {
 namespace error {

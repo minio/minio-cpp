@@ -16,6 +16,10 @@
 #ifndef _MINIO_CREDS_CREDENTIALS_H
 #define _MINIO_CREDS_CREDENTIALS_H
 
+#include <string>
+#include <type_traits>
+
+#include "error.h"
 #include "utils.h"
 
 namespace minio {
