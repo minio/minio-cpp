@@ -16,14 +16,13 @@
 #ifndef _MINIO_HTTP_H
 #define _MINIO_HTTP_H
 
+#include <curlpp/Easy.hpp>
+#include <curlpp/Multi.hpp>
 #include <exception>
 #include <functional>
 #include <iostream>
 #include <string>
 #include <type_traits>
-
-#include <curlpp/Easy.hpp>
-#include <curlpp/Multi.hpp>
 
 #include "error.h"
 #include "utils.h"
@@ -65,8 +64,13 @@ struct Url {
   std::string query_string;
 
   Url() = default;
-  Url(bool https, std::string&& host, unsigned int port, std::string&& path, std::string&& query_string) :
-      https(https), host(std::move(host)), port(port), path(std::move(path)), query_string(std::move(query_string)) {}
+  Url(bool https, std::string&& host, unsigned int port, std::string&& path,
+      std::string&& query_string)
+      : https(https),
+        host(std::move(host)),
+        port(port),
+        path(std::move(path)),
+        query_string(std::move(query_string)) {}
   ~Url() = default;
 
   explicit operator bool() const { return !host.empty(); }
@@ -93,10 +97,14 @@ struct DataFunctionArgs {
   void* userdata = nullptr;
 
   DataFunctionArgs() = default;
-  DataFunctionArgs(curlpp::Easy* handle, Response* response, void* userdata) 
+  DataFunctionArgs(curlpp::Easy* handle, Response* response, void* userdata)
       : handle(handle), response(response), userdata(userdata) {}
-  DataFunctionArgs(curlpp::Easy* handle, Response* response, std::string&& datachunk, void* userdata)
-      : handle(handle), response(response), datachunk(std::move(datachunk)), userdata(userdata) {}
+  DataFunctionArgs(curlpp::Easy* handle, Response* response,
+                   std::string&& datachunk, void* userdata)
+      : handle(handle),
+        response(response),
+        datachunk(std::move(datachunk)),
+        userdata(userdata) {}
 
   ~DataFunctionArgs() = default;
 };  // struct DataFunctionArgs

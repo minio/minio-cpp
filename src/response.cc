@@ -13,20 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "response.h"
+
 #include <cstring>
+#include <curlpp/cURLpp.hpp>
 #include <list>
 #include <map>
+#include <pugixml.hpp>
 #include <string>
 #include <type_traits>
 
-#include <curlpp/cURLpp.hpp>
-#include <pugixml.hpp>
-
 #include "error.h"
-#include "response.h"
 #include "types.h"
 #include "utils.h"
-
 
 minio::s3::Response::Response() {}
 

@@ -13,16 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "types.h"
+
 #include <exception>
 #include <iosfwd>
 #include <iostream>
+#include <nlohmann/json.hpp>
 #include <ostream>
 #include <sstream>
 #include <string>
 
-#include <nlohmann/json.hpp>
-
-#include "types.h"
 #include "error.h"
 
 minio::s3::RetentionMode minio::s3::StringToRetentionMode(

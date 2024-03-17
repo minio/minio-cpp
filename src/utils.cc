@@ -17,44 +17,44 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
+#include "utils.h"
+
 #include <corecrt.h>
+#include <openssl/bio.h>
+#include <openssl/buffer.h>
+#include <openssl/crypto.h>
+#include <openssl/evp.h>
+#include <openssl/ossl_typ.h>
+#include <sys/types.h>
+#include <zconf.h>
+#include <zlib.h>
+
+#include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <clocale>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <curlpp/cURLpp.hpp>
 #include <exception>
+#include <iomanip>
 #include <ios>
 #include <iosfwd>
+#include <iostream>
 #include <list>
 #include <locale>
 #include <map>
+#include <ostream>
+#include <regex>
+#include <sstream>
 #include <streambuf>
 #include <string>
 #include <type_traits>
 #include <vector>
-#include <sstream>
-#include <regex>
-#include <algorithm>
-#include <chrono>
-#include <iomanip>
-#include <ostream>
-#include <iostream>
-
-#include <openssl/buffer.h>
-#include <openssl/evp.h>
-#include <sys/types.h>
-#include <zlib.h>
-#include <curlpp/cURLpp.hpp>
 
 #include "error.h"
-#include "utils.h"
-#include <openssl/bio.h>
-#include <openssl/crypto.h>
-#include <openssl/ossl_typ.h>
-#include <zconf.h>
-
 
 const std::string WEEK_DAYS[] = {"Sun", "Mon", "Tue", "Wed",
                                  "Thu", "Fri", "Sat"};

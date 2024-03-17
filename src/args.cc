@@ -13,25 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "args.h"
+
+#include <curlpp/cURLpp.hpp>
 #include <exception>
 #include <filesystem>
 #include <iosfwd>
 #include <iostream>
 #include <map>
+#include <nlohmann/json.hpp>
 #include <ostream>
 #include <string>
 #include <type_traits>
 
-#include <curlpp/cURLpp.hpp>
-#include <nlohmann/json.hpp>
-
-#include "args.h"
 #include "error.h"
 #include "http.h"
 #include "signer.h"
 #include "types.h"
 #include "utils.h"
-
 
 minio::error::Error minio::s3::BucketArgs::Validate() const {
   return utils::CheckBucketName(bucket);

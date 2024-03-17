@@ -13,12 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "credentials.h"
+
+#include <pugixml.hpp>
 #include <string>
 #include <type_traits>
 
-#include <pugixml.hpp>
-
-#include "credentials.h"
 #include "error.h"
 #include "utils.h"
 
@@ -49,6 +49,7 @@ minio::creds::Credentials minio::creds::Credentials::ParseXML(
   text = credentials.node().select_node("Expiration/text()");
   auto expiration = utils::UtcTime::FromISO8601UTC(text.node().value());
 
-  return Credentials(error::SUCCESS, std::move(access_key), std::move(secret_key), 
-      std::move(session_token), expiration);
+  return Credentials(error::SUCCESS, std::move(access_key),
+                     std::move(secret_key), std::move(session_token),
+                     expiration);
 }

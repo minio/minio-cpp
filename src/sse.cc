@@ -13,10 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "sse.h"
+
 #include <string>
 
 #include "utils.h"
-#include "sse.h"
 
 minio::s3::Sse::Sse() {}
 

@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "request.h"
+
 #include <exception>
 #include <iosfwd>
 #include <iostream>
@@ -27,7 +29,6 @@
 #include "error.h"
 #include "http.h"
 #include "providers.h"
-#include "request.h"
 #include "signer.h"
 #include "utils.h"
 
@@ -215,7 +216,8 @@ minio::error::Error minio::s3::BaseUrl::BuildUrl(
     return error::Error("empty bucket name for object name " + object_name);
   }
 
-  url = http::Url(https, std::string(this->host), port, "/", query_params.ToQueryString());
+  url = http::Url(https, std::string(this->host), port, "/",
+                  query_params.ToQueryString());
 
   if (bucket_name.empty()) {
     this->BuildListBucketsUrl(url, region);

@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "baseclient.h"
+
 #include <cstring>
 #include <exception>
 #include <functional>
@@ -20,16 +22,14 @@
 #include <iostream>
 #include <list>
 #include <map>
+#include <nlohmann/json.hpp>
 #include <ostream>
+#include <pugixml.hpp>
 #include <sstream>
 #include <string>
 #include <type_traits>
 
-#include <nlohmann/json.hpp>
-#include <pugixml.hpp>
-
 #include "args.h"
-#include "baseclient.h"
 #include "config.h"
 #include "credentials.h"
 #include "error.h"

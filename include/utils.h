@@ -16,30 +16,30 @@
 #ifndef _MINIO_UTILS_H
 #define _MINIO_UTILS_H
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include <Winsock2.h>  // NOTE: needed for struct timeval
+#else
 #include <pwd.h>
 #endif
 
+#include <ios>
+#include <iosfwd>
 #include <iostream>
 #include <list>
 #include <map>
 #include <set>
-#include <ios>
-#include <iosfwd>
 #include <streambuf>
 #include <string>
 #include <vector>
-
-#include <Winsock2.h> // NOTE: needed for struct timeval
 
 #include "error.h"
 
 namespace minio {
 namespace utils {
 inline constexpr unsigned int kMaxMultipartCount = 10000;  // 10000 parts
-inline constexpr unsigned long long kMaxObjectSize = 5'497'558'138'880ULL;  // 5TiB
-inline constexpr unsigned long long kMaxPartSize = 5'368'709'120UL;        // 5GiB
-inline constexpr unsigned int kMinPartSize = 5 * 1024 * 1024;           // 5MiB
+inline constexpr unsigned long long kMaxObjectSize = 5'497'558'138'880;  // 5TiB
+inline constexpr unsigned long long kMaxPartSize = 5'368'709'120;        // 5GiB
+inline constexpr unsigned int kMinPartSize = 5 * 1024 * 1024;            // 5MiB
 
 // GetEnv copies the environment variable name into var
 bool GetEnv(std::string& var, const char* name);

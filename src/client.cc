@@ -13,6 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "client.h"
+
+#include <curlpp/cURLpp.hpp>
 #include <filesystem>
 #include <fstream>
 #include <iosfwd>
@@ -22,11 +25,8 @@
 #include <system_error>
 #include <type_traits>
 
-#include <curlpp/cURLpp.hpp>
-
 #include "args.h"
 #include "baseclient.h"
-#include "client.h"
 #include "error.h"
 #include "http.h"
 #include "providers.h"
@@ -304,9 +304,9 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
       upc_args.upload_id = upload_id;
       upc_args.part_number = part_number;
       {
-          UploadPartCopyResponse resp = UploadPartCopy(upc_args);
-          if (!resp) return resp;
-          parts.push_back(Part(part_number, std::move(resp.etag)));
+        UploadPartCopyResponse resp = UploadPartCopy(upc_args);
+        if (!resp) return resp;
+        parts.push_back(Part(part_number, std::move(resp.etag)));
       }
     } else {
       while (size > 0) {
@@ -330,9 +330,9 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
         upc_args.upload_id = upload_id;
         upc_args.part_number = part_number;
         {
-            UploadPartCopyResponse resp = UploadPartCopy(upc_args);
-            if (!resp) return resp;
-            parts.push_back(Part(part_number, std::move(resp.etag)));
+          UploadPartCopyResponse resp = UploadPartCopy(upc_args);
+          if (!resp) return resp;
+          parts.push_back(Part(part_number, std::move(resp.etag)));
         }
         offset = start_bytes;
         size -= (end_bytes - start_bytes);
@@ -489,7 +489,7 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
         up_args.headers = ssec->Headers();
       }
     }
-    
+
     if (UploadPartResponse resp = UploadPart(up_args)) {
       if (args.progressfunc != nullptr) {
         uploaded_bytes += static_cast<double>(data.length());

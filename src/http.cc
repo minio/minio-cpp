@@ -13,6 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <curl/curl.h>
+#include <ws2def.h>    // NOTE needed for AF_INET6
+#include <ws2ipdef.h>  // NOTE needed for sockaddr_in6
+
+#include <curlpp/Easy.hpp>
+#include <curlpp/Exception.hpp>
+#include <curlpp/Infos.hpp>
+#include <curlpp/Multi.hpp>
+#include <curlpp/Options.hpp>
+#include <curlpp/cURLpp.hpp>
 #include <exception>
 #include <functional>
 #include <iosfwd>
@@ -23,16 +33,6 @@
 #include <stdexcept>
 #include <string>
 #include <type_traits>
-
-#include <curl/curl.h>
-#include <curlpp/cURLpp.hpp>
-#include <curlpp/Easy.hpp>
-#include <curlpp/Exception.hpp>
-#include <curlpp/Infos.hpp>
-#include <curlpp/Multi.hpp>
-#include <curlpp/Options.hpp>
-#include <ws2def.h> // NOTE needed for AF_INET6
-#include <ws2ipdef.h> // NOTE needed for sockaddr_in6
 
 #ifdef _WIN32
 #include <ws2tcpip.h>
@@ -132,7 +132,8 @@ minio::http::Url minio::http::Url::Parse(std::string value) {
   if (!https && port == 80) port = 0;
   if (https && port == 443) port = 0;
 
-  return Url(https, std::move(host), port, std::move(path), std::move(query_string));
+  return Url(https, std::move(host), port, std::move(path),
+             std::move(query_string));
 }
 
 minio::error::Error minio::http::Response::ReadStatusCode() {
@@ -275,7 +276,8 @@ size_t minio::http::Response::ResponseCallback(curlpp::Multi* const requests,
 
     // If data function is set and the request is successful, send data.
     if (datafunc != nullptr && status_code >= 200 && status_code <= 299) {
-        DataFunctionArgs args(request, this, std::string(this->response_), userdata);
+      DataFunctionArgs args(request, this, std::string(this->response_),
+                            userdata);
       if (!datafunc(args)) requests->remove(request);
     } else {
       body = response_;

@@ -17,15 +17,15 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #endif
 
+#include <INIReader.h>
+#include <WS2tcpip.h>
+
 #include <fstream>
 #include <iosfwd>
 #include <list>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <type_traits>
-
-#include <INIReader.h>
-#include <nlohmann/json.hpp>
-#include <WS2tcpip.h>
 
 #ifndef _WIN32
 #include <arpa/inet.h>
@@ -33,12 +33,12 @@
 #include <sys/socket.h>
 #endif
 
-#include "credentials.h" 
-#include "signer.h"
-#include "utils.h"
-#include "providers.h"
+#include "credentials.h"
 #include "error.h"
 #include "http.h"
+#include "providers.h"
+#include "signer.h"
+#include "utils.h"
 
 minio::error::Error minio::creds::checkLoopbackHost(const std::string& host) {
   struct addrinfo hints = {};
@@ -90,7 +90,7 @@ minio::creds::StaticProvider::StaticProvider(std::string access_key,
                                              std::string secret_key,
                                              std::string session_token) {
   this->creds_ = Credentials(error::SUCCESS, std::move(access_key),
-      std::move(secret_key), std::move(session_token));
+                             std::move(secret_key), std::move(session_token));
 }
 
 minio::creds::StaticProvider::~StaticProvider() {}
@@ -112,8 +112,8 @@ minio::creds::EnvAwsProvider::EnvAwsProvider() {
   }
   utils::GetEnv(session_token, "AWS_SESSION_TOKEN");
 
-  this->creds_ =
-      Credentials(error::SUCCESS, std::move(access_key), std::move(secret_key), std::move(session_token));
+  this->creds_ = Credentials(error::SUCCESS, std::move(access_key),
+                             std::move(secret_key), std::move(session_token));
 }
 
 minio::creds::EnvAwsProvider::~EnvAwsProvider() {}
@@ -128,7 +128,8 @@ minio::creds::EnvMinioProvider::EnvMinioProvider() {
 
   utils::GetEnv(access_key, "MINIO_ACCESS_KEY");
   utils::GetEnv(secret_key, "MINIO_SECRET_KEY");
-  this->creds_ = Credentials(error::SUCCESS, std::move(access_key), std::move(secret_key));
+  this->creds_ =
+      Credentials(error::SUCCESS, std::move(access_key), std::move(secret_key));
 }
 
 minio::creds::EnvMinioProvider::~EnvMinioProvider() {}

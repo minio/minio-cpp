@@ -13,14 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <map>
-#include <string>
+#include "select.h"
 
+#include <map>
 #include <pugixml.hpp>
+#include <string>
 
 #include "error.h"
 #include "http.h"
-#include "select.h"
 #include "types.h"
 #include "utils.h"
 
