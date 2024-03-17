@@ -199,7 +199,7 @@ minio::error::Error minio::s3::BaseUrl::BuildUrl(
     return error::Error("empty bucket name for object name " + object_name);
   }
 
-  url = http::Url{https, host, port, "/", query_params.ToQueryString()};
+  url = http::Url(https, std::string(this->host), port, "/", query_params.ToQueryString());
 
   if (bucket_name.empty()) {
     this->BuildListBucketsUrl(url, region);
