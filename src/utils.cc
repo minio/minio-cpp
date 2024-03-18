@@ -320,7 +320,7 @@ std::tm minio::utils::UtcTime::auxLocaltime(const std::time_t& time) {
 #ifdef _WIN32
   localtime_s(&result, &time);
 #else
-  localtime_r(&result, &time); //PWTODO    
+  localtime_r(&time, &result);
 #endif
   return result;
 }
