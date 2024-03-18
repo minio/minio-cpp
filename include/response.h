@@ -65,38 +65,40 @@ struct Response {
   error::Error err_;
 };  // struct Response
 
-
-#define MINIO_S3_DERIVE_FROM_RESPONSE(DerivedName)                                                  \
-  struct DerivedName : public Response {                                                            \
-    DerivedName() = default;                                                                        \
-    ~DerivedName() = default;                                                                       \
-                                                                                                    \
-    DerivedName(const DerivedName&) = default;                                                      \
-    DerivedName& operator =(const DerivedName&) = default;                                          \
-                                                                                                    \
-    DerivedName(DerivedName&&) = default;                                                           \
-    DerivedName& operator =(DerivedName&&) = default;                                               \
-                                                                                                    \
-    explicit DerivedName(error::Error err) : Response(std::move(err)) {}                            \
-    explicit DerivedName(const Response& resp) : Response(resp) {}                                  \
+#define MINIO_S3_DERIVE_FROM_RESPONSE(DerivedName)                       \
+  struct DerivedName : public Response {                                 \
+    DerivedName() = default;                                             \
+    ~DerivedName() = default;                                            \
+                                                                         \
+    DerivedName(const DerivedName&) = default;                           \
+    DerivedName& operator=(const DerivedName&) = default;                \
+                                                                         \
+    DerivedName(DerivedName&&) = default;                                \
+    DerivedName& operator=(DerivedName&&) = default;                     \
+                                                                         \
+    explicit DerivedName(error::Error err) : Response(std::move(err)) {} \
+    explicit DerivedName(const Response& resp) : Response(resp) {}       \
   };
 
-#define MINIO_S3_DERIVE_FROM_PUT_OBJECT_RESPONSE(DerivedName)                                       \
-  struct DerivedName : public PutObjectResponse {                                                   \
-    DerivedName() = default;                                                                        \
-    ~DerivedName() = default;                                                                       \
-                                                                                                    \
-    DerivedName(const DerivedName&) = default;                                                      \
-    DerivedName& operator =(const DerivedName&) = default;                                          \
-                                                                                                    \
-    DerivedName(DerivedName&&) = default;                                                           \
-    DerivedName& operator =(DerivedName&&) = default;                                               \
-                                                                                                    \
-    explicit DerivedName(error::Error err) : PutObjectResponse(std::move(err)) {}                   \
-    explicit DerivedName(const PutObjectResponse& resp) : PutObjectResponse(resp) {}                \
-    explicit DerivedName(const Response& resp) : PutObjectResponse(resp) {}                         \
-                                                                                                    \
-    explicit DerivedName(const CompleteMultipartUploadResponse& resp) : PutObjectResponse(resp) {}  \
+#define MINIO_S3_DERIVE_FROM_PUT_OBJECT_RESPONSE(DerivedName)               \
+  struct DerivedName : public PutObjectResponse {                           \
+    DerivedName() = default;                                                \
+    ~DerivedName() = default;                                               \
+                                                                            \
+    DerivedName(const DerivedName&) = default;                              \
+    DerivedName& operator=(const DerivedName&) = default;                   \
+                                                                            \
+    DerivedName(DerivedName&&) = default;                                   \
+    DerivedName& operator=(DerivedName&&) = default;                        \
+                                                                            \
+    explicit DerivedName(error::Error err)                                  \
+        : PutObjectResponse(std::move(err)) {}                              \
+    explicit DerivedName(const PutObjectResponse& resp)                     \
+        : PutObjectResponse(resp) {}                                        \
+    explicit DerivedName(const Response& resp) : PutObjectResponse(resp) {} \
+                                                                            \
+    explicit DerivedName(const CompleteMultipartUploadResponse& resp)       \
+        : PutObjectResponse(resp) {}                                        \
   };
 
 struct GetRegionResponse : public Response {
@@ -106,8 +108,7 @@ struct GetRegionResponse : public Response {
 
   explicit GetRegionResponse(error::Error err) : Response(std::move(err)) {}
 
-  explicit GetRegionResponse(const Response& resp)
-    : Response(resp) {}
+  explicit GetRegionResponse(const Response& resp) : Response(resp) {}
 
   ~GetRegionResponse() = default;
 };  // struct GetRegionResponse
@@ -122,8 +123,7 @@ struct ListBucketsResponse : public Response {
 
   explicit ListBucketsResponse(error::Error err) : Response(std::move(err)) {}
 
-  explicit ListBucketsResponse(const Response& resp)
-    : Response(resp) {}
+  explicit ListBucketsResponse(const Response& resp) : Response(resp) {}
 
   ~ListBucketsResponse() = default;
 
@@ -137,8 +137,7 @@ struct BucketExistsResponse : public Response {
 
   explicit BucketExistsResponse(error::Error err) : Response(std::move(err)) {}
 
-  explicit BucketExistsResponse(const Response& resp)
-    : Response(resp) {}
+  explicit BucketExistsResponse(const Response& resp) : Response(resp) {}
 
   ~BucketExistsResponse() = default;
 };  // struct BucketExistsResponse
@@ -157,7 +156,7 @@ struct CompleteMultipartUploadResponse : public Response {
       : Response(std::move(err)) {}
 
   explicit CompleteMultipartUploadResponse(const Response& resp)
-    : Response(resp) {}
+      : Response(resp) {}
 
   ~CompleteMultipartUploadResponse() = default;
 
@@ -175,7 +174,7 @@ struct CreateMultipartUploadResponse : public Response {
       : Response(std::move(err)) {}
 
   explicit CreateMultipartUploadResponse(const Response& resp)
-    : Response(resp) {}
+      : Response(resp) {}
 
   ~CreateMultipartUploadResponse() = default;
 };  // struct CreateMultipartUploadResponse
@@ -188,8 +187,7 @@ struct PutObjectResponse : public Response {
 
   explicit PutObjectResponse(error::Error err) : Response(std::move(err)) {}
 
-  explicit PutObjectResponse(const Response& resp)
-    : Response(resp) {}
+  explicit PutObjectResponse(const Response& resp) : Response(resp) {}
 
   explicit PutObjectResponse(const CompleteMultipartUploadResponse& resp)
       : Response(resp), etag(resp.etag), version_id(resp.version_id) {}
@@ -215,8 +213,7 @@ struct StatObjectResponse : public Response {
 
   explicit StatObjectResponse(error::Error err) : Response(std::move(err)) {}
 
-  explicit StatObjectResponse(const Response& resp)
-    : Response(resp) {}
+  explicit StatObjectResponse(const Response& resp) : Response(resp) {}
 
   ~StatObjectResponse() = default;
 };  // struct StatObjectResponse
@@ -244,8 +241,7 @@ struct Item : public Response {
 
   explicit Item(error::Error err) : Response(std::move(err)) {}
 
-  explicit Item(const Response& resp)
-    : Response(resp) {}
+  explicit Item(const Response& resp) : Response(resp) {}
 
   ~Item() = default;
 };  // struct Item
@@ -280,8 +276,7 @@ struct ListObjectsResponse : public Response {
 
   explicit ListObjectsResponse(error::Error err) : Response(std::move(err)) {}
 
-  explicit ListObjectsResponse(const Response& resp)
-    : Response(resp) {}
+  explicit ListObjectsResponse(const Response& resp) : Response(resp) {}
 
   ~ListObjectsResponse() = default;
 
@@ -309,8 +304,7 @@ struct DeleteError : public Response {
 
   explicit DeleteError(error::Error err) : Response(std::move(err)) {}
 
-  explicit DeleteError(const Response& resp)
-    : Response(resp) {}
+  explicit DeleteError(const Response& resp) : Response(resp) {}
 
   ~DeleteError() = default;
 };  // struct DeleteError
@@ -323,8 +317,7 @@ struct RemoveObjectsResponse : public Response {
 
   explicit RemoveObjectsResponse(error::Error err) : Response(std::move(err)) {}
 
-  explicit RemoveObjectsResponse(const Response& resp)
-    : Response(resp) {}
+  explicit RemoveObjectsResponse(const Response& resp) : Response(resp) {}
 
   ~RemoveObjectsResponse() = default;
 
@@ -344,8 +337,7 @@ struct GetBucketPolicyResponse : public Response {
   explicit GetBucketPolicyResponse(error::Error err)
       : Response(std::move(err)) {}
 
-  explicit GetBucketPolicyResponse(const Response& resp)
-    : Response(resp) {}
+  explicit GetBucketPolicyResponse(const Response& resp) : Response(resp) {}
 
   ~GetBucketPolicyResponse() = default;
 };  // struct GetBucketPolicyResponse
@@ -363,7 +355,7 @@ struct GetBucketNotificationResponse : public Response {
       : Response(std::move(err)) {}
 
   explicit GetBucketNotificationResponse(const Response& resp)
-    : Response(resp) {}
+      : Response(resp) {}
 
   ~GetBucketNotificationResponse() = default;
 
@@ -382,8 +374,7 @@ struct GetBucketEncryptionResponse : public Response {
   explicit GetBucketEncryptionResponse(error::Error err)
       : Response(std::move(err)) {}
 
-  explicit GetBucketEncryptionResponse(const Response& resp)
-    : Response(resp) {}
+  explicit GetBucketEncryptionResponse(const Response& resp) : Response(resp) {}
 
   ~GetBucketEncryptionResponse() = default;
 
@@ -401,8 +392,7 @@ struct GetBucketVersioningResponse : public Response {
   explicit GetBucketVersioningResponse(error::Error err)
       : Response(std::move(err)) {}
 
-  explicit GetBucketVersioningResponse(const Response& resp)
-    : Response(resp) {}
+  explicit GetBucketVersioningResponse(const Response& resp) : Response(resp) {}
 
   ~GetBucketVersioningResponse() = default;
 
@@ -432,7 +422,7 @@ struct GetBucketReplicationResponse : public Response {
       : Response(std::move(err)) {}
 
   explicit GetBucketReplicationResponse(const Response& resp)
-    : Response(resp) {}
+      : Response(resp) {}
 
   ~GetBucketReplicationResponse() = default;
 
@@ -451,8 +441,7 @@ struct GetBucketLifecycleResponse : public Response {
   explicit GetBucketLifecycleResponse(error::Error err)
       : Response(std::move(err)) {}
 
-  explicit GetBucketLifecycleResponse(const Response& resp)
-    : Response(resp) {}
+  explicit GetBucketLifecycleResponse(const Response& resp) : Response(resp) {}
 
   static GetBucketLifecycleResponse ParseXML(std::string_view data);
 };  // struct GetBucketLifecycleResponse
@@ -468,8 +457,7 @@ struct GetBucketTagsResponse : public Response {
 
   explicit GetBucketTagsResponse(error::Error err) : Response(std::move(err)) {}
 
-  explicit GetBucketTagsResponse(const Response& resp)
-    : Response(resp) {}
+  explicit GetBucketTagsResponse(const Response& resp) : Response(resp) {}
 
   ~GetBucketTagsResponse() = default;
 
@@ -488,8 +476,7 @@ struct GetObjectLockConfigResponse : public Response {
   explicit GetObjectLockConfigResponse(error::Error err)
       : Response(std::move(err)) {}
 
-  explicit GetObjectLockConfigResponse(const Response& resp)
-    : Response(resp) {}
+  explicit GetObjectLockConfigResponse(const Response& resp) : Response(resp) {}
 
   ~GetObjectLockConfigResponse() = default;
 };  // struct GetObjectLockConfigResponse
@@ -505,8 +492,7 @@ struct GetObjectTagsResponse : public Response {
 
   explicit GetObjectTagsResponse(error::Error err) : Response(std::move(err)) {}
 
-  explicit GetObjectTagsResponse(const Response& resp)
-    : Response(resp) {}
+  explicit GetObjectTagsResponse(const Response& resp) : Response(resp) {}
 
   ~GetObjectTagsResponse() = default;
 
@@ -526,7 +512,7 @@ struct IsObjectLegalHoldEnabledResponse : public Response {
       : Response(std::move(err)) {}
 
   explicit IsObjectLegalHoldEnabledResponse(const Response& resp)
-    : Response(resp) {}
+      : Response(resp) {}
 
   ~IsObjectLegalHoldEnabledResponse() = default;
 };  // struct IsObjectLegalHoldEnabledResponse
@@ -540,8 +526,7 @@ struct GetObjectRetentionResponse : public Response {
   explicit GetObjectRetentionResponse(error::Error err)
       : Response(std::move(err)) {}
 
-  explicit GetObjectRetentionResponse(const Response& resp)
-    : Response(resp) {}
+  explicit GetObjectRetentionResponse(const Response& resp) : Response(resp) {}
 
   ~GetObjectRetentionResponse() = default;
 };  // struct GetObjectRetentionResponse
@@ -558,7 +543,7 @@ struct GetPresignedObjectUrlResponse : public Response {
       : Response(std::move(err)) {}
 
   explicit GetPresignedObjectUrlResponse(const Response& resp)
-    : Response(resp) {}
+      : Response(resp) {}
 
   ~GetPresignedObjectUrlResponse() = default;
 };  // struct GetPresignedObjectUrlResponse
@@ -573,7 +558,7 @@ struct GetPresignedPostFormDataResponse : public Response {
       : Response(std::move(err)) {}
 
   explicit GetPresignedPostFormDataResponse(const Response& resp)
-    : Response(resp) {}
+      : Response(resp) {}
 
   ~GetPresignedPostFormDataResponse() = default;
 };  // struct GetPresignedPostFormDataResponse

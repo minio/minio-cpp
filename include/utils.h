@@ -115,7 +115,7 @@ class UtcTime {
   long usecs_ = 0L;
 
   static std::tm auxLocaltime(const std::time_t& time);
-  std::tm getBrokenDownTime() const { return auxLocaltime(secs_); } 
+  std::tm getBrokenDownTime() const { return auxLocaltime(secs_); }
 
  public:
   UtcTime() = default;

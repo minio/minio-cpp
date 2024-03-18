@@ -31,6 +31,7 @@
 #include <time.h>
 #include <chrono>
 #include <clocale>
+#include <memory>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
