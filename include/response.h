@@ -160,9 +160,9 @@ struct StatObjectResponse : public Response {
   std::string version_id;
   std::string etag;
   size_t size = 0;
-  utils::Time last_modified;
+  utils::UtcTime last_modified;
   RetentionMode retention_mode;
-  utils::Time retention_retain_until_date;
+  utils::UtcTime retention_retain_until_date;
   LegalHold legal_hold;
   bool delete_marker;
   utils::Multimap user_metadata;
@@ -185,7 +185,7 @@ using GetObjectResponse = Response;
 struct Item : public Response {
   std::string etag;  // except DeleteMarker
   std::string name;
-  utils::Time last_modified;
+  utils::UtcTime last_modified;
   std::string owner_id;
   std::string owner_name;
   size_t size = 0;  // except DeleteMarker
@@ -478,7 +478,7 @@ struct IsObjectLegalHoldEnabledResponse : public Response {
 
 struct GetObjectRetentionResponse : public Response {
   RetentionMode retention_mode;
-  utils::Time retain_until_date;
+  utils::UtcTime retain_until_date;
 
   GetObjectRetentionResponse() = default;
 

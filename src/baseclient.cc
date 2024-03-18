@@ -874,7 +874,8 @@ minio::s3::GetObjectRetentionResponse minio::s3::BaseClient::GetObjectRetention(
   response.retention_mode = StringToRetentionMode(text.node().value());
 
   text = xdoc.select_node("/Retention/RetainUntilDate/text()");
-  response.retain_until_date = utils::Time::FromISO8601UTC(text.node().value());
+  response.retain_until_date =
+      utils::UtcTime::FromISO8601UTC(text.node().value());
 
   return response;
 }
@@ -933,7 +934,7 @@ minio::s3::BaseClient::GetPresignedObjectUrl(GetPresignedObjectUrlArgs args) {
       query_params.Add("X-Amz-Security-Token", creds.session_token);
     }
 
-    utils::Time date = utils::Time::Now();
+    utils::UtcTime date = utils::UtcTime::Now();
     if (args.request_time) date = args.request_time;
 
     std::string host = url.HostHeaderValue();
@@ -1704,7 +1705,7 @@ minio::s3::StatObjectResponse minio::s3::BaseClient::StatObject(
 
   value = response.headers.GetFront("last-modified");
   if (!value.empty()) {
-    resp.last_modified = utils::Time::FromHttpHeaderValue(value.c_str());
+    resp.last_modified = utils::UtcTime::FromHttpHeaderValue(value.c_str());
   }
 
   value = response.headers.GetFront("x-amz-object-lock-mode");
@@ -1713,7 +1714,7 @@ minio::s3::StatObjectResponse minio::s3::BaseClient::StatObject(
   value = response.headers.GetFront("x-amz-object-lock-retain-until-date");
   if (!value.empty()) {
     resp.retention_retain_until_date =
-        utils::Time::FromISO8601UTC(value.c_str());
+        utils::UtcTime::FromISO8601UTC(value.c_str());
   }
 
   value = response.headers.GetFront("x-amz-object-lock-legal-hold");

@@ -81,13 +81,13 @@ minio::s3::ListBucketsResponse minio::s3::ListBucketsResponse::ParseXML(
       xdoc.select_nodes("/ListAllMyBucketsResult/Buckets/Bucket");
   for (auto xnode : xnodes) {
     std::string name;
-    utils::Time creation_date;
+    utils::UtcTime creation_date;
     if (auto node = xnode.node().select_node("Name/text()").node()) {
       name = node.value();
     }
     if (auto node = xnode.node().select_node("CreationDate/text()").node()) {
       std::string value = node.value();
-      creation_date = utils::Time::FromISO8601UTC(value.c_str());
+      creation_date = utils::UtcTime::FromISO8601UTC(value.c_str());
     }
 
     buckets.push_back(Bucket{name, creation_date});
@@ -232,7 +232,7 @@ minio::s3::ListObjectsResponse minio::s3::ListObjectsResponse::ParseXML(
 
       text = content.node().select_node("LastModified/text()");
       value = text.node().value();
-      item.last_modified = utils::Time::FromISO8601UTC(value.c_str());
+      item.last_modified = utils::UtcTime::FromISO8601UTC(value.c_str());
 
       text = content.node().select_node("Owner/ID/text()");
       item.owner_id = text.node().value();
@@ -656,7 +656,7 @@ minio::s3::GetBucketLifecycleResponse::ParseXML(std::string_view data) {
       if (rule.node().select_node("Expiration/Date")) {
         text = rule.node().select_node("Expiration/Date/text()");
         lrule.expiration_date =
-            utils::Time::FromISO8601UTC(text.node().value());
+            utils::UtcTime::FromISO8601UTC(text.node().value());
       }
 
       if (rule.node().select_node("Expiration/Days")) {
@@ -735,7 +735,7 @@ minio::s3::GetBucketLifecycleResponse::ParseXML(std::string_view data) {
       if (rule.node().select_node("Transition/Date")) {
         text = rule.node().select_node("Transition/Date/text()");
         lrule.transition_date =
-            utils::Time::FromISO8601UTC(text.node().value());
+            utils::UtcTime::FromISO8601UTC(text.node().value());
       }
 
       if (rule.node().select_node("Transition/Days")) {

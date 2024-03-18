@@ -31,7 +31,7 @@ int main() {
   args.bucket = "my-bucket";
   args.object = "my-object";
   args.retention_mode = minio::s3::RetentionMode::kGovernance;
-  minio::utils::Time tomorrow = minio::utils::Time::Now();
+  minio::utils::UtcTime tomorrow = minio::utils::UtcTime::Now();
   tomorrow.Add(60 * 60 * 24);
   args.retain_until_date = tomorrow;
 

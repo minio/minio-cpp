@@ -281,7 +281,7 @@ void minio::s3::Request::BuildHeaders(http::Url& url,
   if (!md5sum.empty()) headers.Add("Content-MD5", md5sum);
   if (!sha256.empty()) headers.Add("x-amz-content-sha256", sha256);
 
-  date = utils::Time::Now();
+  date = utils::UtcTime::Now();
   headers.Add("x-amz-date", date.ToAmzDate());
 
   if (provider != nullptr) {
