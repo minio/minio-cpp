@@ -15,17 +15,14 @@
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
+#include <corecrt.h>
 #endif
 
-#include "utils.h"
-
-#include <corecrt.h>
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 #include <openssl/crypto.h>
 #include <openssl/evp.h>
-#include <openssl/ossl_typ.h>
-#include <sys/types.h>
+#include <openssl/types.h>
 #include <zconf.h>
 #include <zlib.h>
 
@@ -55,6 +52,7 @@
 #include <vector>
 
 #include "error.h"
+#include "utils.h"
 
 const std::string WEEK_DAYS[] = {"Sun", "Mon", "Tue", "Wed",
                                  "Thu", "Fri", "Sat"};

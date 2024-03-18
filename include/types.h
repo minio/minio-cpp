@@ -18,11 +18,10 @@
 
 #include <exception>
 #include <functional>
-#include <iosfwd>
 #include <iostream>
 #include <list>
 #include <map>
-#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <ostream>
 #include <string>
 #include <type_traits>
@@ -318,7 +317,7 @@ struct Bucket {
   utils::UtcTime creation_date;
 
   Bucket() = default;
-  Bucket(std::string&& name, utils::Time&& creation_date)
+  Bucket(std::string&& name, utils::UtcTime&& creation_date)
       : name(std::move(name)), creation_date(std::move(creation_date)) {}
   ~Bucket() = default;
 };  // struct Bucket

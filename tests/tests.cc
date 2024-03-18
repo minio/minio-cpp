@@ -556,7 +556,9 @@ class Tests {
         args.bucket = bucket_name_;
         args.object = object_name;
         minio::s3::PutObjectResponse resp = client_.PutObject(args);
-        if (!resp) std::runtime_error("PutObject(): " + resp.Error().String());
+        if (!resp) {
+          throw std::runtime_error("PutObject(): " + resp.Error().String());
+        }
         object_names.push_back(object_name);
       }
       RemoveObjects(object_names);

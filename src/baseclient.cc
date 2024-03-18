@@ -18,7 +18,6 @@
 #include <cstring>
 #include <exception>
 #include <functional>
-#include <iosfwd>
 #include <iostream>
 #include <list>
 #include <map>

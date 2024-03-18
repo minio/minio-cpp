@@ -17,14 +17,13 @@
 #define _MINIO_UTILS_H
 
 #ifdef _WIN32
-#include <Winsock2.h>  // NOTE: needed for struct timeval
+#include <corecrt.h>
 #else
 #include <pwd.h>
 #endif
 
+#include <ctime>
 #include <ios>
-#include <iosfwd>
-#include <iostream>
 #include <list>
 #include <map>
 #include <set>

@@ -17,7 +17,6 @@
 #define _MINIO_S3_ARGS_H
 
 #include <functional>
-#include <iosfwd>
 #include <list>
 #include <map>
 #include <string>

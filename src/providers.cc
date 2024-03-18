@@ -18,7 +18,6 @@
 #endif
 
 #include <INIReader.h>
-#include <WS2tcpip.h>
 
 #include <fstream>
 #include <iosfwd>
@@ -27,7 +26,11 @@
 #include <string>
 #include <type_traits>
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include <WinSock2.h>
+#include <ws2def.h>
+#include <ws2tcpip.h>
+#else
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/socket.h>

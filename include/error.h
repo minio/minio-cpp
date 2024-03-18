@@ -16,8 +16,9 @@
 #ifndef _MINIO_ERROR_H
 #define _MINIO_ERROR_H
 
-#include <iosfwd>
+#include <ostream>
 #include <string>
+#include <type_traits>
 
 namespace minio {
 namespace error {
@@ -32,9 +33,9 @@ class Error {
   Error(const Error&) = default;
   Error& operator=(const Error&) = default;
 
-  Error(Error&& v) : msg_(std::move(v.msg_)) {}
+  Error(Error&& v) noexcept : msg_(std::move(v.msg_)) {}
 
-  Error& operator=(Error&& v) {
+  Error& operator=(Error&& v) noexcept {
     if (this != &v) {
       msg_ = std::move(v.msg_);
     }

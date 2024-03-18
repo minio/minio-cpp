@@ -14,8 +14,6 @@
 // limitations under the License.
 
 #include <curl/curl.h>
-#include <ws2def.h>    // NOTE needed for AF_INET6
-#include <ws2ipdef.h>  // NOTE needed for sockaddr_in6
 
 #include <curlpp/Easy.hpp>
 #include <curlpp/Exception.hpp>
@@ -35,6 +33,9 @@
 #include <type_traits>
 
 #ifdef _WIN32
+#include <WinSock2.h>
+#include <ws2def.h>    // NOTE needed for AF_INET6
+#include <ws2ipdef.h>  // NOTE needed for sockaddr_in6
 #include <ws2tcpip.h>
 #else
 #include <arpa/inet.h>
@@ -397,9 +398,9 @@ minio::http::Response minio::http::Request::execute() {
   while (!requests.perform(&left)) {
   }
   while (left) {
-    fd_set fdread;
-    fd_set fdwrite;
-    fd_set fdexcep;
+    fd_set fdread{};
+    fd_set fdwrite{};
+    fd_set fdexcep{};
     int maxfd = 0;
 
     FD_ZERO(&fdread);

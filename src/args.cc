@@ -18,7 +18,6 @@
 #include <curlpp/cURLpp.hpp>
 #include <exception>
 #include <filesystem>
-#include <iosfwd>
 #include <iostream>
 #include <map>
 #include <nlohmann/json.hpp>

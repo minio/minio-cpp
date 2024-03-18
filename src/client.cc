@@ -18,7 +18,6 @@
 #include <curlpp/cURLpp.hpp>
 #include <filesystem>
 #include <fstream>
-#include <iosfwd>
 #include <list>
 #include <memory>
 #include <string>
