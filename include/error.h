@@ -33,14 +33,8 @@ class Error {
   Error(const Error&) = default;
   Error& operator=(const Error&) = default;
 
-  Error(Error&& v) noexcept : msg_(std::move(v.msg_)) {}
-
-  Error& operator=(Error&& v) noexcept {
-    if (this != &v) {
-      msg_ = std::move(v.msg_);
-    }
-    return *this;
-  }
+  Error(Error&& v) = default;
+  Error& operator=(Error&& v) = default;
 
   ~Error() = default;
 
@@ -53,6 +47,11 @@ class Error {
 };  // class Error
 
 const static Error SUCCESS;
+
+template <typename T_RESULT, typename... TA>
+inline T_RESULT make(TA&&... args) {
+  return T_RESULT{Error(std::forward<TA>(args)...)};
+}
 }  // namespace error
 }  // namespace minio
 

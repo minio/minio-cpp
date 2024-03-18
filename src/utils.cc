@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <time.h>
 #include <chrono>
 #include <clocale>
 #include <cmath>

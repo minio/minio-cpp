@@ -51,6 +51,7 @@ class BaseClient {
  public:
   explicit BaseClient(BaseUrl base_url,
                       creds::Provider* const provider = nullptr);
+
   virtual ~BaseClient() = default;
 
   void Debug(bool flag) { debug_ = flag; }

@@ -33,8 +33,9 @@ minio::creds::Credentials minio::creds::Credentials::ParseXML(
     std::string_view data, const std::string& root) {
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(data.data());
-  if (!result) return Credentials{error::Error("unable to parse XML")};
-
+  if (!result) {
+    return error::make<Credentials>("unable to parse XML");
+  }
   auto credentials = xdoc.select_node((root + "/Credentials").c_str());
 
   auto text = credentials.node().select_node("AccessKeyId/text()");

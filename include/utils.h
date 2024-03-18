@@ -50,7 +50,7 @@ unsigned long CRC32(std::string_view str);
 unsigned int Int(std::string_view str);
 
 // FormatTime formats time as per format.
-std::string FormatTime(const std::tm* time, const char* format);
+std::string FormatTime(const std::tm& time, const char* format);
 
 // StringToBool converts string to bool.
 bool StringToBool(const std::string& str);

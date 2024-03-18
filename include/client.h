@@ -41,13 +41,14 @@ class ListObjectsResult {
   void Populate();
 
  public:
-  ListObjectsResult(error::Error err);
+  explicit ListObjectsResult(error::Error err);
   ListObjectsResult(Client* const client, const ListObjectsArgs& args);
   ListObjectsResult(Client* const client, ListObjectsArgs&& args);
   ~ListObjectsResult() = default;
 
   Item& operator*() const { return *itr_; }
   explicit operator bool() const { return itr_ != resp_.contents.end(); }
+
   ListObjectsResult& operator++() {
     itr_++;
     if (!failed_ && itr_ == resp_.contents.end() && resp_.is_truncated) {
@@ -55,6 +56,7 @@ class ListObjectsResult {
     }
     return *this;
   }
+
   ListObjectsResult operator++(int) {
     ListObjectsResult curr = *this;
     ++(*this);
@@ -73,7 +75,7 @@ class RemoveObjectsResult {
   void Populate();
 
  public:
-  RemoveObjectsResult(error::Error err);
+  explicit RemoveObjectsResult(error::Error err);
   RemoveObjectsResult(Client* const client, const RemoveObjectsArgs& args);
   RemoveObjectsResult(Client* const client, RemoveObjectsArgs&& args);
   ~RemoveObjectsResult() = default;
@@ -108,7 +110,7 @@ class Client : public BaseClient {
                               char* buf);
 
  public:
-  Client(BaseUrl& base_url, creds::Provider* const provider = nullptr);
+  explicit Client(BaseUrl& base_url, creds::Provider* const provider = nullptr);
   ~Client() = default;
 
   ComposeObjectResponse ComposeObject(ComposeObjectArgs args);

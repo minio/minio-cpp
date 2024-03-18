@@ -86,7 +86,7 @@ minio::creds::Credentials minio::creds::ChainedProvider::Fetch() {
     if (creds_) return creds_;
   }
 
-  return Credentials{error::Error("All providers fail to fetch credentials")};
+  return error::make<Credentials>("All providers fail to fetch credentials");
 }
 
 minio::creds::StaticProvider::StaticProvider(std::string access_key,
@@ -155,7 +155,7 @@ minio::creds::AwsConfigProvider::AwsConfigProvider(std::string filename,
 
   INIReader reader(filename);
   if (reader.ParseError() < 0) {
-    this->creds_ = Credentials{error::Error("unable to read " + filename)};
+    this->creds_ = error::make<Credentials>("unable to read " + filename);
   } else {
     this->creds_ = Credentials{error::SUCCESS,
                                reader.Get(profile, "aws_access_key_id", ""),
@@ -189,14 +189,14 @@ minio::creds::MinioClientConfigProvider::MinioClientConfigProvider(
     aliases = json["aliases"];
   } else {
     this->creds_ =
-        Credentials{error::Error("invalid configuration in file " + filename)};
+        error::make<Credentials>("invalid configuration in file " + filename);
     return;
   }
 
   if (!aliases.contains(alias)) {
-    this->creds_ = Credentials{error::Error(
+    this->creds_ = error::make<Credentials>(
         "alias " + alias + " not found in MinIO client configuration file " +
-        filename)};
+        filename);
     return;
   }
 
@@ -437,9 +437,9 @@ minio::creds::Credentials minio::creds::IamAwsProvider::fetch(http::Url url) {
   nlohmann::json json = nlohmann::json::parse(resp.body);
   std::string code = json.value("Code", "Success");
   if (code != "Success") {
-    return Credentials{error::Error(url.String() + " failed with code " + code +
+    return error::make<Credentials>(url.String() + " failed with code " + code +
                                     " and message " +
-                                    json.value("Message", ""))};
+                                    json.value("Message", ""));
   }
 
   std::string expiration = json["Expiration"];
