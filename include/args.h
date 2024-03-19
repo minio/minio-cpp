@@ -231,6 +231,12 @@ struct ListObjectsArgs : public BucketArgs {
 
   ListObjectsArgs() = default;
   ~ListObjectsArgs() = default;
+
+  ListObjectsArgs(const ListObjectsArgs &) = default;
+  ListObjectsArgs &operator=(const ListObjectsArgs &) = default;
+
+  ListObjectsArgs(ListObjectsArgs &&) = default;
+  ListObjectsArgs &operator=(ListObjectsArgs &&) = default;
 };  // struct ListObjectsArgs
 
 struct ListObjectsCommonArgs : public BucketArgs {
@@ -241,14 +247,29 @@ struct ListObjectsCommonArgs : public BucketArgs {
 
   ListObjectsCommonArgs() = default;
   ~ListObjectsCommonArgs() = default;
+
+  ListObjectsCommonArgs(const ListObjectsCommonArgs &) = default;
+  ListObjectsCommonArgs &operator=(const ListObjectsCommonArgs &) = default;
+
+  ListObjectsCommonArgs(ListObjectsCommonArgs &&) = default;
+  ListObjectsCommonArgs &operator=(ListObjectsCommonArgs &&) = default;
 };  // struct ListObjectsCommonArgs
 
 struct ListObjectsV1Args : public ListObjectsCommonArgs {
   std::string marker;
 
   ListObjectsV1Args();
-  ListObjectsV1Args(ListObjectsArgs args);
+
+  explicit ListObjectsV1Args(ListObjectsArgs args);
+  ListObjectsV1Args &operator=(ListObjectsArgs args);
+
   ~ListObjectsV1Args() = default;
+
+  ListObjectsV1Args(const ListObjectsV1Args &) = default;
+  ListObjectsV1Args &operator=(const ListObjectsV1Args &) = default;
+
+  ListObjectsV1Args(ListObjectsV1Args &&) = default;
+  ListObjectsV1Args &operator=(ListObjectsV1Args &&) = default;
 };  // struct ListObjectsV1Args
 
 struct ListObjectsV2Args : public ListObjectsCommonArgs {
@@ -258,8 +279,17 @@ struct ListObjectsV2Args : public ListObjectsCommonArgs {
   bool include_user_metadata = false;
 
   ListObjectsV2Args();
-  ListObjectsV2Args(ListObjectsArgs args);
+
+  explicit ListObjectsV2Args(ListObjectsArgs args);
+  ListObjectsV2Args &operator=(ListObjectsArgs args);
+
   ~ListObjectsV2Args() = default;
+
+  ListObjectsV2Args(const ListObjectsV2Args &) = default;
+  ListObjectsV2Args &operator=(const ListObjectsV2Args &) = default;
+
+  ListObjectsV2Args(ListObjectsV2Args &&) = default;
+  ListObjectsV2Args &operator=(ListObjectsV2Args &&) = default;
 };  // struct ListObjectsV2Args
 
 struct ListObjectVersionsArgs : public ListObjectsCommonArgs {
@@ -267,8 +297,17 @@ struct ListObjectVersionsArgs : public ListObjectsCommonArgs {
   std::string version_id_marker;
 
   ListObjectVersionsArgs();
-  ListObjectVersionsArgs(ListObjectsArgs args);
+
+  explicit ListObjectVersionsArgs(ListObjectsArgs args);
+  ListObjectVersionsArgs &operator=(ListObjectsArgs args);
+
   ~ListObjectVersionsArgs() = default;
+
+  ListObjectVersionsArgs(const ListObjectVersionsArgs &) = default;
+  ListObjectVersionsArgs &operator=(const ListObjectVersionsArgs &) = default;
+
+  ListObjectVersionsArgs(ListObjectVersionsArgs &&) = default;
+  ListObjectVersionsArgs &operator=(ListObjectVersionsArgs &&) = default;
 };  // struct ListObjectVersionsArgs
 
 struct PutObjectArgs : public PutObjectBaseArgs {
@@ -393,7 +432,7 @@ using GetBucketNotificationArgs = BucketArgs;
 struct SetBucketNotificationArgs : public BucketArgs {
   NotificationConfig &config;
 
-  SetBucketNotificationArgs(NotificationConfig &configvalue)
+  explicit SetBucketNotificationArgs(NotificationConfig &configvalue)
       : config(configvalue) {}
 
   ~SetBucketNotificationArgs() = default;
@@ -406,7 +445,8 @@ using GetBucketEncryptionArgs = BucketArgs;
 struct SetBucketEncryptionArgs : public BucketArgs {
   SseConfig &config;
 
-  SetBucketEncryptionArgs(SseConfig &sseconfig) : config(sseconfig) {}
+  explicit SetBucketEncryptionArgs(SseConfig &sseconfig) : config(sseconfig) {}
+
   ~SetBucketEncryptionArgs() = default;
 
   error::Error Validate() const;
@@ -431,7 +471,8 @@ using GetBucketReplicationArgs = BucketArgs;
 struct SetBucketReplicationArgs : public BucketArgs {
   ReplicationConfig &config;
 
-  SetBucketReplicationArgs(ReplicationConfig &value) : config(value) {}
+  explicit SetBucketReplicationArgs(ReplicationConfig &value) : config(value) {}
+
   ~SetBucketReplicationArgs() = default;
 };  // struct SetBucketReplication
 
@@ -442,7 +483,8 @@ using GetBucketLifecycleArgs = BucketArgs;
 struct SetBucketLifecycleArgs : public BucketArgs {
   LifecycleConfig &config;
 
-  SetBucketLifecycleArgs(LifecycleConfig &value) : config(value) {}
+  explicit SetBucketLifecycleArgs(LifecycleConfig &value) : config(value) {}
+
   ~SetBucketLifecycleArgs() = default;
 };  // struct SetBucketLifecycle
 

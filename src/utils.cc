@@ -23,6 +23,7 @@
 #include <openssl/crypto.h>
 #include <openssl/evp.h>
 #include <openssl/types.h>
+#include <time.h>
 #include <zconf.h>
 #include <zlib.h>
 
@@ -43,6 +44,7 @@
 #include <list>
 #include <locale>
 #include <map>
+#include <memory>
 #include <ostream>
 #include <regex>
 #include <sstream>
@@ -308,15 +310,20 @@ std::string minio::utils::Md5sumHash(std::string_view str) {
   return minio::utils::Base64Encode(hash);
 }
 
-std::string minio::utils::FormatTime(const std::tm* time, const char* format) {
+std::string minio::utils::FormatTime(const std::tm& time, const char* format) {
   char buf[128];
-  std::strftime(buf, 128, format, time);
+  std::strftime(buf, 128, format, &time);
   return std::string(buf);
 }
 
-std::tm* minio::utils::UtcTime::getBrokenDownTime() const {
-  const time_t secs = secs_;
-  return std::localtime(&secs);
+std::tm minio::utils::UtcTime::auxLocaltime(const std::time_t& time) {
+  std::tm result{};
+#ifdef _WIN32
+  localtime_s(&result, &time);
+#else
+  localtime_r(&time, &result);
+#endif
+  return result;
 }
 
 minio::utils::UtcTime minio::utils::UtcTime::Now() {
@@ -333,7 +340,7 @@ void minio::utils::UtcTime::ToLocalTime(std::tm& time) {
   auto secs_local = static_cast<time_t>(usec_now / 1000000);
   auto secs_utc = std::mktime(std::gmtime(&secs_local));
   auto secs = secs_ + (secs_local - secs_utc);
-  time = *std::localtime(&secs);
+  time = auxLocaltime(secs);
 }
 
 std::string minio::utils::UtcTime::ToSignerDate() const {
@@ -345,10 +352,10 @@ std::string minio::utils::UtcTime::ToAmzDate() const {
 }
 
 std::string minio::utils::UtcTime::ToHttpHeaderValue() const {
-  auto tm = getBrokenDownTime();
+  const auto tm = getBrokenDownTime();
   std::stringstream ss;
-  ss << WEEK_DAYS[tm->tm_wday] << ", " << FormatTime(tm, "%d ")
-     << MONTHS[tm->tm_mon] << FormatTime(tm, " %Y %H:%M:%S GMT");
+  ss << WEEK_DAYS[tm.tm_wday] << ", " << FormatTime(tm, "%d ")
+     << MONTHS[tm.tm_mon] << FormatTime(tm, " %Y %H:%M:%S GMT");
   return ss.str();
 }
 
@@ -382,11 +389,11 @@ minio::utils::UtcTime minio::utils::UtcTime::FromHttpHeaderValue(
   ltm.tm_mon = static_cast<int>(month);
 
   // Validate week day.
-  std::time_t time = std::mktime(&ltm);
-  std::tm* t = std::localtime(&time);
-  if (week_day != t->tm_wday) return UtcTime();
-
-  return UtcTime(std::mktime(t));
+  auto t = auxLocaltime(std::mktime(&ltm));
+  if (week_day != t.tm_wday) {
+    return UtcTime();
+  }
+  return UtcTime(std::mktime(&t));
 }
 
 std::string minio::utils::UtcTime::ToISO8601UTC() const {

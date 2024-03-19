@@ -50,7 +50,7 @@ unsigned long CRC32(std::string_view str);
 unsigned int Int(std::string_view str);
 
 // FormatTime formats time as per format.
-std::string FormatTime(const std::tm* time, const char* format);
+std::string FormatTime(const std::tm& time, const char* format);
 
 // StringToBool converts string to bool.
 bool StringToBool(const std::string& str);
@@ -114,7 +114,8 @@ class UtcTime {
   std::time_t secs_ = {};
   long usecs_ = 0L;
 
-  std::tm* getBrokenDownTime() const;
+  static std::tm auxLocaltime(const std::time_t& time);
+  std::tm getBrokenDownTime() const { return auxLocaltime(secs_); }
 
  public:
   UtcTime() = default;

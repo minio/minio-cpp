@@ -41,7 +41,7 @@ struct Response {
   std::string object_name;
 
   Response();
-  Response(error::Error err) : err_(std::move(err)) {}
+  explicit Response(error::Error err) : err_(std::move(err)) {}
 
   Response(const Response& resp) = default;
   Response& operator=(const Response& resp) = default;
@@ -65,29 +65,65 @@ struct Response {
   error::Error err_;
 };  // struct Response
 
+#define MINIO_S3_DERIVE_FROM_RESPONSE(DerivedName)                       \
+  struct DerivedName : public Response {                                 \
+    DerivedName() = default;                                             \
+    ~DerivedName() = default;                                            \
+                                                                         \
+    DerivedName(const DerivedName&) = default;                           \
+    DerivedName& operator=(const DerivedName&) = default;                \
+                                                                         \
+    DerivedName(DerivedName&&) = default;                                \
+    DerivedName& operator=(DerivedName&&) = default;                     \
+                                                                         \
+    explicit DerivedName(error::Error err) : Response(std::move(err)) {} \
+    explicit DerivedName(const Response& resp) : Response(resp) {}       \
+  };
+
+#define MINIO_S3_DERIVE_FROM_PUT_OBJECT_RESPONSE(DerivedName)               \
+  struct DerivedName : public PutObjectResponse {                           \
+    DerivedName() = default;                                                \
+    ~DerivedName() = default;                                               \
+                                                                            \
+    DerivedName(const DerivedName&) = default;                              \
+    DerivedName& operator=(const DerivedName&) = default;                   \
+                                                                            \
+    DerivedName(DerivedName&&) = default;                                   \
+    DerivedName& operator=(DerivedName&&) = default;                        \
+                                                                            \
+    explicit DerivedName(error::Error err)                                  \
+        : PutObjectResponse(std::move(err)) {}                              \
+    explicit DerivedName(const PutObjectResponse& resp)                     \
+        : PutObjectResponse(resp) {}                                        \
+    explicit DerivedName(const Response& resp) : PutObjectResponse(resp) {} \
+                                                                            \
+    explicit DerivedName(const CompleteMultipartUploadResponse& resp)       \
+        : PutObjectResponse(resp) {}                                        \
+  };
+
 struct GetRegionResponse : public Response {
   std::string region;
 
-  GetRegionResponse(std::string region) : region(std::move(region)) {}
+  explicit GetRegionResponse(std::string region) : region(std::move(region)) {}
 
-  GetRegionResponse(error::Error err) : Response(std::move(err)) {}
+  explicit GetRegionResponse(error::Error err) : Response(std::move(err)) {}
 
-  GetRegionResponse(const Response& resp) : Response(resp) {}
+  explicit GetRegionResponse(const Response& resp) : Response(resp) {}
 
   ~GetRegionResponse() = default;
 };  // struct GetRegionResponse
 
-using MakeBucketResponse = Response;
+MINIO_S3_DERIVE_FROM_RESPONSE(MakeBucketResponse)
 
 struct ListBucketsResponse : public Response {
   std::list<Bucket> buckets;
 
-  ListBucketsResponse(std::list<Bucket> buckets)
+  explicit ListBucketsResponse(std::list<Bucket> buckets)
       : buckets(std::move(buckets)) {}
 
-  ListBucketsResponse(error::Error err) : Response(std::move(err)) {}
+  explicit ListBucketsResponse(error::Error err) : Response(std::move(err)) {}
 
-  ListBucketsResponse(const Response& resp) : Response(resp) {}
+  explicit ListBucketsResponse(const Response& resp) : Response(resp) {}
 
   ~ListBucketsResponse() = default;
 
@@ -97,18 +133,17 @@ struct ListBucketsResponse : public Response {
 struct BucketExistsResponse : public Response {
   bool exist = false;
 
-  BucketExistsResponse(bool exist) : exist(exist) {}
+  explicit BucketExistsResponse(bool exist) : exist(exist) {}
 
-  BucketExistsResponse(error::Error err) : Response(std::move(err)) {}
+  explicit BucketExistsResponse(error::Error err) : Response(std::move(err)) {}
 
-  BucketExistsResponse(const Response& resp) : Response(resp) {}
+  explicit BucketExistsResponse(const Response& resp) : Response(resp) {}
 
   ~BucketExistsResponse() = default;
 };  // struct BucketExistsResponse
 
-using RemoveBucketResponse = Response;
-
-using AbortMultipartUploadResponse = Response;
+MINIO_S3_DERIVE_FROM_RESPONSE(RemoveBucketResponse)
+MINIO_S3_DERIVE_FROM_RESPONSE(AbortMultipartUploadResponse)
 
 struct CompleteMultipartUploadResponse : public Response {
   std::string location;
@@ -117,10 +152,11 @@ struct CompleteMultipartUploadResponse : public Response {
 
   CompleteMultipartUploadResponse() = default;
 
-  CompleteMultipartUploadResponse(error::Error err)
+  explicit CompleteMultipartUploadResponse(error::Error err)
       : Response(std::move(err)) {}
 
-  CompleteMultipartUploadResponse(const Response& resp) : Response(resp) {}
+  explicit CompleteMultipartUploadResponse(const Response& resp)
+      : Response(resp) {}
 
   ~CompleteMultipartUploadResponse() = default;
 
@@ -131,12 +167,14 @@ struct CompleteMultipartUploadResponse : public Response {
 struct CreateMultipartUploadResponse : public Response {
   std::string upload_id;
 
-  CreateMultipartUploadResponse(std::string upload_id)
+  explicit CreateMultipartUploadResponse(std::string upload_id)
       : upload_id(std::move(upload_id)) {}
 
-  CreateMultipartUploadResponse(error::Error err) : Response(std::move(err)) {}
+  explicit CreateMultipartUploadResponse(error::Error err)
+      : Response(std::move(err)) {}
 
-  CreateMultipartUploadResponse(const Response& resp) : Response(resp) {}
+  explicit CreateMultipartUploadResponse(const Response& resp)
+      : Response(resp) {}
 
   ~CreateMultipartUploadResponse() = default;
 };  // struct CreateMultipartUploadResponse
@@ -147,19 +185,18 @@ struct PutObjectResponse : public Response {
 
   PutObjectResponse() = default;
 
-  PutObjectResponse(error::Error err) : Response(std::move(err)) {}
+  explicit PutObjectResponse(error::Error err) : Response(std::move(err)) {}
 
-  PutObjectResponse(const Response& resp) : Response(resp) {}
+  explicit PutObjectResponse(const Response& resp) : Response(resp) {}
 
-  PutObjectResponse(const CompleteMultipartUploadResponse& resp)
+  explicit PutObjectResponse(const CompleteMultipartUploadResponse& resp)
       : Response(resp), etag(resp.etag), version_id(resp.version_id) {}
 
   ~PutObjectResponse() = default;
 };  // struct PutObjectResponse
 
-using UploadPartResponse = PutObjectResponse;
-
-using UploadPartCopyResponse = PutObjectResponse;
+MINIO_S3_DERIVE_FROM_PUT_OBJECT_RESPONSE(UploadPartResponse)
+MINIO_S3_DERIVE_FROM_PUT_OBJECT_RESPONSE(UploadPartCopyResponse)
 
 struct StatObjectResponse : public Response {
   std::string version_id;
@@ -174,18 +211,16 @@ struct StatObjectResponse : public Response {
 
   StatObjectResponse() = default;
 
-  StatObjectResponse(error::Error err) : Response(std::move(err)) {}
+  explicit StatObjectResponse(error::Error err) : Response(std::move(err)) {}
 
-  StatObjectResponse(const Response& resp) : Response(resp) {}
+  explicit StatObjectResponse(const Response& resp) : Response(resp) {}
 
   ~StatObjectResponse() = default;
 };  // struct StatObjectResponse
 
-using RemoveObjectResponse = Response;
-
-using DownloadObjectResponse = Response;
-
-using GetObjectResponse = Response;
+MINIO_S3_DERIVE_FROM_RESPONSE(RemoveObjectResponse)
+MINIO_S3_DERIVE_FROM_RESPONSE(DownloadObjectResponse)
+MINIO_S3_DERIVE_FROM_RESPONSE(GetObjectResponse)
 
 struct Item : public Response {
   std::string etag;  // except DeleteMarker
@@ -204,9 +239,9 @@ struct Item : public Response {
 
   Item() = default;
 
-  Item(error::Error err) : Response(std::move(err)) {}
+  explicit Item(error::Error err) : Response(std::move(err)) {}
 
-  Item(const Response& resp) : Response(resp) {}
+  explicit Item(const Response& resp) : Response(resp) {}
 
   ~Item() = default;
 };  // struct Item
@@ -239,20 +274,18 @@ struct ListObjectsResponse : public Response {
 
   ListObjectsResponse() = default;
 
-  ListObjectsResponse(error::Error err) : Response(std::move(err)) {}
+  explicit ListObjectsResponse(error::Error err) : Response(std::move(err)) {}
 
-  ListObjectsResponse(const Response& resp) : Response(resp) {}
+  explicit ListObjectsResponse(const Response& resp) : Response(resp) {}
 
   ~ListObjectsResponse() = default;
 
   static ListObjectsResponse ParseXML(std::string_view data, bool version);
 };  // struct ListObjectsResponse
 
-using CopyObjectResponse = PutObjectResponse;
-
-using ComposeObjectResponse = PutObjectResponse;
-
-using UploadObjectResponse = PutObjectResponse;
+MINIO_S3_DERIVE_FROM_PUT_OBJECT_RESPONSE(CopyObjectResponse)
+MINIO_S3_DERIVE_FROM_PUT_OBJECT_RESPONSE(ComposeObjectResponse)
+MINIO_S3_DERIVE_FROM_PUT_OBJECT_RESPONSE(UploadObjectResponse)
 
 struct DeletedObject : public Response {
   std::string name;
@@ -269,9 +302,9 @@ struct DeleteError : public Response {
 
   DeleteError() = default;
 
-  DeleteError(error::Error err) : Response(std::move(err)) {}
+  explicit DeleteError(error::Error err) : Response(std::move(err)) {}
 
-  DeleteError(const Response& resp) : Response(resp) {}
+  explicit DeleteError(const Response& resp) : Response(resp) {}
 
   ~DeleteError() = default;
 };  // struct DeleteError
@@ -282,71 +315,73 @@ struct RemoveObjectsResponse : public Response {
 
   RemoveObjectsResponse() = default;
 
-  RemoveObjectsResponse(error::Error err) : Response(std::move(err)) {}
+  explicit RemoveObjectsResponse(error::Error err) : Response(std::move(err)) {}
 
-  RemoveObjectsResponse(const Response& resp) : Response(resp) {}
+  explicit RemoveObjectsResponse(const Response& resp) : Response(resp) {}
 
   ~RemoveObjectsResponse() = default;
 
   static RemoveObjectsResponse ParseXML(std::string_view data);
 };  // struct RemoveObjectsResponse
 
-using SelectObjectContentResponse = Response;
-
-using ListenBucketNotificationResponse = Response;
-
-using DeleteBucketPolicyResponse = Response;
+MINIO_S3_DERIVE_FROM_RESPONSE(SelectObjectContentResponse)
+MINIO_S3_DERIVE_FROM_RESPONSE(ListenBucketNotificationResponse)
+MINIO_S3_DERIVE_FROM_RESPONSE(DeleteBucketPolicyResponse)
 
 struct GetBucketPolicyResponse : public Response {
   std::string policy;
 
-  GetBucketPolicyResponse(std::string policy) : policy(std::move(policy)) {}
+  explicit GetBucketPolicyResponse(std::string policy)
+      : policy(std::move(policy)) {}
 
-  GetBucketPolicyResponse(error::Error err) : Response(std::move(err)) {}
+  explicit GetBucketPolicyResponse(error::Error err)
+      : Response(std::move(err)) {}
 
-  GetBucketPolicyResponse(const Response& resp) : Response(resp) {}
+  explicit GetBucketPolicyResponse(const Response& resp) : Response(resp) {}
 
   ~GetBucketPolicyResponse() = default;
 };  // struct GetBucketPolicyResponse
 
-using SetBucketPolicyResponse = Response;
-
-using DeleteBucketNotificationResponse = Response;
+MINIO_S3_DERIVE_FROM_RESPONSE(SetBucketPolicyResponse)
+MINIO_S3_DERIVE_FROM_RESPONSE(DeleteBucketNotificationResponse)
 
 struct GetBucketNotificationResponse : public Response {
   NotificationConfig config;
 
-  GetBucketNotificationResponse(NotificationConfig config)
+  explicit GetBucketNotificationResponse(NotificationConfig config)
       : config(std::move(config)) {}
 
-  GetBucketNotificationResponse(error::Error err) : Response(std::move(err)) {}
+  explicit GetBucketNotificationResponse(error::Error err)
+      : Response(std::move(err)) {}
 
-  GetBucketNotificationResponse(const Response& resp) : Response(resp) {}
+  explicit GetBucketNotificationResponse(const Response& resp)
+      : Response(resp) {}
 
   ~GetBucketNotificationResponse() = default;
 
   static GetBucketNotificationResponse ParseXML(std::string_view data);
 };  // struct GetBucketNotificationResponse
 
-using SetBucketNotificationResponse = Response;
-
-using DeleteBucketEncryptionResponse = Response;
+MINIO_S3_DERIVE_FROM_RESPONSE(SetBucketNotificationResponse)
+MINIO_S3_DERIVE_FROM_RESPONSE(DeleteBucketEncryptionResponse)
 
 struct GetBucketEncryptionResponse : public Response {
   SseConfig config;
 
-  GetBucketEncryptionResponse(SseConfig config) : config(std::move(config)) {}
+  explicit GetBucketEncryptionResponse(SseConfig config)
+      : config(std::move(config)) {}
 
-  GetBucketEncryptionResponse(error::Error err) : Response(std::move(err)) {}
+  explicit GetBucketEncryptionResponse(error::Error err)
+      : Response(std::move(err)) {}
 
-  GetBucketEncryptionResponse(const Response& resp) : Response(resp) {}
+  explicit GetBucketEncryptionResponse(const Response& resp) : Response(resp) {}
 
   ~GetBucketEncryptionResponse() = default;
 
   static GetBucketEncryptionResponse ParseXML(std::string_view data);
 };  // struct GetBucketEncryptionResponse
 
-using SetBucketEncryptionResponse = Response;
+MINIO_S3_DERIVE_FROM_RESPONSE(SetBucketEncryptionResponse)
 
 struct GetBucketVersioningResponse : public Response {
   Boolean status;
@@ -354,9 +389,10 @@ struct GetBucketVersioningResponse : public Response {
 
   GetBucketVersioningResponse() = default;
 
-  GetBucketVersioningResponse(error::Error err) : Response(std::move(err)) {}
+  explicit GetBucketVersioningResponse(error::Error err)
+      : Response(std::move(err)) {}
 
-  GetBucketVersioningResponse(const Response& resp) : Response(resp) {}
+  explicit GetBucketVersioningResponse(const Response& resp) : Response(resp) {}
 
   ~GetBucketVersioningResponse() = default;
 
@@ -366,50 +402,52 @@ struct GetBucketVersioningResponse : public Response {
   }
 
   std::string MfaDelete() const {
-    if (!mfa_delete) return {};
+    if (!mfa_delete) {
+      return {};
+    }
     return mfa_delete.Get() ? "Enabled" : "Disabled";
   }
 };  // struct GetBucketVersioningResponse
 
-using SetBucketVersioningResponse = Response;
-
-using DeleteBucketReplicationResponse = Response;
+MINIO_S3_DERIVE_FROM_RESPONSE(SetBucketVersioningResponse)
+MINIO_S3_DERIVE_FROM_RESPONSE(DeleteBucketReplicationResponse)
 
 struct GetBucketReplicationResponse : public Response {
   ReplicationConfig config;
 
-  GetBucketReplicationResponse(ReplicationConfig config)
+  explicit GetBucketReplicationResponse(ReplicationConfig config)
       : config(std::move(config)) {}
 
-  GetBucketReplicationResponse(error::Error err) : Response(std::move(err)) {}
+  explicit GetBucketReplicationResponse(error::Error err)
+      : Response(std::move(err)) {}
 
-  GetBucketReplicationResponse(const Response& resp) : Response(resp) {}
+  explicit GetBucketReplicationResponse(const Response& resp)
+      : Response(resp) {}
 
   ~GetBucketReplicationResponse() = default;
 
   static GetBucketReplicationResponse ParseXML(std::string_view data);
 };  // struct GetBucketReplicationResponse
 
-using SetBucketReplicationResponse = Response;
-
-using DeleteBucketLifecycleResponse = Response;
+MINIO_S3_DERIVE_FROM_RESPONSE(SetBucketReplicationResponse)
+MINIO_S3_DERIVE_FROM_RESPONSE(DeleteBucketLifecycleResponse)
 
 struct GetBucketLifecycleResponse : public Response {
   LifecycleConfig config;
 
-  GetBucketLifecycleResponse(LifecycleConfig config)
+  explicit GetBucketLifecycleResponse(LifecycleConfig config)
       : config(std::move(config)) {}
 
-  GetBucketLifecycleResponse(error::Error err) : Response(std::move(err)) {}
+  explicit GetBucketLifecycleResponse(error::Error err)
+      : Response(std::move(err)) {}
 
-  GetBucketLifecycleResponse(const Response& resp) : Response(resp) {}
+  explicit GetBucketLifecycleResponse(const Response& resp) : Response(resp) {}
 
   static GetBucketLifecycleResponse ParseXML(std::string_view data);
 };  // struct GetBucketLifecycleResponse
 
-using SetBucketLifecycleResponse = Response;
-
-using DeleteBucketTagsResponse = Response;
+MINIO_S3_DERIVE_FROM_RESPONSE(SetBucketLifecycleResponse)
+MINIO_S3_DERIVE_FROM_RESPONSE(DeleteBucketTagsResponse)
 
 struct GetBucketTagsResponse : public Response {
   std::map<std::string, std::string> tags;
@@ -417,35 +455,34 @@ struct GetBucketTagsResponse : public Response {
   GetBucketTagsResponse(std::map<std::string, std::string> tags)
       : tags(std::move(tags)) {}
 
-  GetBucketTagsResponse(error::Error err) : Response(std::move(err)) {}
+  explicit GetBucketTagsResponse(error::Error err) : Response(std::move(err)) {}
 
-  GetBucketTagsResponse(const Response& resp) : Response(resp) {}
+  explicit GetBucketTagsResponse(const Response& resp) : Response(resp) {}
 
   ~GetBucketTagsResponse() = default;
 
   static GetBucketTagsResponse ParseXML(std::string_view data);
 };  // struct GetBucketTagsResponse
 
-using SetBucketTagsResponse = Response;
-
-using DeleteObjectLockConfigResponse = Response;
+MINIO_S3_DERIVE_FROM_RESPONSE(SetBucketTagsResponse)
+MINIO_S3_DERIVE_FROM_RESPONSE(DeleteObjectLockConfigResponse)
 
 struct GetObjectLockConfigResponse : public Response {
   ObjectLockConfig config;
 
-  GetObjectLockConfigResponse(ObjectLockConfig config)
+  explicit GetObjectLockConfigResponse(ObjectLockConfig config)
       : config(std::move(config)) {}
 
-  GetObjectLockConfigResponse(error::Error err) : Response(std::move(err)) {}
+  explicit GetObjectLockConfigResponse(error::Error err)
+      : Response(std::move(err)) {}
 
-  GetObjectLockConfigResponse(const Response& resp) : Response(resp) {}
+  explicit GetObjectLockConfigResponse(const Response& resp) : Response(resp) {}
 
   ~GetObjectLockConfigResponse() = default;
 };  // struct GetObjectLockConfigResponse
 
-using SetObjectLockConfigResponse = Response;
-
-using DeleteObjectTagsResponse = Response;
+MINIO_S3_DERIVE_FROM_RESPONSE(SetObjectLockConfigResponse)
+MINIO_S3_DERIVE_FROM_RESPONSE(DeleteObjectTagsResponse)
 
 struct GetObjectTagsResponse : public Response {
   std::map<std::string, std::string> tags;
@@ -453,30 +490,29 @@ struct GetObjectTagsResponse : public Response {
   GetObjectTagsResponse(std::map<std::string, std::string> tags)
       : tags(std::move(tags)) {}
 
-  GetObjectTagsResponse(error::Error err) : Response(std::move(err)) {}
+  explicit GetObjectTagsResponse(error::Error err) : Response(std::move(err)) {}
 
-  GetObjectTagsResponse(const Response& resp) : Response(resp) {}
+  explicit GetObjectTagsResponse(const Response& resp) : Response(resp) {}
 
   ~GetObjectTagsResponse() = default;
 
   static GetObjectTagsResponse ParseXML(std::string_view data);
 };  // struct GetObjectTagsResponse
 
-using SetObjectTagsResponse = Response;
-
-using EnableObjectLegalHoldResponse = Response;
-
-using DisableObjectLegalHoldResponse = Response;
+MINIO_S3_DERIVE_FROM_RESPONSE(SetObjectTagsResponse)
+MINIO_S3_DERIVE_FROM_RESPONSE(EnableObjectLegalHoldResponse)
+MINIO_S3_DERIVE_FROM_RESPONSE(DisableObjectLegalHoldResponse)
 
 struct IsObjectLegalHoldEnabledResponse : public Response {
   bool enabled = false;
 
-  IsObjectLegalHoldEnabledResponse(bool enabled) : enabled(enabled) {}
+  explicit IsObjectLegalHoldEnabledResponse(bool enabled) : enabled(enabled) {}
 
-  IsObjectLegalHoldEnabledResponse(error::Error err)
+  explicit IsObjectLegalHoldEnabledResponse(error::Error err)
       : Response(std::move(err)) {}
 
-  IsObjectLegalHoldEnabledResponse(const Response& resp) : Response(resp) {}
+  explicit IsObjectLegalHoldEnabledResponse(const Response& resp)
+      : Response(resp) {}
 
   ~IsObjectLegalHoldEnabledResponse() = default;
 };  // struct IsObjectLegalHoldEnabledResponse
@@ -487,23 +523,27 @@ struct GetObjectRetentionResponse : public Response {
 
   GetObjectRetentionResponse() = default;
 
-  GetObjectRetentionResponse(error::Error err) : Response(std::move(err)) {}
+  explicit GetObjectRetentionResponse(error::Error err)
+      : Response(std::move(err)) {}
 
-  GetObjectRetentionResponse(const Response& resp) : Response(resp) {}
+  explicit GetObjectRetentionResponse(const Response& resp) : Response(resp) {}
 
   ~GetObjectRetentionResponse() = default;
 };  // struct GetObjectRetentionResponse
 
-using SetObjectRetentionResponse = Response;
+MINIO_S3_DERIVE_FROM_RESPONSE(SetObjectRetentionResponse)
 
 struct GetPresignedObjectUrlResponse : public Response {
   std::string url;
 
-  GetPresignedObjectUrlResponse(std::string url) : url(std::move(url)) {}
+  explicit GetPresignedObjectUrlResponse(std::string url)
+      : url(std::move(url)) {}
 
-  GetPresignedObjectUrlResponse(error::Error err) : Response(std::move(err)) {}
+  explicit GetPresignedObjectUrlResponse(error::Error err)
+      : Response(std::move(err)) {}
 
-  GetPresignedObjectUrlResponse(const Response& resp) : Response(resp) {}
+  explicit GetPresignedObjectUrlResponse(const Response& resp)
+      : Response(resp) {}
 
   ~GetPresignedObjectUrlResponse() = default;
 };  // struct GetPresignedObjectUrlResponse
@@ -514,13 +554,17 @@ struct GetPresignedPostFormDataResponse : public Response {
   GetPresignedPostFormDataResponse(std::map<std::string, std::string> form_data)
       : form_data(std::move(form_data)) {}
 
-  GetPresignedPostFormDataResponse(error::Error err)
+  explicit GetPresignedPostFormDataResponse(error::Error err)
       : Response(std::move(err)) {}
 
-  GetPresignedPostFormDataResponse(const Response& resp) : Response(resp) {}
+  explicit GetPresignedPostFormDataResponse(const Response& resp)
+      : Response(resp) {}
 
   ~GetPresignedPostFormDataResponse() = default;
 };  // struct GetPresignedPostFormDataResponse
+
+#undef MINIO_S3_DERIVE_FROM_PUT_OBJECT_RESPONSE
+#undef MINIO_S3_DERIVE_FROM_RESPONSE
 }  // namespace s3
 }  // namespace minio
 

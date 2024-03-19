@@ -74,11 +74,11 @@ void minio::s3::ListObjectsResult::Populate() {
     }
 
     if (args_.include_versions || !args_.version_id_marker.empty()) {
-      resp_ = client_->ListObjectVersions(args_);
+      resp_ = client_->ListObjectVersions(ListObjectVersionsArgs(args_));
     } else if (args_.use_api_v1) {
-      resp_ = client_->ListObjectsV1(args_);
+      resp_ = client_->ListObjectsV1(ListObjectsV1Args(args_));
     } else {
-      resp_ = client_->ListObjectsV2(args_);
+      resp_ = client_->ListObjectsV2(ListObjectsV2Args(args_));
     }
 
     if (!resp_) {
@@ -123,13 +123,17 @@ void minio::s3::RemoveObjectsResult::Populate() {
 
     for (int i = 0; i < 1000; i++) {
       DeleteObject object;
-      if (!args_.func(object)) break;
+      if (!args_.func(object)) {
+        break;
+      }
       args.objects.push_back(object);
     }
 
     if (args.objects.size() != 0) {
       resp_ = client_->BaseClient::RemoveObjects(args);
-      if (!resp_) resp_.errors.push_back(DeleteError(resp_));
+      if (!resp_) {
+        resp_.errors.push_back(DeleteError(resp_));
+      }
       itr_ = resp_.errors.begin();
     } else {
       done_ = true;
@@ -147,9 +151,11 @@ minio::s3::StatObjectResponse minio::s3::Client::CalculatePartCount(
   for (auto& source : sources) {
     if (source.ssec != nullptr && !base_url_.https) {
       std::string msg = "source " + source.bucket + "/" + source.object;
-      if (!source.version_id.empty()) msg += "?versionId=" + source.version_id;
+      if (!source.version_id.empty()) {
+        msg += "?versionId=" + source.version_id;
+      }
       msg += ": SSE-C operation must be performed over a secure connection";
-      return error::Error(msg);
+      return error::make<StatObjectResponse>(msg);
     }
 
     i++;
@@ -158,11 +164,14 @@ minio::s3::StatObjectResponse minio::s3::Client::CalculatePartCount(
     size_t size;
 
     StatObjectResponse resp = StatObject(source);
-    if (!resp) return resp;
+    if (!resp) {
+      return resp;
+    }
     etag = resp.etag;
     size = resp.size;
-    if (error::Error err = source.BuildHeaders(size, etag)) return err;
-
+    if (error::Error err = source.BuildHeaders(size, etag)) {
+      return StatObjectResponse(err);
+    }
     if (source.length != nullptr) {
       size = *source.length;
     } else if (source.offset != nullptr) {
@@ -175,13 +184,14 @@ minio::s3::StatObjectResponse minio::s3::Client::CalculatePartCount(
       if (!source.version_id.empty()) msg += "?versionId=" + source.version_id;
       msg += ": size " + std::to_string(size) + " must be greater than " +
              std::to_string(utils::kMinPartSize);
-      return error::Error(msg);
+      return error::make<StatObjectResponse>(msg);
     }
 
     object_size += size;
     if (object_size > utils::kMaxObjectSize) {
-      return error::Error("destination object size must be less than " +
-                          std::to_string(utils::kMaxObjectSize));
+      return error::make<StatObjectResponse>(
+          "destination object size must be less than " +
+          std::to_string(utils::kMaxObjectSize));
     }
 
     if (size > utils::kMaxPartSize) {
@@ -203,7 +213,7 @@ minio::s3::StatObjectResponse minio::s3::Client::CalculatePartCount(
                " for multipart split upload of " + std::to_string(size) +
                ", last part size is less than " +
                std::to_string(utils::kMinPartSize);
-        return error::Error(msg);
+        return error::make<StatObjectResponse>(msg);
       }
 
       part_count += count;
@@ -212,13 +222,13 @@ minio::s3::StatObjectResponse minio::s3::Client::CalculatePartCount(
     }
 
     if (part_count > utils::kMaxMultipartCount) {
-      return error::Error(
+      return error::make<StatObjectResponse>(
           "Compose sources create more than allowed multipart count " +
           std::to_string(utils::kMaxMultipartCount));
     }
   }
 
-  return error::SUCCESS;
+  return StatObjectResponse(error::SUCCESS);
 }
 
 minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
@@ -226,7 +236,9 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
   size_t part_count = 0;
   {
     StatObjectResponse resp = CalculatePartCount(part_count, args.sources);
-    if (!resp) return resp;
+    if (!resp) {
+      return ComposeObjectResponse(resp);
+    }
   }
 
   ComposeSource& source = args.sources.front();
@@ -240,7 +252,7 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
     coargs.sse = args.sse;
     coargs.source = source;
 
-    return CopyObject(coargs);
+    return ComposeObjectResponse(CopyObject(coargs));
   }
 
   utils::Multimap headers = args.Headers();
@@ -255,7 +267,7 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
     if (CreateMultipartUploadResponse resp = CreateMultipartUpload(cmu_args)) {
       upload_id = resp.upload_id;
     } else {
-      return resp;
+      return ComposeObjectResponse(resp);
     }
   }
 
@@ -303,7 +315,9 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
       upc_args.upload_id = upload_id;
       upc_args.part_number = part_number;
       UploadPartCopyResponse resp = UploadPartCopy(upc_args);
-      if (!resp) return resp;
+      if (!resp) {
+        return ComposeObjectResponse(resp);
+      }
       parts.push_back(Part(part_number, std::move(resp.etag)));
     } else {
       while (size > 0) {
@@ -328,7 +342,9 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
         upc_args.part_number = part_number;
         {
           UploadPartCopyResponse resp = UploadPartCopy(upc_args);
-          if (!resp) return resp;
+          if (!resp) {
+            return ComposeObjectResponse(resp);
+          }
           parts.push_back(Part(part_number, std::move(resp.etag)));
         }
         offset = start_bytes;
@@ -343,7 +359,7 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
   cmu_args.object = args.object;
   cmu_args.upload_id = upload_id;
   cmu_args.parts = parts;
-  return CompleteMultipartUpload(cmu_args);
+  return ComposeObjectResponse(CompleteMultipartUpload(cmu_args));
 }
 
 minio::s3::PutObjectResponse minio::s3::Client::PutObject(
@@ -381,13 +397,14 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
 
       if (error::Error err =
               utils::ReadPart(args.stream, buf, part_size, bytes_read)) {
-        return err;
+        return PutObjectResponse(err);
       }
 
       if (bytes_read != part_size) {
-        return error::Error("not enough data in the stream; expected: " +
-                            std::to_string(part_size) +
-                            ", got: " + std::to_string(bytes_read) + " bytes");
+        return error::make<PutObjectResponse>(
+            "not enough data in the stream; expected: " +
+            std::to_string(part_size) + ", got: " + std::to_string(bytes_read) +
+            " bytes");
       }
     } else {
       char* b = buf;
@@ -403,7 +420,7 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
 
       size_t n = 0;
       if (error::Error err = utils::ReadPart(args.stream, b, size, n)) {
-        return err;
+        return PutObjectResponse(err);
       }
 
       bytes_read += n;
@@ -448,7 +465,7 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
               CreateMultipartUpload(cmu_args)) {
         upload_id = resp.upload_id;
       } else {
-        return resp;
+        return PutObjectResponse(resp);
       }
     }
 
@@ -515,15 +532,17 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
     actual_args.userdata = args.progress_userdata;
     args.progressfunc(actual_args);
   }
-  return resp;
+  return PutObjectResponse(resp);
 }
 
 minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
     ComposeObjectArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return ComposeObjectResponse(err);
+  }
 
   if (args.sse != nullptr && args.sse->TlsRequired() && !base_url_.https) {
-    return error::Error(
+    return error::make<ComposeObjectResponse>(
         "SSE operation must be performed over a secure connection");
   }
 
@@ -543,15 +562,17 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
 
 minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
     CopyObjectArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return CopyObjectResponse(err);
+  }
 
   if (args.sse != nullptr && args.sse->TlsRequired() && !base_url_.https) {
-    return error::Error(
+    return error::make<CopyObjectResponse>(
         "SSE operation must be performed over a secure connection");
   }
 
   if (args.source.ssec != nullptr && !base_url_.https) {
-    return error::Error(
+    return error::make<CopyObjectResponse>(
         "SSE-C operation must be performed over a secure connection");
   }
 
@@ -559,7 +580,9 @@ minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
   size_t size;
   {
     StatObjectResponse resp = StatObject(args.source);
-    if (!resp) return resp;
+    if (!resp) {
+      return CopyObjectResponse(resp);
+    }
     etag = resp.etag;
     size = resp.size;
   }
@@ -568,14 +591,14 @@ minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
       size > utils::kMaxPartSize) {
     if (args.metadata_directive != nullptr &&
         *args.metadata_directive == Directive::kCopy) {
-      return error::Error(
+      return error::make<CopyObjectResponse>(
           "COPY metadata directive is not applicable to source object size "
           "greater than 5 GiB");
     }
 
     if (args.tagging_directive != nullptr &&
         *args.tagging_directive == Directive::kCopy) {
-      return error::Error(
+      return error::make<CopyObjectResponse>(
           "COPY tagging directive is not applicable to source object size "
           "greater than 5 GiB");
     }
@@ -603,7 +626,7 @@ minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
     coargs.sse = args.sse;
     coargs.sources.push_back(src);
 
-    return ComposeObject(coargs);
+    return CopyObjectResponse(ComposeObject(coargs));
   }
 
   utils::Multimap headers;
@@ -623,7 +646,7 @@ minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return CopyObjectResponse(resp);
   }
 
   Request req(http::Method::kPut, region, base_url_, args.extra_headers,
@@ -633,7 +656,9 @@ minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
   req.headers.AddAll(headers);
 
   Response response = Execute(req);
-  if (!response) return response;
+  if (!response) {
+    return CopyObjectResponse(response);
+  }
 
   CopyObjectResponse resp;
   resp.etag = utils::Trim(response.headers.GetFront("etag"), '"');
@@ -644,10 +669,12 @@ minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
 
 minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
     DownloadObjectArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return DownloadObjectResponse(err);
+  }
 
   if (args.ssec != nullptr && !base_url_.https) {
-    return error::Error(
+    return error::make<DownloadObjectResponse>(
         "SSE-C operation must be performed over a secure connection");
   }
 
@@ -660,7 +687,9 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
     soargs.version_id = args.version_id;
     soargs.ssec = args.ssec;
     StatObjectResponse resp = StatObject(soargs);
-    if (!resp) return resp;
+    if (!resp) {
+      return DownloadObjectResponse(resp);
+    }
     etag = resp.etag;
   }
 
@@ -668,14 +697,15 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
       args.filename + "." + curlpp::escape(etag) + ".part.minio";
   std::ofstream fout(temp_filename, std::ios::trunc | std::ios::out);
   if (!fout.is_open()) {
-    return error::Error("unable to open file " + temp_filename);
+    return error::make<DownloadObjectResponse>("unable to open file " +
+                                               temp_filename);
   }
 
   std::string region;
   if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
     region = resp.region;
   } else {
-    return resp;
+    return DownloadObjectResponse(resp);
   }
 
   Request req(http::Method::kGet, region, base_url_, args.extra_headers,
@@ -694,21 +724,27 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
 
   Response response = Execute(req);
   fout.close();
-  if (response) std::filesystem::rename(temp_filename, args.filename);
-  return response;
+  if (response) {
+    std::filesystem::rename(temp_filename, args.filename);
+  }
+  return DownloadObjectResponse(response);
 }
 
 minio::s3::ListObjectsResult minio::s3::Client::ListObjects(
     ListObjectsArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return ListObjectsResult(err);
+  }
   return ListObjectsResult(this, std::move(args));
 }
 
 minio::s3::PutObjectResponse minio::s3::Client::PutObject(PutObjectArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return PutObjectResponse(err);
+  }
 
   if (args.sse != nullptr && args.sse->TlsRequired() && !base_url_.https) {
-    return error::Error(
+    return error::make<PutObjectResponse>(
         "SSE operation must be performed over a secure connection");
   }
 
@@ -732,15 +768,17 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(PutObjectArgs args) {
 
 minio::s3::UploadObjectResponse minio::s3::Client::UploadObject(
     UploadObjectArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return UploadObjectResponse(err);
+  }
 
   std::ifstream file;
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   try {
     file.open(args.filename);
   } catch (std::system_error& err) {
-    return error::Error("unable to open file " + args.filename + "; " +
-                        err.code().message());
+    return error::make<UploadObjectResponse>(
+        "unable to open file " + args.filename + "; " + err.code().message());
   }
 
   PutObjectArgs po_args(file, args.object_size, 0);
@@ -759,11 +797,13 @@ minio::s3::UploadObjectResponse minio::s3::Client::UploadObject(
 
   PutObjectResponse resp = PutObject(std::move(po_args));
   file.close();
-  return resp;
+  return UploadObjectResponse(resp);
 }
 
 minio::s3::RemoveObjectsResult minio::s3::Client::RemoveObjects(
     RemoveObjectsArgs args) {
-  if (error::Error err = args.Validate()) return err;
+  if (error::Error err = args.Validate()) {
+    return RemoveObjectsResult(err);
+  }
   return RemoveObjectsResult(this, std::move(args));
 }
