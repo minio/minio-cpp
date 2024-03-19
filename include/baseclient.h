@@ -17,6 +17,7 @@
 #define _MINIO_S3_BASE_CLIENT_H
 
 #include <map>
+#include <memory>
 #include <string>
 #include <type_traits>
 
@@ -41,7 +42,7 @@ utils::Multimap GetCommonListObjectsQueryParams(
 class BaseClient {
  protected:
   BaseUrl base_url_;
-  creds::Provider* const provider_ = nullptr;
+  std::shared_ptr<creds::Provider> provider_;
   std::map<std::string, std::string> region_map_;
   bool debug_ = false;
   bool ignore_cert_check_ = false;
@@ -50,7 +51,7 @@ class BaseClient {
 
  public:
   explicit BaseClient(BaseUrl base_url,
-                      creds::Provider* const provider = nullptr);
+                      std::shared_ptr<creds::Provider> provider = nullptr);
 
   virtual ~BaseClient() = default;
 

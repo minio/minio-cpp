@@ -18,6 +18,7 @@
 #include <exception>
 #include <iosfwd>
 #include <iostream>
+#include <memory>
 #include <ostream>
 #include <regex>
 #include <sstream>
@@ -271,8 +272,8 @@ minio::s3::Request::Request(http::Method method, std::string region,
       headers(std::move(extra_headers)),
       query_params(std::move(extra_query_params)) {}
 
-void minio::s3::Request::BuildHeaders(http::Url& url,
-                                      creds::Provider* const provider) {
+void minio::s3::Request::BuildHeaders(
+    http::Url& url, std::shared_ptr<creds::Provider> provider) {
   headers.Add("Host", url.HostHeaderValue());
   headers.Add("User-Agent", user_agent);
 
@@ -314,7 +315,7 @@ void minio::s3::Request::BuildHeaders(http::Url& url,
 }
 
 minio::http::Request minio::s3::Request::ToHttpRequest(
-    creds::Provider* const provider) {
+    std::shared_ptr<creds::Provider> provider) {
   http::Url url;
   if (error::Error err = base_url.BuildUrl(url, method, region, query_params,
                                            bucket_name, object_name)) {
@@ -322,7 +323,7 @@ minio::http::Request minio::s3::Request::ToHttpRequest(
               << ". This should not happen" << std::endl;
     std::terminate();
   }
-  BuildHeaders(url, provider);
+  BuildHeaders(url, std::move(provider));
 
   http::Request request(method, url);
   request.body = body;

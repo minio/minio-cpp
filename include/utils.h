@@ -16,11 +16,7 @@
 #ifndef _MINIO_UTILS_H
 #define _MINIO_UTILS_H
 
-#ifndef _WIN32
-#include <pwd.h>
-#endif
-
-#include <ctime>
+#include <cstdint>
 #include <ios>
 #include <list>
 #include <map>
@@ -120,8 +116,8 @@ class UtcTime {
  public:
   UtcTime() = default;
 
-  UtcTime(std::time_t secs) : secs_(secs) {}
-  UtcTime(std::time_t secs, long usecs) : secs_(secs), usecs_(usecs) {}
+  explicit UtcTime(std::time_t secs) : secs_(secs) {}
+  explicit UtcTime(std::time_t secs, long usecs) : secs_(secs), usecs_(usecs) {}
 
   ~UtcTime() = default;
 

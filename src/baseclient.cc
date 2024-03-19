@@ -52,7 +52,8 @@ minio::utils::Multimap minio::s3::GetCommonListObjectsQueryParams(
   return query_params;
 }
 
-minio::s3::BaseClient::BaseClient(BaseUrl base_url, creds::Provider* provider)
+minio::s3::BaseClient::BaseClient(BaseUrl base_url,
+                                  std::shared_ptr<creds::Provider> provider)
     : base_url_(std::move(base_url)), provider_(provider) {
   if (!base_url_) {
     std::cerr << "valid base url must be provided; " << base_url_.Error()

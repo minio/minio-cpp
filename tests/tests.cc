@@ -731,8 +731,9 @@ int main(int /*argc*/, char* /*argv*/[]) {
 
   minio::s3::BaseUrl base_url(host, secure);
 
-  minio::creds::StaticProvider provider(access_key, secret_key);
-  minio::s3::Client client(base_url, &provider);
+  auto provider =
+      std::make_unique<minio::creds::StaticProvider>(access_key, secret_key);
+  minio::s3::Client client(base_url, std::move(provider));
   if (secure) client.IgnoreCertCheck(ignore_cert_check);
 
   Tests tests(client);

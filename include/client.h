@@ -17,6 +17,7 @@
 #define _MINIO_S3_CLIENT_H
 
 #include <list>
+#include <memory>
 #include <string>
 
 #include "args.h"
@@ -32,7 +33,7 @@ class Client;
 
 class ListObjectsResult {
  private:
-  Client* client_ = nullptr;
+  std::shared_ptr<Client> client_ = nullptr;
   ListObjectsArgs args_;
   bool failed_ = false;
   ListObjectsResponse resp_;
@@ -42,8 +43,9 @@ class ListObjectsResult {
 
  public:
   explicit ListObjectsResult(error::Error err);
-  ListObjectsResult(Client* const client, const ListObjectsArgs& args);
-  ListObjectsResult(Client* const client, ListObjectsArgs&& args);
+  ListObjectsResult(std::shared_ptr<Client> client,
+                    const ListObjectsArgs& args);
+  ListObjectsResult(std::shared_ptr<Client> client, ListObjectsArgs&& args);
   ~ListObjectsResult() = default;
 
   Item& operator*() const { return *itr_; }
@@ -66,7 +68,7 @@ class ListObjectsResult {
 
 class RemoveObjectsResult {
  private:
-  Client* client_ = nullptr;
+  std::shared_ptr<Client> client_ = nullptr;
   RemoveObjectsArgs args_;
   bool done_ = false;
   RemoveObjectsResponse resp_;
@@ -76,8 +78,9 @@ class RemoveObjectsResult {
 
  public:
   explicit RemoveObjectsResult(error::Error err);
-  RemoveObjectsResult(Client* const client, const RemoveObjectsArgs& args);
-  RemoveObjectsResult(Client* const client, RemoveObjectsArgs&& args);
+  RemoveObjectsResult(std::shared_ptr<Client> client,
+                      const RemoveObjectsArgs& args);
+  RemoveObjectsResult(std::shared_ptr<Client> client, RemoveObjectsArgs&& args);
   ~RemoveObjectsResult() = default;
 
   DeleteError& operator*() const { return *itr_; }
@@ -100,7 +103,7 @@ class RemoveObjectsResult {
  * Simple Storage Service (aka S3) client to perform bucket and object
  * operations.
  */
-class Client : public BaseClient {
+class Client : public BaseClient, std::enable_shared_from_this<Client> {
  protected:
   StatObjectResponse CalculatePartCount(size_t& part_count,
                                         std::list<ComposeSource> sources);
@@ -110,7 +113,8 @@ class Client : public BaseClient {
                               char* buf);
 
  public:
-  explicit Client(BaseUrl& base_url, creds::Provider* const provider = nullptr);
+  explicit Client(const BaseUrl& base_url,
+                  std::shared_ptr<creds::Provider> provider = nullptr);
   ~Client() = default;
 
   ComposeObjectResponse ComposeObject(ComposeObjectArgs args);

@@ -16,6 +16,7 @@
 #ifndef _MINIO_REQUEST_H
 #define _MINIO_REQUEST_H
 
+#include <memory>
 #include <regex>
 #include <string>
 
@@ -131,10 +132,11 @@ struct Request {
 
   ~Request() = default;
 
-  http::Request ToHttpRequest(creds::Provider* const provider = nullptr);
+  http::Request ToHttpRequest(
+      std::shared_ptr<creds::Provider> provider = nullptr);
 
  private:
-  void BuildHeaders(http::Url& url, creds::Provider* const provider);
+  void BuildHeaders(http::Url& url, std::shared_ptr<creds::Provider> provider);
 };  // struct Request
 }  // namespace s3
 }  // namespace minio

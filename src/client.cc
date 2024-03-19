@@ -41,15 +41,15 @@ minio::s3::ListObjectsResult::ListObjectsResult(error::Error err)
   this->itr_ = resp_.contents.begin();
 }
 
-minio::s3::ListObjectsResult::ListObjectsResult(Client* const client,
+minio::s3::ListObjectsResult::ListObjectsResult(std::shared_ptr<Client> client,
                                                 const ListObjectsArgs& args)
-    : client_(client), args_(args) {
+    : client_(std::move(client)), args_(args) {
   Populate();
 }
 
-minio::s3::ListObjectsResult::ListObjectsResult(Client* const client,
+minio::s3::ListObjectsResult::ListObjectsResult(std::shared_ptr<Client> client,
                                                 ListObjectsArgs&& args)
-    : client_(client), args_(std::move(args)) {
+    : client_(std::move(client)), args_(std::move(args)) {
   Populate();
 }
 
@@ -100,14 +100,14 @@ minio::s3::RemoveObjectsResult::RemoveObjectsResult(error::Error err) {
 }
 
 minio::s3::RemoveObjectsResult::RemoveObjectsResult(
-    Client* const client, const RemoveObjectsArgs& args)
-    : client_(client), args_(args) {
+    std::shared_ptr<Client> client, const RemoveObjectsArgs& args)
+    : client_(std::move(client)), args_(args) {
   Populate();
 }
 
-minio::s3::RemoveObjectsResult::RemoveObjectsResult(Client* const client,
-                                                    RemoveObjectsArgs&& args)
-    : client_(client), args_(args) {
+minio::s3::RemoveObjectsResult::RemoveObjectsResult(
+    std::shared_ptr<Client> client, RemoveObjectsArgs&& args)
+    : client_(std::move(client)), args_(args) {
   Populate();
 }
 
@@ -141,8 +141,9 @@ void minio::s3::RemoveObjectsResult::Populate() {
   }
 }
 
-minio::s3::Client::Client(BaseUrl& base_url, creds::Provider* const provider)
-    : BaseClient(base_url, provider) {}
+minio::s3::Client::Client(const BaseUrl& base_url,
+                          std::shared_ptr<creds::Provider> provider)
+    : BaseClient(base_url, std::move(provider)) {}
 
 minio::s3::StatObjectResponse minio::s3::Client::CalculatePartCount(
     size_t& part_count, std::list<ComposeSource> sources) {
@@ -735,7 +736,7 @@ minio::s3::ListObjectsResult minio::s3::Client::ListObjects(
   if (error::Error err = args.Validate()) {
     return ListObjectsResult(err);
   }
-  return ListObjectsResult(this, std::move(args));
+  return ListObjectsResult(shared_from_this(), std::move(args));
 }
 
 minio::s3::PutObjectResponse minio::s3::Client::PutObject(PutObjectArgs args) {
@@ -805,5 +806,5 @@ minio::s3::RemoveObjectsResult minio::s3::Client::RemoveObjects(
   if (error::Error err = args.Validate()) {
     return RemoveObjectsResult(err);
   }
-  return RemoveObjectsResult(this, std::move(args));
+  return RemoveObjectsResult(shared_from_this(), std::move(args));
 }
