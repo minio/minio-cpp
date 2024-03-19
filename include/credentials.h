@@ -40,22 +40,20 @@ struct Credentials {
   Credentials() = default;
   Credentials(error::Error err) : err(err) {}
 
-  Credentials(error::Error err, std::string&& access_key,
-              std::string&& secret_key)
+  Credentials(error::Error err, std::string access_key, std::string secret_key)
       : err(err),
         access_key(std::move(access_key)),
         secret_key(std::move(secret_key)) {}
 
-  Credentials(error::Error err, std::string&& access_key,
-              std::string&& secret_key, std::string&& session_token)
+  Credentials(error::Error err, std::string access_key, std::string secret_key,
+              std::string session_token)
       : err(err),
         access_key(std::move(access_key)),
         secret_key(std::move(secret_key)),
         session_token(std::move(session_token)) {}
 
-  Credentials(error::Error err, std::string&& access_key,
-              std::string&& secret_key, std::string&& session_token,
-              utils::UtcTime expiration)
+  Credentials(error::Error err, std::string access_key, std::string secret_key,
+              std::string session_token, utils::UtcTime expiration)
       : err(err),
         access_key(std::move(access_key)),
         secret_key(std::move(secret_key)),

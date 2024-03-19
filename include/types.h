@@ -317,7 +317,7 @@ struct Bucket {
   utils::UtcTime creation_date;
 
   Bucket() = default;
-  Bucket(std::string&& name, utils::UtcTime&& creation_date)
+  Bucket(std::string name, utils::UtcTime creation_date)
       : name(std::move(name)), creation_date(std::move(creation_date)) {}
   ~Bucket() = default;
 };  // struct Bucket
@@ -329,7 +329,7 @@ struct Part {
   size_t size = 0;
 
   Part() = default;
-  Part(unsigned int number, std::string&& etag)
+  Part(unsigned int number, std::string etag)
       : number(number), etag(std::move(etag)) {}
   ~Part() = default;
 };  // struct Part
