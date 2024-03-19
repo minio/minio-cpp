@@ -13,7 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <fstream>
+#include <iosfwd>
+#include <iostream>
+#include <ostream>
+
+#include "args.h"
 #include "client.h"
+#include "providers.h"
+#include "request.h"
+#include "response.h"
 
 int main() {
   // Create S3 base URL.

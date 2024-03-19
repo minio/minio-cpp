@@ -15,8 +15,21 @@
 
 #include "args.h"
 
+#include <curlpp/cURLpp.hpp>
+#include <exception>
 #include <filesystem>
+#include <iostream>
+#include <map>
 #include <nlohmann/json.hpp>
+#include <ostream>
+#include <string>
+#include <type_traits>
+
+#include "error.h"
+#include "http.h"
+#include "signer.h"
+#include "types.h"
+#include "utils.h"
 
 minio::error::Error minio::s3::BucketArgs::Validate() const {
   return utils::CheckBucketName(bucket);
@@ -346,7 +359,7 @@ minio::error::Error minio::s3::ComposeSource::BuildHeaders(
 size_t minio::s3::ComposeSource::ObjectSize() const {
   if (object_size_ == -1) {
     std::cerr << "ABORT: ComposeSource::BuildHeaders() must be called prior to "
-                 "this method invocation. This shoud not happen."
+                 "this method invocation. This should not happen."
               << std::endl;
     std::terminate();
   }
@@ -357,7 +370,7 @@ size_t minio::s3::ComposeSource::ObjectSize() const {
 minio::utils::Multimap minio::s3::ComposeSource::Headers() const {
   if (!headers_) {
     std::cerr << "ABORT: ComposeSource::BuildHeaders() must be called prior to "
-                 "this method invocation. This shoud not happen."
+                 "this method invocation. This should not happen."
               << std::endl;
     std::terminate();
   }
@@ -441,7 +454,7 @@ minio::error::Error minio::s3::ListenBucketNotificationArgs::Validate() const {
     return err;
   }
   if (func == nullptr) {
-    error::Error("notification records function must be set");
+    return error::Error("notification records function must be set");
   }
   return error::SUCCESS;
 }

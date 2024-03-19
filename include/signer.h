@@ -16,9 +16,10 @@
 #ifndef _MINIO_SIGNER_H
 #define _MINIO_SIGNER_H
 
-#include <openssl/hmac.h>
+#include <string>
 
 #include "http.h"
+#include "utils.h"
 
 namespace minio {
 namespace signer {

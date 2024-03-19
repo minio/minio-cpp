@@ -13,9 +13,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "http.h"
+#include <curl/curl.h>
 
+#include <curlpp/Easy.hpp>
+#include <curlpp/Exception.hpp>
 #include <curlpp/Infos.hpp>
+#include <curlpp/Multi.hpp>
+#include <curlpp/Options.hpp>
+#include <curlpp/cURLpp.hpp>
+#include <exception>
+#include <functional>
+#include <iosfwd>
+#include <iostream>
+#include <list>
+#include <ostream>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <type_traits>
+
+#ifdef _WIN32
+#include <WinSock2.h>
+#include <ws2def.h>    // NOTE needed for AF_INET6
+#include <ws2ipdef.h>  // NOTE needed for sockaddr_in6
+#include <ws2tcpip.h>
+#else
+#include <arpa/inet.h>
+#endif
+
+#include "error.h"
+#include "http.h"
+#include "utils.h"
 
 std::string minio::http::Url::String() const {
   if (host.empty()) return {};
@@ -105,7 +133,8 @@ minio::http::Url minio::http::Url::Parse(std::string value) {
   if (!https && port == 80) port = 0;
   if (https && port == 443) port = 0;
 
-  return Url{https, host, port, path, query_string};
+  return Url(https, std::move(host), port, std::move(path),
+             std::move(query_string));
 }
 
 minio::error::Error minio::http::Response::ReadStatusCode() {
@@ -248,7 +277,8 @@ size_t minio::http::Response::ResponseCallback(curlpp::Multi* const requests,
 
     // If data function is set and the request is successful, send data.
     if (datafunc != nullptr && status_code >= 200 && status_code <= 299) {
-      DataFunctionArgs args{request, this, response_, userdata};
+      DataFunctionArgs args(request, this, std::string(this->response_),
+                            userdata);
       if (!datafunc(args)) requests->remove(request);
     } else {
       body = response_;
@@ -259,7 +289,7 @@ size_t minio::http::Response::ResponseCallback(curlpp::Multi* const requests,
 
   // If data function is set and the request is successful, send data.
   if (datafunc != nullptr && status_code >= 200 && status_code <= 299) {
-    DataFunctionArgs args{request, this, std::string(buffer, length), userdata};
+    DataFunctionArgs args(request, this, std::string(buffer, length), userdata);
     if (!datafunc(args)) requests->remove(request);
   } else {
     body.append(buffer, length);
@@ -368,9 +398,9 @@ minio::http::Response minio::http::Request::execute() {
   while (!requests.perform(&left)) {
   }
   while (left) {
-    fd_set fdread;
-    fd_set fdwrite;
-    fd_set fdexcep;
+    fd_set fdread{};
+    fd_set fdwrite{};
+    fd_set fdexcep{};
     int maxfd = 0;
 
     FD_ZERO(&fdread);

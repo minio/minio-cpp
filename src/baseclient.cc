@@ -15,6 +15,32 @@
 
 #include "baseclient.h"
 
+#include <cstring>
+#include <exception>
+#include <functional>
+#include <iostream>
+#include <list>
+#include <map>
+#include <nlohmann/json.hpp>
+#include <ostream>
+#include <pugixml.hpp>
+#include <sstream>
+#include <string>
+#include <type_traits>
+
+#include "args.h"
+#include "config.h"
+#include "credentials.h"
+#include "error.h"
+#include "http.h"
+#include "providers.h"
+#include "request.h"
+#include "response.h"
+#include "select.h"
+#include "signer.h"
+#include "types.h"
+#include "utils.h"
+
 minio::utils::Multimap minio::s3::GetCommonListObjectsQueryParams(
     const std::string& delimiter, const std::string& encoding_type,
     unsigned int max_keys, const std::string& prefix) {
@@ -955,7 +981,7 @@ minio::s3::BaseClient::GetPresignedPostFormData(PostPolicy policy) {
 
   if (provider_ == nullptr) {
     return error::Error(
-        "Anonymous access does not require presigned post form-data");
+        "Anonymous access does not require pre-signed post form-data");
   }
 
   std::string region;

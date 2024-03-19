@@ -16,10 +16,17 @@
 #ifndef _MINIO_S3_TYPES_H
 #define _MINIO_S3_TYPES_H
 
+#include <exception>
+#include <functional>
 #include <iostream>
-#include <nlohmann/json.hpp>
+#include <list>
+#include <map>
+#include <nlohmann/json_fwd.hpp>
 #include <ostream>
+#include <string>
+#include <type_traits>
 
+#include "error.h"
 #include "utils.h"
 
 namespace minio {
@@ -310,6 +317,8 @@ struct Bucket {
   utils::UtcTime creation_date;
 
   Bucket() = default;
+  explicit Bucket(std::string name, utils::UtcTime creation_date)
+      : name(std::move(name)), creation_date(std::move(creation_date)) {}
   ~Bucket() = default;
 };  // struct Bucket
 
@@ -320,6 +329,8 @@ struct Part {
   size_t size = 0;
 
   Part() = default;
+  explicit Part(unsigned int number, std::string etag)
+      : number(number), etag(std::move(etag)) {}
   ~Part() = default;
 };  // struct Part
 

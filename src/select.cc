@@ -15,6 +15,15 @@
 
 #include "select.h"
 
+#include <map>
+#include <pugixml.hpp>
+#include <string>
+
+#include "error.h"
+#include "http.h"
+#include "types.h"
+#include "utils.h"
+
 void minio::s3::SelectHandler::Reset() {
   prelude_.clear();
   prelude_read_ = false;

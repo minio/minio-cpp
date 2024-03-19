@@ -16,6 +16,8 @@
 #ifndef _MINIO_S3_SSE_H
 #define _MINIO_S3_SSE_H
 
+#include <string>
+
 #include "utils.h"
 
 namespace minio {

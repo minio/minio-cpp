@@ -15,6 +15,26 @@
 
 #include "client.h"
 
+#include <curlpp/cURLpp.hpp>
+#include <filesystem>
+#include <fstream>
+#include <list>
+#include <memory>
+#include <string>
+#include <system_error>
+#include <type_traits>
+
+#include "args.h"
+#include "baseclient.h"
+#include "error.h"
+#include "http.h"
+#include "providers.h"
+#include "request.h"
+#include "response.h"
+#include "sse.h"
+#include "types.h"
+#include "utils.h"
+
 minio::s3::ListObjectsResult::ListObjectsResult(error::Error err)
     : failed_(true) {
   this->resp_.contents.push_back(Item(std::move(err)));
@@ -284,7 +304,7 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
       upc_args.part_number = part_number;
       UploadPartCopyResponse resp = UploadPartCopy(upc_args);
       if (!resp) return resp;
-      parts.push_back(Part{part_number, resp.etag});
+      parts.push_back(Part(part_number, std::move(resp.etag)));
     } else {
       while (size > 0) {
         part_number++;
@@ -306,10 +326,11 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
         upc_args.headers = headerscopy;
         upc_args.upload_id = upload_id;
         upc_args.part_number = part_number;
-        UploadPartCopyResponse resp = UploadPartCopy(upc_args);
-        if (!resp) return resp;
-        parts.push_back(Part{part_number, resp.etag});
-
+        {
+          UploadPartCopyResponse resp = UploadPartCopy(upc_args);
+          if (!resp) return resp;
+          parts.push_back(Part(part_number, std::move(resp.etag)));
+        }
         offset = start_bytes;
         size -= (end_bytes - start_bytes);
       }
@@ -475,7 +496,7 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
         actual_args.userdata = args.progress_userdata;
         args.progressfunc(actual_args);
       }
-      parts.push_back(Part{part_number, resp.etag});
+      parts.push_back(Part(part_number, std::move(resp.etag)));
     } else {
       return resp;
     }

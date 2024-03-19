@@ -17,21 +17,31 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #endif
 
-#include "providers.h"
-
 #include <INIReader.h>
 
 #include <fstream>
+#include <iosfwd>
+#include <list>
 #include <nlohmann/json.hpp>
+#include <string>
+#include <type_traits>
 
-#include "signer.h"
-#include "utils.h"
-
-#ifndef _WIN32
+#ifdef _WIN32
+#include <WinSock2.h>
+#include <ws2def.h>
+#include <ws2tcpip.h>
+#else
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/socket.h>
 #endif
+
+#include "credentials.h"
+#include "error.h"
+#include "http.h"
+#include "providers.h"
+#include "signer.h"
+#include "utils.h"
 
 minio::error::Error minio::creds::checkLoopbackHost(const std::string& host) {
   struct addrinfo hints = {};
@@ -82,8 +92,8 @@ minio::creds::Credentials minio::creds::ChainedProvider::Fetch() {
 minio::creds::StaticProvider::StaticProvider(std::string access_key,
                                              std::string secret_key,
                                              std::string session_token) {
-  this->creds_ = Credentials{error::SUCCESS, std::move(access_key),
-                             std::move(secret_key), std::move(session_token)};
+  this->creds_ = Credentials(error::SUCCESS, std::move(access_key),
+                             std::move(secret_key), std::move(session_token));
 }
 
 minio::creds::StaticProvider::~StaticProvider() {}
@@ -105,8 +115,8 @@ minio::creds::EnvAwsProvider::EnvAwsProvider() {
   }
   utils::GetEnv(session_token, "AWS_SESSION_TOKEN");
 
-  this->creds_ =
-      Credentials{error::SUCCESS, access_key, secret_key, session_token};
+  this->creds_ = Credentials(error::SUCCESS, std::move(access_key),
+                             std::move(secret_key), std::move(session_token));
 }
 
 minio::creds::EnvAwsProvider::~EnvAwsProvider() {}
@@ -121,7 +131,8 @@ minio::creds::EnvMinioProvider::EnvMinioProvider() {
 
   utils::GetEnv(access_key, "MINIO_ACCESS_KEY");
   utils::GetEnv(secret_key, "MINIO_SECRET_KEY");
-  this->creds_ = Credentials{error::SUCCESS, access_key, secret_key};
+  this->creds_ =
+      Credentials(error::SUCCESS, std::move(access_key), std::move(secret_key));
 }
 
 minio::creds::EnvMinioProvider::~EnvMinioProvider() {}
@@ -379,7 +390,7 @@ minio::creds::Credentials minio::creds::IamAwsProvider::Fetch() {
           std::ifstream ifs(token_file);
           nlohmann::json json = nlohmann::json::parse(ifs);
           ifs.close();
-          return Jwt{json["access_token"], json["expires_in"]};
+          return Jwt(std::move(json["access_token"]), json["expires_in"]);
         },
         url, 0, "", role_arn_, role_session_name_);
     creds_ = provider.Fetch();

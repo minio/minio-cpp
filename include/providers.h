@@ -16,11 +16,13 @@
 #ifndef _MINIO_CREDS_PROVIDERS_H
 #define _MINIO_CREDS_PROVIDERS_H
 
-#include <sys/types.h>
-
+#include <functional>
+#include <list>
 #include <string>
+#include <type_traits>
 
 #include "credentials.h"
+#include "error.h"
 #include "http.h"
 
 #define DEFAULT_DURATION_SECONDS (60 * 60 * 24)  // 1 day.
@@ -34,6 +36,8 @@ struct Jwt {
   unsigned int expiry = 0;
 
   Jwt() = default;
+  explicit Jwt(std::string token, unsigned int expiry)
+      : token(std::move(token)), expiry(expiry) {}
   ~Jwt() = default;
 
   explicit operator bool() const { return !token.empty(); }

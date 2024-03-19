@@ -16,10 +16,17 @@
 #ifndef _MINIO_S3_ARGS_H
 #define _MINIO_S3_ARGS_H
 
+#include <functional>
+#include <list>
+#include <map>
+#include <string>
+#include <type_traits>
+
+#include "error.h"
 #include "http.h"
-#include "signer.h"
 #include "sse.h"
 #include "types.h"
+#include "utils.h"
 
 namespace minio {
 namespace s3 {

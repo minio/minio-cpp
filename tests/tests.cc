@@ -12,11 +12,33 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include <chrono>
-#include <random>
-#include <thread>
 
+#include <array>
+#include <chrono>
+#include <cstdio>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <iosfwd>
+#include <iostream>
+#include <list>
+#include <ostream>
+#include <random>
+#include <sstream>
+#include <stdexcept>
+#include <streambuf>
+#include <string>
+#include <thread>
+#include <utility>
+
+#include "args.h"
 #include "client.h"
+#include "http.h"
+#include "providers.h"
+#include "request.h"
+#include "response.h"
+#include "types.h"
+#include "utils.h"
 
 thread_local static std::mt19937 rg{std::random_device{}()};
 
@@ -534,7 +556,9 @@ class Tests {
         args.bucket = bucket_name_;
         args.object = object_name;
         minio::s3::PutObjectResponse resp = client_.PutObject(args);
-        if (!resp) std::runtime_error("PutObject(): " + resp.Error().String());
+        if (!resp) {
+          throw std::runtime_error("PutObject(): " + resp.Error().String());
+        }
         object_names.push_back(object_name);
       }
       RemoveObjects(object_names);

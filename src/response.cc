@@ -15,6 +15,18 @@
 
 #include "response.h"
 
+#include <cstring>
+#include <curlpp/cURLpp.hpp>
+#include <list>
+#include <map>
+#include <pugixml.hpp>
+#include <string>
+#include <type_traits>
+
+#include "error.h"
+#include "types.h"
+#include "utils.h"
+
 minio::s3::Response::Response() {}
 
 minio::s3::Response::~Response() {}
@@ -90,7 +102,7 @@ minio::s3::ListBucketsResponse minio::s3::ListBucketsResponse::ParseXML(
       creation_date = utils::UtcTime::FromISO8601UTC(value.c_str());
     }
 
-    buckets.push_back(Bucket{name, creation_date});
+    buckets.push_back(Bucket(std::move(name), std::move(creation_date)));
   }
 
   return buckets;

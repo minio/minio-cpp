@@ -15,11 +15,44 @@
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
+#include <corecrt.h>
 #endif
 
-#include "utils.h"
+#include <openssl/bio.h>
+#include <openssl/buffer.h>
+#include <openssl/crypto.h>
+#include <openssl/evp.h>
+#include <openssl/types.h>
+#include <zconf.h>
+#include <zlib.h>
 
-#include <memory>
+#include <algorithm>
+#include <cctype>
+#include <chrono>
+#include <clocale>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+#include <curlpp/cURLpp.hpp>
+#include <exception>
+#include <iomanip>
+#include <ios>
+#include <iosfwd>
+#include <iostream>
+#include <list>
+#include <locale>
+#include <map>
+#include <ostream>
+#include <regex>
+#include <sstream>
+#include <streambuf>
+#include <string>
+#include <type_traits>
+#include <vector>
+
+#include "error.h"
+#include "utils.h"
 
 const std::string WEEK_DAYS[] = {"Sun", "Mon", "Tue", "Wed",
                                  "Thu", "Fri", "Sat"};
@@ -370,7 +403,7 @@ minio::utils::UtcTime minio::utils::UtcTime::FromISO8601UTC(const char* value) {
   std::time_t secs = std::mktime(&t);
 
   unsigned long ul = 0;
-  sscanf(rv, ".%lu", &ul);
+  static_cast<void>(sscanf(rv, ".%lu", &ul));
   long usecs = (long)ul;
 
   return UtcTime(secs, usecs);
@@ -563,7 +596,7 @@ minio::error::Error minio::utils::CalcPartInfo(long object_size,
   }
 
   if (object_size >= 0) {
-    if (static_cast<unsigned long long>(object_size) > kMaxObjectSize) {
+    if (static_cast<uint64_t>(object_size) > kMaxObjectSize) {
       return error::Error("object size " + std::to_string(object_size) +
                           " is not supported; maximum allowed 5TiB");
     }

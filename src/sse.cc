@@ -15,6 +15,10 @@
 
 #include "sse.h"
 
+#include <string>
+
+#include "utils.h"
+
 minio::s3::Sse::Sse() {}
 
 minio::s3::Sse::~Sse() {}

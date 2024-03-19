@@ -16,6 +16,10 @@
 #ifndef _MINIO_CREDS_CREDENTIALS_H
 #define _MINIO_CREDS_CREDENTIALS_H
 
+#include <string>
+#include <type_traits>
+
+#include "error.h"
 #include "utils.h"
 
 namespace minio {
@@ -34,6 +38,30 @@ struct Credentials {
   utils::UtcTime expiration = {};
 
   Credentials() = default;
+  explicit Credentials(error::Error err) : err(std::move(err)) {}
+
+  explicit Credentials(error::Error err, std::string access_key,
+                       std::string secret_key)
+      : err(std::move(err)),
+        access_key(std::move(access_key)),
+        secret_key(std::move(secret_key)) {}
+
+  explicit Credentials(error::Error err, std::string access_key,
+                       std::string secret_key, std::string session_token)
+      : err(std::move(err)),
+        access_key(std::move(access_key)),
+        secret_key(std::move(secret_key)),
+        session_token(std::move(session_token)) {}
+
+  explicit Credentials(error::Error err, std::string access_key,
+                       std::string secret_key, std::string session_token,
+                       utils::UtcTime expiration)
+      : err(std::move(err)),
+        access_key(std::move(access_key)),
+        secret_key(std::move(secret_key)),
+        session_token(std::move(session_token)),
+        expiration(std::move(expiration)) {}
+
   ~Credentials() = default;
 
   bool IsExpired() const { return expired(expiration); }
