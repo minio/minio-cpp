@@ -302,11 +302,9 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
       upc_args.headers = headers;
       upc_args.upload_id = upload_id;
       upc_args.part_number = part_number;
-      {
-        UploadPartCopyResponse resp = UploadPartCopy(upc_args);
-        if (!resp) return resp;
-        parts.push_back(Part(part_number, std::move(resp.etag)));
-      }
+      UploadPartCopyResponse resp = UploadPartCopy(upc_args);
+      if (!resp) return resp;
+      parts.push_back(Part(part_number, std::move(resp.etag)));
     } else {
       while (size > 0) {
         part_number++;

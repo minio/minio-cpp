@@ -36,7 +36,7 @@ struct Jwt {
   unsigned int expiry = 0;
 
   Jwt() = default;
-  Jwt(std::string token, unsigned int expiry)
+  explicit Jwt(std::string token, unsigned int expiry)
       : token(std::move(token)), expiry(expiry) {}
   ~Jwt() = default;
 

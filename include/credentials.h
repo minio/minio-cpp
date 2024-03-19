@@ -38,23 +38,25 @@ struct Credentials {
   utils::UtcTime expiration = {};
 
   Credentials() = default;
-  Credentials(error::Error err) : err(err) {}
+  explicit Credentials(error::Error err) : err(std::move(err)) {}
 
-  Credentials(error::Error err, std::string access_key, std::string secret_key)
-      : err(err),
+  explicit Credentials(error::Error err, std::string access_key,
+                       std::string secret_key)
+      : err(std::move(err)),
         access_key(std::move(access_key)),
         secret_key(std::move(secret_key)) {}
 
-  Credentials(error::Error err, std::string access_key, std::string secret_key,
-              std::string session_token)
-      : err(err),
+  explicit Credentials(error::Error err, std::string access_key,
+                       std::string secret_key, std::string session_token)
+      : err(std::move(err)),
         access_key(std::move(access_key)),
         secret_key(std::move(secret_key)),
         session_token(std::move(session_token)) {}
 
-  Credentials(error::Error err, std::string access_key, std::string secret_key,
-              std::string session_token, utils::UtcTime expiration)
-      : err(err),
+  explicit Credentials(error::Error err, std::string access_key,
+                       std::string secret_key, std::string session_token,
+                       utils::UtcTime expiration)
+      : err(std::move(err)),
         access_key(std::move(access_key)),
         secret_key(std::move(secret_key)),
         session_token(std::move(session_token)),

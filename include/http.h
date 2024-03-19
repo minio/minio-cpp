@@ -64,8 +64,8 @@ struct Url {
   std::string query_string;
 
   Url() = default;
-  Url(bool https, std::string host, unsigned int port, std::string path,
-      std::string query_string)
+  explicit Url(bool https, std::string host, unsigned int port,
+               std::string path, std::string query_string)
       : https(https),
         host(std::move(host)),
         port(port),
@@ -97,10 +97,11 @@ struct DataFunctionArgs {
   void* userdata = nullptr;
 
   DataFunctionArgs() = default;
-  DataFunctionArgs(curlpp::Easy* handle, Response* response, void* userdata)
+  explicit DataFunctionArgs(curlpp::Easy* handle, Response* response,
+                            void* userdata)
       : handle(handle), response(response), userdata(userdata) {}
-  DataFunctionArgs(curlpp::Easy* handle, Response* response,
-                   std::string datachunk, void* userdata)
+  explicit DataFunctionArgs(curlpp::Easy* handle, Response* response,
+                            std::string datachunk, void* userdata)
       : handle(handle),
         response(response),
         datachunk(std::move(datachunk)),

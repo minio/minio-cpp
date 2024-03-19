@@ -16,9 +16,7 @@
 #ifndef _MINIO_UTILS_H
 #define _MINIO_UTILS_H
 
-#ifdef _WIN32
-#include <corecrt.h>
-#else
+#ifndef _WIN32
 #include <pwd.h>
 #endif
 
@@ -35,10 +33,10 @@
 
 namespace minio {
 namespace utils {
-inline constexpr unsigned int kMaxMultipartCount = 10000;  // 10000 parts
-inline constexpr unsigned long long kMaxObjectSize = 5'497'558'138'880;  // 5TiB
-inline constexpr unsigned long long kMaxPartSize = 5'368'709'120;        // 5GiB
-inline constexpr unsigned int kMinPartSize = 5 * 1024 * 1024;            // 5MiB
+inline constexpr unsigned int kMaxMultipartCount = 10000;      // 10000 parts
+inline constexpr uint64_t kMaxObjectSize = 5'497'558'138'880;  // 5TiB
+inline constexpr uint64_t kMaxPartSize = 5'368'709'120;        // 5GiB
+inline constexpr unsigned int kMinPartSize = 5 * 1024 * 1024;  // 5MiB
 
 // GetEnv copies the environment variable name into var
 bool GetEnv(std::string& var, const char* name);
