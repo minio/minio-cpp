@@ -103,7 +103,7 @@ jobs:
     - name: Configure and Build
       shell: bash
       run: |
-        cmake -B ./build -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} -DCMAKE_TOOLCHAIN_FILE=./vcpkg-master/scripts/buildsystems/vcpkg.cmake
+        cmake -B ./build -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} -DCMAKE_TOOLCHAIN_FILE=./vcpkg-master/scripts/buildsystems/vcpkg.cmake -DMINIO_CPP_TEST:BOOL=ON
         cmake --build ./build --config ${{ matrix.config.build_type }} -j 4
 
     - name: Start MinIO server if Ubuntu
@@ -135,18 +135,18 @@ jobs:
     - name: Run tests if Ubuntu
       if: startsWith(matrix.config.name, 'Ubuntu_Latest_GCC')
       run: |
-        SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ENABLE_HTTPS=1 ./build/tests/tests
+        SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ENABLE_HTTPS=1 ./build/tests
 
     - name: Run tests if macOS
       if: startsWith(matrix.config.name, 'macos')
       run: |
-        SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ./build/tests/tests
+        SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ./build/tests
 
     - name: Run tests if Windows
       shell: bash
       if: startsWith(matrix.config.os, 'windows')
       run: |
-        SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ENABLE_HTTPS=1 ./build/tests/Release/tests.exe
+        SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ENABLE_HTTPS=1 ./build/Release/tests.exe
 
     - name: Run CMake test
       working-directory: ${{github.workspace}}/build

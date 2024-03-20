@@ -4,17 +4,57 @@ MinIO C++ SDK is Simple Storage Service (aka S3) client to perform bucket and ob
 
 For a complete list of APIs and examples, please take a look at the [MinIO C++ Client API Reference](https://minio-cpp.min.io/)
 
-## Build requirements
-* A working C++ development environment supporting C++17 standards.
-* CMake 3.10 or higher.
-* [vcpkg](https://vcpkg.io/en/index.html).
+## Build Requirements
 
-## Install from `vcpkg`
-```
-vcpkg install minio-cpp
+* [cmake](https://cmake.org/) 3.10 or higher.
+* [vcpkg](https://vcpkg.io/en/index.html) package manager.
+* A working C++ compiler that supports at least C++17.
+
+## Installation via `vcpkg`
+
+MinIO C++ client SDK can be installed via `vcpkg` package manager:
+
+```bash
+$ vcpkg install minio-cpp
 ```
 
-## Building source
+Typically `minio-cpp` will be part of dependencies specified in `vcpkg.json` file:
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "your-project",
+  "version": "0.0.1",
+  "dependencies": [
+    { "name": "minio-cpp" }
+  ]
+}
+```
+
+## Hacking minio-cpp
+
+In order to run minio-cpp tests and examples, you can do the following assuming `VCPKG_ROOT` points to a `vcpkg` installation:
+
+```bash
+$ git clone https://github.com/minio/minio-cpp
+$ cd minio-cpp
+$ ${VCPKG_ROOT}/vcpkg install
+$ cmake . -B build/Debug -DCMAKE_BUILD_TYPE=Debug -DMINIO_CPP_TEST=ON -DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake
+$ cmake --build ./build/Debug
+```
+
+Note that cmake also supports multi-configuration generators. Multi-configuration generators don't use `CMAKE_BUILD_TYPE` during configure time. For example a Visual Studio project can be setup the following way:
+
+```bash
+$ git clone https://github.com/minio/minio-cpp
+$ cd minio-cpp
+$ ${VCPKG_ROOT}/vcpkg install
+$ cmake . -B build -DMINIO_CPP_TEST=ON -DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake
+$ cmake --build ./build --config Debug
+```
+
+The examples above assumed that you have `vcpkg` already installed and you have a `VCPKG_ROOT` environment variable set. This is common if you use `vcpkg` to handle dependencies of multiple projects as only a single installation of `vcpkg` is required in that case. If you don't have `vcpkg` installed and you only want to use it to test `minio-cpp`, it's possible to install it locally like this:
+
 ```bash
 $ git clone https://github.com/minio/minio-cpp
 $ cd minio-cpp
@@ -22,11 +62,20 @@ $ wget --quiet -O vcpkg-master.zip https://github.com/microsoft/vcpkg/archive/re
 $ unzip -qq vcpkg-master.zip
 $ ./vcpkg-master/bootstrap-vcpkg.sh
 $ ./vcpkg-master/vcpkg integrate install
-$ cmake -B ./build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=./vcpkg-master/scripts/buildsystems/vcpkg.cmake
-$ cmake --build ./build --config Debug
+$ cmake . -B ./build/Debug -DCMAKE_BUILD_TYPE=Debug -DMINIO_CPP_TEST=ON -DCMAKE_TOOLCHAIN_FILE=./vcpkg-master/scripts/buildsystems/vcpkg.cmake
+$ cmake --build ./build/Debug
+```
+
+We recommend the setup with `VCPKG_ROOT` for development. In that case there is a `configure.sh` script, that can be used to create both Debug and Release projects:
+
+```bash
+$ git clone https://github.com/minio/minio-cpp
+$ cd minio-cpp
+$ ./configure.sh -DMINIO_CPP_TEST=ON
 ```
 
 ## Example:: file-uploader.cc
+
 ```c++
 #include <client.h>
 
@@ -92,4 +141,5 @@ int main(int argc, char* argv[]) {
 ```
 
 ## License
+
 This SDK is distributed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0), see [LICENSE](https://github.com/minio/minio-cpp/blob/master/LICENSE) for more information.
