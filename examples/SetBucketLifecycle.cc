@@ -20,11 +20,11 @@ int main() {
   minio::s3::BaseUrl base_url("play.min.io");
 
   // Create credential provider.
-  minio::creds::StaticProvider provider(
+  auto provider = std::make_unique<minio::creds::StaticProvider>(
       "Q3AM3UQ867SPQQA43P2F", "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG");
 
   // Create S3 client.
-  minio::s3::Client client(base_url, &provider);
+  minio::s3::Client client(base_url, std::move(provider));
 
   // Create set bucket lifecycle arguments.
   minio::s3::LifecycleConfig config;

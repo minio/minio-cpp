@@ -22,7 +22,6 @@
 #include <openssl/buffer.h>
 #include <openssl/crypto.h>
 #include <openssl/evp.h>
-#include <openssl/types.h>
 #include <time.h>
 #include <zconf.h>
 #include <zlib.h>
