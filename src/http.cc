@@ -1,5 +1,5 @@
 // MinIO C++ Library for Amazon S3 Compatible Cloud Storage
-// Copyright 2022 MinIO, Inc.
+// Copyright 2022-2024 MinIO, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+
+#include "miniocpp/http.h"
 
 #include <curl/curl.h>
 
@@ -32,6 +36,9 @@
 #include <string>
 #include <type_traits>
 
+#include "miniocpp/error.h"
+#include "miniocpp/utils.h"
+
 #ifdef _WIN32
 #include <WinSock2.h>
 #include <ws2def.h>    // NOTE needed for AF_INET6
@@ -40,10 +47,6 @@
 #else
 #include <arpa/inet.h>
 #endif
-
-#include "error.h"
-#include "http.h"
-#include "utils.h"
 
 std::string minio::http::Url::String() const {
   if (host.empty()) return {};

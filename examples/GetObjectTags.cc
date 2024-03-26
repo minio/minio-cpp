@@ -1,5 +1,5 @@
 // MinIO C++ Library for Amazon S3 Compatible Cloud Storage
-// Copyright 2022 MinIO, Inc.
+// Copyright 2022-2024 MinIO, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +12,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
 
-#include "client.h"
+#include <miniocpp/client.h>
 
 int main() {
   // Create S3 base URL.
@@ -38,8 +40,7 @@ int main() {
   if (resp) {
     std::cout << "Object tags: " << std::endl;
     for (auto& [key, value] : resp.tags) {
-      std::cout << "Key: " << key << ", "
-                << "Value: " << value << std::endl;
+      std::cout << "Key: " << key << ", " << "Value: " << value << std::endl;
     }
   } else {
     std::cout << "unable to get object tags; " << resp.Error().String()

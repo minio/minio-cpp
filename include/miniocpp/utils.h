@@ -1,5 +1,5 @@
 // MinIO C++ Library for Amazon S3 Compatible Cloud Storage
-// Copyright 2022 MinIO, Inc.
+// Copyright 2022-2024 MinIO, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
 
-#ifndef _MINIO_UTILS_H
-#define _MINIO_UTILS_H
+#ifndef MINIO_CPP_UTILS_H_INCLUDED
+#define MINIO_CPP_UTILS_H_INCLUDED
 
 #ifndef _WIN32
 #include <pwd.h>
@@ -33,6 +35,7 @@
 
 namespace minio {
 namespace utils {
+
 inline constexpr unsigned int kMaxMultipartCount = 10000;      // 10000 parts
 inline constexpr uint64_t kMaxObjectSize = 5'497'558'138'880;  // 5TiB
 inline constexpr uint64_t kMaxPartSize = 5'368'709'120;        // 5GiB
@@ -223,7 +226,8 @@ struct CharBuffer : std::streambuf {
       off_type off, std::ios_base::seekdir dir,
       std::ios_base::openmode which = std::ios_base::in) override;
 };  // struct CharBuffer
+
 }  // namespace utils
 }  // namespace minio
 
-#endif  // #ifndef _MINIO_UTILS_H
+#endif  // MINIO_CPP_UTILS_H_INCLUDED

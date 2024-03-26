@@ -1,5 +1,5 @@
 // MinIO C++ Library for Amazon S3 Compatible Cloud Storage
-// Copyright 2022 MinIO, Inc.
+// Copyright 2022-2024 MinIO, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,17 +12,19 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+
+#include <miniocpp/args.h>
+#include <miniocpp/client.h>
+#include <miniocpp/providers.h>
+#include <miniocpp/request.h>
+#include <miniocpp/response.h>
 
 #include <fstream>
 #include <iosfwd>
 #include <iostream>
 #include <ostream>
-
-#include "args.h"
-#include "client.h"
-#include "providers.h"
-#include "request.h"
-#include "response.h"
 
 int main() {
   // Create S3 base URL.

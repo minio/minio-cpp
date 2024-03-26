@@ -33,7 +33,7 @@ Typically `minio-cpp` will be part of dependencies specified in `vcpkg.json` fil
 
 ## Hacking minio-cpp
 
-In order to run minio-cpp tests and examples, you can do the following assuming `VCPKG_ROOT` points to a `vcpkg` installation:
+In order to run minio-cpp tests and examples, you can do the following assuming `VCPKG_ROOT` points to a valid `vcpkg` installation:
 
 ```bash
 $ git clone https://github.com/minio/minio-cpp
@@ -58,11 +58,10 @@ The examples above assumed that you have `vcpkg` already installed and you have 
 ```bash
 $ git clone https://github.com/minio/minio-cpp
 $ cd minio-cpp
-$ wget --quiet -O vcpkg-master.zip https://github.com/microsoft/vcpkg/archive/refs/heads/master.zip
-$ unzip -qq vcpkg-master.zip
-$ ./vcpkg-master/bootstrap-vcpkg.sh
-$ ./vcpkg-master/vcpkg integrate install
-$ cmake . -B ./build/Debug -DCMAKE_BUILD_TYPE=Debug -DMINIO_CPP_TEST=ON -DCMAKE_TOOLCHAIN_FILE=./vcpkg-master/scripts/buildsystems/vcpkg.cmake
+$ git clone https://github.com/microsoft/vcpkg.git
+$ ./vcpkg/bootstrap-vcpkg.sh
+$ ./vcpkg/vcpkg install
+$ cmake . -B ./build/Debug -DCMAKE_BUILD_TYPE=Debug -DMINIO_CPP_TEST=ON -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
 $ cmake --build ./build/Debug
 ```
 

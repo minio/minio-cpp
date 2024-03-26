@@ -1,5 +1,5 @@
 // MinIO C++ Library for Amazon S3 Compatible Cloud Storage
-// Copyright 2022 MinIO, Inc.
+// Copyright 2022-2024 MinIO, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +12,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
 
-#include "request.h"
+#include "miniocpp/request.h"
 
 #include <exception>
 #include <iosfwd>
@@ -25,12 +27,12 @@
 #include <type_traits>
 #include <vector>
 
-#include "credentials.h"
-#include "error.h"
-#include "http.h"
-#include "providers.h"
-#include "signer.h"
-#include "utils.h"
+#include "miniocpp/credentials.h"
+#include "miniocpp/error.h"
+#include "miniocpp/http.h"
+#include "miniocpp/providers.h"
+#include "miniocpp/signer.h"
+#include "miniocpp/utils.h"
 
 #define EMPTY_SHA256 \
   "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"

@@ -1,5 +1,5 @@
 // MinIO C++ Library for Amazon S3 Compatible Cloud Storage
-// Copyright 2022 MinIO, Inc.
+// Copyright 2022-2024 MinIO, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
 
-#ifndef _MINIO_REQUEST_H
-#define _MINIO_REQUEST_H
+#ifndef MINIO_CPP_REQUEST_H_INCLUDED
+#define MINIO_CPP_REQUEST_H_INCLUDED
 
 #include <regex>
 #include <string>
@@ -26,6 +28,7 @@
 
 namespace minio {
 namespace s3 {
+
 const std::string AWS_S3_PREFIX =
     "^(((bucket\\.|accesspoint\\.)"
     "vpce(-(?!_)[a-z_\\d]+)+\\.s3\\.)|"
@@ -136,6 +139,8 @@ struct Request {
  private:
   void BuildHeaders(http::Url& url, creds::Provider* const provider);
 };  // struct Request
+
 }  // namespace s3
 }  // namespace minio
-#endif  // #ifndef __MINIO_REQUEST_H
+
+#endif  // MINIO_CPP_REQUEST_H_INCLUDED

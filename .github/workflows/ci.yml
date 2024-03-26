@@ -16,16 +16,34 @@ permissions:
   contents: read
 
 jobs:
+  coding-style:
+    name: "Coding Style Check"
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies if Ubuntu
+      run: |
+        wget --quiet -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+        echo 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-18 main' | sudo tee -a /etc/apt/sources.list
+        sudo apt-get -qy update
+        sudo apt-get -qy install clang-format-18
+        clang-format-18 --version
+
+    - name: Coding Style Check
+      shell: bash
+      run: |
+        CLANG_FORMAT=clang-format-18 ./check-style.sh
+
   build:
-    name: ${{ matrix.config.name }}
-    runs-on: ${{ matrix.config.os }}
     strategy:
       fail-fast: false
       matrix:
         config:
         - {
             name: "Ubuntu_Latest_GCC",
-            os: Ubuntu-latest,
+            os: ubuntu-latest,
             build_type: "Release",
             cc: "gcc",
             cxx: "g++"
@@ -45,8 +63,20 @@ jobs:
             cxx: "cl"
           }
 
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout minio-cpp
+      uses: actions/checkout@v4
+      with:
+        path: "minio-cpp"
+
+    - name: Checkout vcpkg
+      uses: actions/checkout@v4
+      with:
+        repository: microsoft/vcpkg
+        path: "vcpkg"
 
     - name: Print env
       run: |
@@ -57,22 +87,20 @@ jobs:
       if: startsWith(matrix.config.name, 'Ubuntu_Latest_GCC')
       run: |
         wget --quiet -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-        echo 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-14 main' | sudo tee -a /etc/apt/sources.list
+        echo 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-18 main' | sudo tee -a /etc/apt/sources.list
         sudo apt-get -qy update
-        sudo apt-get -qy install cmake clang-format-14
+        sudo apt-get -qy install cmake
         wget --quiet https://dl.min.io/server/minio/release/linux-amd64/minio
         chmod +x minio
         cmake --version
-        clang-format --version
         ./minio --version
 
     - name: Install dependencies if macOS
       if: startsWith(matrix.config.os, 'macos')
       run: |
-        brew install pkg-config cmake clang-format minio/stable/minio
+        brew install pkg-config cmake minio/stable/minio
         cmake --version
         minio --version
-        clang-format --version
 
     - name: Install dependencies if Windows
       shell: bash
@@ -83,35 +111,21 @@ jobs:
         chmod +x minio.exe
         cmake --version
 
-    - name: Install vcpkg
-      shell: bash
-      run: |
-        mkdir -p ~/.vcpkg
-        touch ~/.vcpkg/vcpkg.path.txt
-        wget --quiet -O vcpkg-master.zip https://github.com/microsoft/vcpkg/archive/refs/heads/master.zip
-        unzip -qq vcpkg-master.zip
-        ./vcpkg-master/bootstrap-vcpkg.sh
-        ./vcpkg-master/vcpkg integrate install
-        ./vcpkg-master/vcpkg install
-
-    - name: C++ Style check if not Windows
-      if: ${{ !startsWith(matrix.config.os, 'windows') }}
-      shell: bash
-      run: |
-        ./check-style.sh
-
     - name: Configure and Build
       shell: bash
       run: |
-        cmake -B ./build -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} -DCMAKE_TOOLCHAIN_FILE=./vcpkg-master/scripts/buildsystems/vcpkg.cmake -DMINIO_CPP_TEST:BOOL=ON
-        cmake --build ./build --config ${{ matrix.config.build_type }} -j 4
+        ./vcpkg/bootstrap-vcpkg.sh
+        cd minio-cpp
+        ../vcpkg/vcpkg install
+        cmake . -B ./build -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} -DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake -DMINIO_CPP_TEST:BOOL=ON
+        cmake --build ./build --config ${{matrix.config.build_type}} -j 4
 
     - name: Start MinIO server if Ubuntu
       if: startsWith(matrix.config.name, 'Ubuntu_Latest_GCC')
       run: |
         mkdir -p ~/.minio/certs
-        cp ./tests/public.crt ./tests/private.key ~/.minio/certs/
-        sudo cp ./tests/public.crt /usr/local/share/ca-certificates/
+        cp ./minio-cpp/tests/public.crt ./minio-cpp/tests/private.key ~/.minio/certs/
+        sudo cp ./minio-cpp/tests/public.crt /usr/local/share/ca-certificates/
         sudo update-ca-certificates
         MINIO_CI_CD=true ./minio server /tmp/test-xl/{1...4}/ &
         sleep 10
@@ -127,29 +141,28 @@ jobs:
       shell: bash
       run: |
         mkdir -p ~/.minio/certs
-        cp ./tests/public.crt ./tests/private.key ~/.minio/certs/
-        certutil -addstore -f "ROOT" ./tests/public.crt
+        cp ./minio-cpp/tests/public.crt ./minio-cpp/tests/private.key ~/.minio/certs/
+        certutil -addstore -f "ROOT" ./minio-cpp/tests/public.crt
         MINIO_CI_CD=true ./minio.exe server test-xl/{1...4}/ &
         sleep 10
 
     - name: Run tests if Ubuntu
       if: startsWith(matrix.config.name, 'Ubuntu_Latest_GCC')
       run: |
-        SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ENABLE_HTTPS=1 ./build/tests
+        SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ENABLE_HTTPS=1 ./minio-cpp/build/tests
 
     - name: Run tests if macOS
       if: startsWith(matrix.config.name, 'macos')
       run: |
-        SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ./build/tests
+        SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ./minio-cpp/build/tests
 
     - name: Run tests if Windows
       shell: bash
       if: startsWith(matrix.config.os, 'windows')
       run: |
-        SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ENABLE_HTTPS=1 ./build/Release/tests.exe
+        SERVER_ENDPOINT=localhost:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin ENABLE_HTTPS=1 ./minio-cpp/build/Release/tests.exe
 
     - name: Run CMake test
-      working-directory: ${{github.workspace}}/build
-      # Execute tests defined by the CMake configuration.
-      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C ${{ matrix.config.build_type }}
+      run: |
+        cd minio-cpp/build
+        ctest -C ${{ matrix.config.build_type }}
