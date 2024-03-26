@@ -1,5 +1,5 @@
 // MinIO C++ Library for Amazon S3 Compatible Cloud Storage
-// Copyright 2022 MinIO, Inc.
+// Copyright 2022-2024 MinIO, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +12,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
 
-#include "signer.h"
+#include "miniocpp/signer.h"
 
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
@@ -23,8 +25,8 @@
 #include <string>
 #include <type_traits>
 
-#include "http.h"
-#include "utils.h"
+#include "miniocpp/http.h"
+#include "miniocpp/utils.h"
 
 const char* SIGN_V4_ALGORITHM = "AWS4-HMAC-SHA256";
 

@@ -12,6 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 cmake_minimum_required(VERSION 3.10)
 cmake_policy(SET CMP0091 NEW)
 
@@ -97,21 +100,21 @@ set(MINIO_CPP_SOURCES
 )
 
 set(MINIO_CPP_HEADERS
-  include/args.h
-  include/baseclient.h
-  include/client.h
-  include/config.h
-  include/credentials.h
-  include/error.h
-  include/http.h
-  include/providers.h
-  include/request.h
-  include/response.h
-  include/select.h
-  include/signer.h
-  include/sse.h
-  include/types.h
-  include/utils.h
+  include/miniocpp/args.h
+  include/miniocpp/baseclient.h
+  include/miniocpp/client.h
+  include/miniocpp/config.h
+  include/miniocpp/credentials.h
+  include/miniocpp/error.h
+  include/miniocpp/http.h
+  include/miniocpp/providers.h
+  include/miniocpp/request.h
+  include/miniocpp/response.h
+  include/miniocpp/select.h
+  include/miniocpp/signer.h
+  include/miniocpp/sse.h
+  include/miniocpp/types.h
+  include/miniocpp/utils.h
 )
 
 add_library(miniocpp STATIC ${MINIO_CPP_SOURCES} ${MINIO_CPP_HEADERS})

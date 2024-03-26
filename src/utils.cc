@@ -1,5 +1,5 @@
 // MinIO C++ Library for Amazon S3 Compatible Cloud Storage
-// Copyright 2022 MinIO, Inc.
+// Copyright 2022-2024 MinIO, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,12 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+
+#include "miniocpp/utils.h"
+
+#include "miniocpp/error.h"
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
@@ -52,9 +58,6 @@
 #include <string>
 #include <type_traits>
 #include <vector>
-
-#include "error.h"
-#include "utils.h"
 
 const std::string WEEK_DAYS[] = {"Sun", "Mon", "Tue", "Wed",
                                  "Thu", "Fri", "Sat"};
@@ -139,10 +142,8 @@ bool minio::utils::StringToBool(const std::string& str) {
 
 std::string minio::utils::Trim(std::string_view str, char ch) {
   std::size_t start, len;
-  for (start = 0; start < str.size() && str[start] == ch; start++)
-    ;
-  for (len = str.size() - start; len > 0 && str[start + len - 1] == ch; len--)
-    ;
+  for (start = 0; start < str.size() && str[start] == ch; start++);
+  for (len = str.size() - start; len > 0 && str[start + len - 1] == ch; len--);
   return std::string(str.substr(start, len));
 }
 

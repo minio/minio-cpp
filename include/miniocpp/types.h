@@ -1,5 +1,5 @@
 // MinIO C++ Library for Amazon S3 Compatible Cloud Storage
-// Copyright 2022 MinIO, Inc.
+// Copyright 2022-2024 MinIO, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
 
-#ifndef _MINIO_S3_TYPES_H
-#define _MINIO_S3_TYPES_H
+#ifndef MINIO_CPP_TYPES_H_INCLUDED
+#define MINIO_CPP_TYPES_H_INCLUDED
 
 #include <exception>
 #include <functional>
@@ -31,6 +33,7 @@
 
 namespace minio {
 namespace s3 {
+
 enum class RetentionMode { kGovernance, kCompliance };
 
 // StringToRetentionMode converts string to retention mode enum.
@@ -763,6 +766,8 @@ struct ObjectLockConfig {
 
   error::Error Validate() const;
 };  // struct ObjectLockConfig
+
 }  // namespace s3
 }  // namespace minio
-#endif  // #ifndef __MINIO_S3_TYPES_H
+
+#endif  // MINIO_CPP_TYPES_H_INCLUDED

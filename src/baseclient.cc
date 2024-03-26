@@ -1,5 +1,5 @@
 // MinIO C++ Library for Amazon S3 Compatible Cloud Storage
-// Copyright 2022 MinIO, Inc.
+// Copyright 2022-2024 MinIO, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +12,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
 
-#include "baseclient.h"
+#include "miniocpp/baseclient.h"
 
 #include <cstring>
 #include <exception>
@@ -28,18 +30,18 @@
 #include <string>
 #include <type_traits>
 
-#include "args.h"
-#include "config.h"
-#include "credentials.h"
-#include "error.h"
-#include "http.h"
-#include "providers.h"
-#include "request.h"
-#include "response.h"
-#include "select.h"
-#include "signer.h"
-#include "types.h"
-#include "utils.h"
+#include "miniocpp/args.h"
+#include "miniocpp/config.h"
+#include "miniocpp/credentials.h"
+#include "miniocpp/error.h"
+#include "miniocpp/http.h"
+#include "miniocpp/providers.h"
+#include "miniocpp/request.h"
+#include "miniocpp/response.h"
+#include "miniocpp/select.h"
+#include "miniocpp/signer.h"
+#include "miniocpp/types.h"
+#include "miniocpp/utils.h"
 
 minio::utils::Multimap minio::s3::GetCommonListObjectsQueryParams(
     const std::string& delimiter, const std::string& encoding_type,
@@ -361,12 +363,8 @@ minio::s3::BaseClient::CompleteMultipartUpload(
   std::stringstream ss;
   ss << "<CompleteMultipartUpload>";
   for (auto& part : args.parts) {
-    ss << "<Part>"
-       << "<PartNumber>" << part.number << "</PartNumber>"
-       << "<ETag>"
-       << "\"" << part.etag << "\""
-       << "</ETag>"
-       << "</Part>";
+    ss << "<Part>" << "<PartNumber>" << part.number << "</PartNumber>"
+       << "<ETag>" << "\"" << part.etag << "\"" << "</ETag>" << "</Part>";
   }
   ss << "</CompleteMultipartUpload>";
   std::string body = ss.str();
@@ -1348,9 +1346,8 @@ minio::s3::MakeBucketResponse minio::s3::BaseClient::MakeBucket(
   std::string body;
   if (region != "us-east-1") {
     std::stringstream ss;
-    ss << "<CreateBucketConfiguration>"
-       << "<LocationConstraint>" << region << "</LocationConstraint>"
-       << "</CreateBucketConfiguration>";
+    ss << "<CreateBucketConfiguration>" << "<LocationConstraint>" << region
+       << "</LocationConstraint>" << "</CreateBucketConfiguration>";
     body = ss.str();
     req.body = body;
   }
@@ -1671,10 +1668,8 @@ minio::s3::SetBucketTagsResponse minio::s3::BaseClient::SetBucketTags(
   if (!args.tags.empty()) {
     ss << "<TagSet>";
     for (auto& [key, value] : args.tags) {
-      ss << "<Tag>"
-         << "<Key>" << key << "</Key>"
-         << "<Value>" << value << "</Value>"
-         << "</Tag>";
+      ss << "<Tag>" << "<Key>" << key << "</Key>" << "<Value>" << value
+         << "</Value>" << "</Tag>";
     }
     ss << "</TagSet>";
   }
@@ -1788,10 +1783,9 @@ minio::s3::SetObjectRetentionResponse minio::s3::BaseClient::SetObjectRetention(
   }
 
   std::stringstream ss;
-  ss << "<Retention>"
-     << "<Mode>" << RetentionModeToString(args.retention_mode) << "</Mode>"
-     << "<RetainUntilDate>" << args.retain_until_date.ToISO8601UTC()
-     << "</RetainUntilDate>"
+  ss << "<Retention>" << "<Mode>" << RetentionModeToString(args.retention_mode)
+     << "</Mode>" << "<RetainUntilDate>"
+     << args.retain_until_date.ToISO8601UTC() << "</RetainUntilDate>"
      << "</Retention>";
 
   std::string body = ss.str();
@@ -1828,10 +1822,8 @@ minio::s3::SetObjectTagsResponse minio::s3::BaseClient::SetObjectTags(
   if (!args.tags.empty()) {
     ss << "<TagSet>";
     for (auto& [key, value] : args.tags) {
-      ss << "<Tag>"
-         << "<Key>" << key << "</Key>"
-         << "<Value>" << value << "</Value>"
-         << "</Tag>";
+      ss << "<Tag>" << "<Key>" << key << "</Key>" << "<Value>" << value
+         << "</Value>" << "</Tag>";
     }
     ss << "</TagSet>";
   }

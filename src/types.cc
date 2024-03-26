@@ -1,5 +1,5 @@
 // MinIO C++ Library for Amazon S3 Compatible Cloud Storage
-// Copyright 2022 MinIO, Inc.
+// Copyright 2022-2024 MinIO, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +12,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
 
-#include "types.h"
+#include "miniocpp/types.h"
 
 #include <exception>
 #include <iosfwd>
@@ -23,7 +25,7 @@
 #include <sstream>
 #include <string>
 
-#include "error.h"
+#include "miniocpp/error.h"
 
 minio::s3::RetentionMode minio::s3::StringToRetentionMode(
     std::string_view str) noexcept {
@@ -340,10 +342,8 @@ std::string minio::s3::ReplicationConfig::ToXML() const {
 
   auto tag_xml = [](std::string key, std::string value) -> std::string {
     std::stringstream ss;
-    ss << "<Tag>"
-       << "<Key>" << key << "</Key>"
-       << "<Value>" << value << "</Value>"
-       << "</Tag>";
+    ss << "<Tag>" << "<Key>" << key << "</Key>" << "<Value>" << value
+       << "</Value>" << "</Tag>";
     return ss.str();
   };
 
@@ -373,8 +373,7 @@ std::string minio::s3::ReplicationConfig::ToXML() const {
       ss << "</EncryptionConfiguration>";
     }
     if (rule.destination.metrics) {
-      ss << "<Metrics>"
-         << "<EventThreshold>";
+      ss << "<Metrics>" << "<EventThreshold>";
       if (rule.destination.metrics.event_threshold_minutes > 0) {
         ss << minutes_xml(rule.destination.metrics.event_threshold_minutes);
       }
@@ -382,8 +381,7 @@ std::string minio::s3::ReplicationConfig::ToXML() const {
          << "</Metrics>";
     }
     if (rule.destination.replication_time) {
-      ss << "<ReplicationTime>"
-         << "<Time>";
+      ss << "<ReplicationTime>" << "<Time>";
       if (rule.destination.replication_time.time_minutes > 0) {
         ss << minutes_xml(rule.destination.replication_time.time_minutes);
       }
@@ -543,10 +541,8 @@ std::string minio::s3::LifecycleConfig::ToXML() const {
       }
       if (!rule.filter.and_operator.tags.empty()) {
         for (auto& [key, value] : rule.filter.and_operator.tags) {
-          ss << "<Tag>"
-             << "<Key>" << key << "</Key>"
-             << "<Value>" << value << "</Value>"
-             << "</Tag>";
+          ss << "<Tag>" << "<Key>" << key << "</Key>" << "<Value>" << value
+             << "</Value>" << "</Tag>";
         }
       }
       ss << "</And>";
@@ -555,10 +551,8 @@ std::string minio::s3::LifecycleConfig::ToXML() const {
       ss << "<Prefix>" << rule.filter.prefix << "</Prefix>";
     }
     if (rule.filter.tag) {
-      ss << "<Tag>"
-         << "<Key>" << rule.filter.tag.key << "</Key>"
-         << "<Value>" << rule.filter.tag.value << "</Value>"
-         << "</Tag>";
+      ss << "<Tag>" << "<Key>" << rule.filter.tag.key << "</Key>" << "<Value>"
+         << rule.filter.tag.value << "</Value>" << "</Tag>";
     }
     ss << "</Filter>";
 
