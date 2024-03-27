@@ -27,12 +27,16 @@
 #include "error.h"
 #include "http.h"
 
-#define DEFAULT_DURATION_SECONDS (60 * 60 * 24)  // 1 day.
-#define MIN_DURATION_SECONDS (60 * 15)           // 15 minutes.
-#define MAX_DURATION_SECONDS (60 * 60 * 24 * 7)  // 7 days.
+namespace minio::creds {
 
-namespace minio {
-namespace creds {
+// 1 day.
+static constexpr unsigned DEFAULT_DURATION_SECONDS = 60 * 60 * 24;
+
+// 15 minutes.
+static constexpr unsigned MIN_DURATION_SECONDS = 60 * 15;
+
+// 7 days.
+static constexpr unsigned MAX_DURATION_SECONDS = 60 * 60 * 24 * 7;
 
 struct Jwt {
   std::string token;
@@ -250,7 +254,6 @@ struct CertificateIdentityProvider : public Provider {
   virtual Credentials Fetch() override;
 };  // struct CertificateIdentityProvider
 
-}  // namespace creds
-}  // namespace minio
+}  // namespace minio::creds
 
 #endif  // MINIO_CPP_PROVIDERS_H_INCLUDED

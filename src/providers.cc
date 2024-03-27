@@ -46,7 +46,9 @@
 #include <sys/socket.h>
 #endif
 
-minio::error::Error minio::creds::checkLoopbackHost(const std::string& host) {
+namespace minio::creds {
+
+error::Error checkLoopbackHost(const std::string& host) {
   struct addrinfo hints = {};
   hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
@@ -69,11 +71,11 @@ minio::error::Error minio::creds::checkLoopbackHost(const std::string& host) {
   return error::SUCCESS;
 }
 
-minio::creds::Provider::~Provider() {}
+Provider::~Provider() {}
 
-minio::creds::ChainedProvider::~ChainedProvider() {}
+ChainedProvider::~ChainedProvider() {}
 
-minio::creds::Credentials minio::creds::ChainedProvider::Fetch() {
+Credentials ChainedProvider::Fetch() {
   if (err_) return Credentials{err_};
 
   if (creds_) return creds_;
@@ -92,20 +94,17 @@ minio::creds::Credentials minio::creds::ChainedProvider::Fetch() {
   return error::make<Credentials>("All providers fail to fetch credentials");
 }
 
-minio::creds::StaticProvider::StaticProvider(std::string access_key,
-                                             std::string secret_key,
-                                             std::string session_token) {
+StaticProvider::StaticProvider(std::string access_key, std::string secret_key,
+                               std::string session_token) {
   this->creds_ = Credentials(error::SUCCESS, std::move(access_key),
                              std::move(secret_key), std::move(session_token));
 }
 
-minio::creds::StaticProvider::~StaticProvider() {}
+StaticProvider::~StaticProvider() {}
 
-minio::creds::Credentials minio::creds::StaticProvider::Fetch() {
-  return creds_;
-}
+Credentials StaticProvider::Fetch() { return creds_; }
 
-minio::creds::EnvAwsProvider::EnvAwsProvider() {
+EnvAwsProvider::EnvAwsProvider() {
   std::string access_key;
   std::string secret_key;
   std::string session_token;
@@ -122,13 +121,11 @@ minio::creds::EnvAwsProvider::EnvAwsProvider() {
                              std::move(secret_key), std::move(session_token));
 }
 
-minio::creds::EnvAwsProvider::~EnvAwsProvider() {}
+EnvAwsProvider::~EnvAwsProvider() {}
 
-minio::creds::Credentials minio::creds::EnvAwsProvider::Fetch() {
-  return creds_;
-}
+Credentials EnvAwsProvider::Fetch() { return creds_; }
 
-minio::creds::EnvMinioProvider::EnvMinioProvider() {
+EnvMinioProvider::EnvMinioProvider() {
   std::string access_key;
   std::string secret_key;
 
@@ -138,14 +135,12 @@ minio::creds::EnvMinioProvider::EnvMinioProvider() {
       Credentials(error::SUCCESS, std::move(access_key), std::move(secret_key));
 }
 
-minio::creds::EnvMinioProvider::~EnvMinioProvider() {}
+EnvMinioProvider::~EnvMinioProvider() {}
 
-minio::creds::Credentials minio::creds::EnvMinioProvider::Fetch() {
-  return creds_;
-}
+Credentials EnvMinioProvider::Fetch() { return creds_; }
 
-minio::creds::AwsConfigProvider::AwsConfigProvider(std::string filename,
-                                                   std::string profile) {
+AwsConfigProvider::AwsConfigProvider(std::string filename,
+                                     std::string profile) {
   if (filename.empty()) {
     if (!utils::GetEnv(filename, "AWS_SHARED_CREDENTIALS_FILE")) {
       filename = utils::GetHomeDir() + "/aws/credentials";
@@ -167,14 +162,12 @@ minio::creds::AwsConfigProvider::AwsConfigProvider(std::string filename,
   }
 }
 
-minio::creds::AwsConfigProvider::~AwsConfigProvider() {}
+AwsConfigProvider::~AwsConfigProvider() {}
 
-minio::creds::Credentials minio::creds::AwsConfigProvider::Fetch() {
-  return creds_;
-}
+Credentials AwsConfigProvider::Fetch() { return creds_; }
 
-minio::creds::MinioClientConfigProvider::MinioClientConfigProvider(
-    std::string filename, std::string alias) {
+MinioClientConfigProvider::MinioClientConfigProvider(std::string filename,
+                                                     std::string alias) {
   if (filename.empty()) filename = utils::GetHomeDir() + "/.mc/config.json";
 
   if (alias.empty()) {
@@ -207,13 +200,11 @@ minio::creds::MinioClientConfigProvider::MinioClientConfigProvider(
                              aliases[alias]["secretKey"]};
 }
 
-minio::creds::MinioClientConfigProvider::~MinioClientConfigProvider() {}
+MinioClientConfigProvider::~MinioClientConfigProvider() {}
 
-minio::creds::Credentials minio::creds::MinioClientConfigProvider::Fetch() {
-  return creds_;
-}
+Credentials MinioClientConfigProvider::Fetch() { return creds_; }
 
-minio::creds::AssumeRoleProvider::AssumeRoleProvider(
+AssumeRoleProvider::AssumeRoleProvider(
     http::Url sts_endpoint, std::string access_key, std::string secret_key,
     unsigned int duration_seconds, std::string policy, std::string region,
     std::string role_arn, std::string role_session_name,
@@ -242,9 +233,9 @@ minio::creds::AssumeRoleProvider::AssumeRoleProvider(
   this->content_sha256_ = utils::Sha256Hash(body_);
 }
 
-minio::creds::AssumeRoleProvider::~AssumeRoleProvider() {}
+AssumeRoleProvider::~AssumeRoleProvider() {}
 
-minio::creds::Credentials minio::creds::AssumeRoleProvider::Fetch() {
+Credentials AssumeRoleProvider::Fetch() {
   if (err_) return Credentials{err_};
 
   if (creds_) return creds_;
@@ -273,7 +264,7 @@ minio::creds::Credentials minio::creds::AssumeRoleProvider::Fetch() {
   return creds_;
 }
 
-minio::creds::WebIdentityClientGrantsProvider::WebIdentityClientGrantsProvider(
+WebIdentityClientGrantsProvider::WebIdentityClientGrantsProvider(
     JwtFunction jwtfunc, http::Url sts_endpoint, unsigned int duration_seconds,
     std::string policy, std::string role_arn, std::string role_session_name) {
   this->jwtfunc_ = jwtfunc;
@@ -284,10 +275,9 @@ minio::creds::WebIdentityClientGrantsProvider::WebIdentityClientGrantsProvider(
   this->role_session_name_ = role_session_name;
 }
 
-minio::creds::WebIdentityClientGrantsProvider::
-    ~WebIdentityClientGrantsProvider() {}
+WebIdentityClientGrantsProvider::~WebIdentityClientGrantsProvider() {}
 
-unsigned int minio::creds::WebIdentityClientGrantsProvider::getDurationSeconds(
+unsigned int WebIdentityClientGrantsProvider::getDurationSeconds(
     unsigned int expiry) const {
   if (duration_seconds_) expiry = duration_seconds_;
   if (expiry > MAX_DURATION_SECONDS) return MAX_DURATION_SECONDS;
@@ -296,8 +286,7 @@ unsigned int minio::creds::WebIdentityClientGrantsProvider::getDurationSeconds(
   return expiry;
 }
 
-minio::creds::Credentials
-minio::creds::WebIdentityClientGrantsProvider::Fetch() {
+Credentials WebIdentityClientGrantsProvider::Fetch() {
   if (creds_) return creds_;
 
   Jwt jwt = jwtfunc_();
@@ -340,27 +329,27 @@ minio::creds::WebIdentityClientGrantsProvider::Fetch() {
   return creds_;
 }
 
-minio::creds::ClientGrantsProvider::ClientGrantsProvider(
+ClientGrantsProvider::ClientGrantsProvider(
     JwtFunction jwtfunc, http::Url sts_endpoint, unsigned int duration_seconds,
     std::string policy, std::string role_arn, std::string role_session_name)
     : WebIdentityClientGrantsProvider(jwtfunc, sts_endpoint, duration_seconds,
                                       policy, role_arn, role_session_name) {}
 
-minio::creds::ClientGrantsProvider::~ClientGrantsProvider() {}
+ClientGrantsProvider::~ClientGrantsProvider() {}
 
-bool minio::creds::ClientGrantsProvider::IsWebIdentity() const { return false; }
+bool ClientGrantsProvider::IsWebIdentity() const { return false; }
 
-minio::creds::WebIdentityProvider::WebIdentityProvider(
+WebIdentityProvider::WebIdentityProvider(
     JwtFunction jwtfunc, http::Url sts_endpoint, unsigned int duration_seconds,
     std::string policy, std::string role_arn, std::string role_session_name)
     : WebIdentityClientGrantsProvider(jwtfunc, sts_endpoint, duration_seconds,
                                       policy, role_arn, role_session_name) {}
 
-minio::creds::WebIdentityProvider::~WebIdentityProvider() {}
+WebIdentityProvider::~WebIdentityProvider() {}
 
-bool minio::creds::WebIdentityProvider::IsWebIdentity() const { return true; }
+bool WebIdentityProvider::IsWebIdentity() const { return true; }
 
-minio::creds::IamAwsProvider::IamAwsProvider(http::Url custom_endpoint) {
+IamAwsProvider::IamAwsProvider(http::Url custom_endpoint) {
   this->custom_endpoint_ = custom_endpoint;
   utils::GetEnv(this->token_file_, "AWS_WEB_IDENTITY_TOKEN_FILE");
   utils::GetEnv(this->aws_region_, "AWS_REGION");
@@ -373,9 +362,9 @@ minio::creds::IamAwsProvider::IamAwsProvider(http::Url custom_endpoint) {
   utils::GetEnv(this->full_uri_, "AWS_CONTAINER_CREDENTIALS_FULL_URI");
 }
 
-minio::creds::IamAwsProvider::~IamAwsProvider() {}
+IamAwsProvider::~IamAwsProvider() {}
 
-minio::creds::Credentials minio::creds::IamAwsProvider::Fetch() {
+Credentials IamAwsProvider::Fetch() {
   if (creds_) return creds_;
 
   http::Url url = custom_endpoint_;
@@ -432,7 +421,7 @@ minio::creds::Credentials minio::creds::IamAwsProvider::Fetch() {
   return creds_;
 }
 
-minio::creds::Credentials minio::creds::IamAwsProvider::fetch(http::Url url) {
+Credentials IamAwsProvider::fetch(http::Url url) {
   http::Request req(http::Method::kGet, url);
   http::Response resp = req.Execute();
   if (!resp) return Credentials{resp.Error()};
@@ -451,8 +440,8 @@ minio::creds::Credentials minio::creds::IamAwsProvider::fetch(http::Url url) {
                      utils::UtcTime::FromISO8601UTC(expiration.c_str())};
 }
 
-minio::error::Error minio::creds::IamAwsProvider::getRoleName(
-    std::string& role_name, http::Url url) const {
+error::Error IamAwsProvider::getRoleName(std::string& role_name,
+                                         http::Url url) const {
   http::Request req(http::Method::kGet, url);
   http::Response resp = req.Execute();
   if (!resp) return resp.Error();
@@ -475,9 +464,9 @@ minio::error::Error minio::creds::IamAwsProvider::getRoleName(
   return error::SUCCESS;
 }
 
-minio::creds::LdapIdentityProvider::LdapIdentityProvider(
-    http::Url sts_endpoint, std::string ldap_username,
-    std::string ldap_password) {
+LdapIdentityProvider::LdapIdentityProvider(http::Url sts_endpoint,
+                                           std::string ldap_username,
+                                           std::string ldap_password) {
   this->sts_endpoint_ = sts_endpoint;
   utils::Multimap map;
   map.Add("Action", "AssumeRoleWithLDAPIdentity");
@@ -487,9 +476,9 @@ minio::creds::LdapIdentityProvider::LdapIdentityProvider(
   this->sts_endpoint_.query_string = map.ToQueryString();
 }
 
-minio::creds::LdapIdentityProvider::~LdapIdentityProvider() {}
+LdapIdentityProvider::~LdapIdentityProvider() {}
 
-minio::creds::Credentials minio::creds::LdapIdentityProvider::Fetch() {
+Credentials LdapIdentityProvider::Fetch() {
   if (creds_) return creds_;
 
   http::Request req(http::Method::kPost, sts_endpoint_);
@@ -500,7 +489,7 @@ minio::creds::Credentials minio::creds::LdapIdentityProvider::Fetch() {
   return creds_;
 }
 
-minio::creds::CertificateIdentityProvider::CertificateIdentityProvider(
+CertificateIdentityProvider::CertificateIdentityProvider(
     http::Url sts_endpoint, std::string key_file, std::string cert_file,
     std::string ssl_cert_file, unsigned int duration_seconds) {
   if (!sts_endpoint.https) {
@@ -530,9 +519,9 @@ minio::creds::CertificateIdentityProvider::CertificateIdentityProvider(
   ssl_cert_file_ = ssl_cert_file;
 }
 
-minio::creds::CertificateIdentityProvider::~CertificateIdentityProvider() {}
+CertificateIdentityProvider::~CertificateIdentityProvider() {}
 
-minio::creds::Credentials minio::creds::CertificateIdentityProvider::Fetch() {
+Credentials CertificateIdentityProvider::Fetch() {
   if (err_) return Credentials{err_};
 
   if (creds_) return creds_;
@@ -548,3 +537,5 @@ minio::creds::Credentials minio::creds::CertificateIdentityProvider::Fetch() {
   creds_ = Credentials::ParseXML(resp.body, "AssumeRoleWithCertificateResult");
   return creds_;
 }
+
+}  // namespace minio::creds

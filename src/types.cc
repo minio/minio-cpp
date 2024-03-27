@@ -27,8 +27,9 @@
 
 #include "miniocpp/error.h"
 
-minio::s3::RetentionMode minio::s3::StringToRetentionMode(
-    std::string_view str) noexcept {
+namespace minio::s3 {
+
+RetentionMode StringToRetentionMode(std::string_view str) noexcept {
   if (str == "GOVERNANCE") return RetentionMode::kGovernance;
   if (str == "COMPLIANCE") return RetentionMode::kCompliance;
 
@@ -39,8 +40,7 @@ minio::s3::RetentionMode minio::s3::StringToRetentionMode(
   return RetentionMode::kGovernance;  // never reaches here.
 }
 
-minio::s3::LegalHold minio::s3::StringToLegalHold(
-    std::string_view str) noexcept {
+LegalHold StringToLegalHold(std::string_view str) noexcept {
   if (str == "ON") return LegalHold::kOn;
   if (str == "OFF") return LegalHold::kOff;
 
@@ -51,8 +51,7 @@ minio::s3::LegalHold minio::s3::StringToLegalHold(
   return LegalHold::kOff;  // never reaches here.
 }
 
-minio::s3::Directive minio::s3::StringToDirective(
-    std::string_view str) noexcept {
+Directive StringToDirective(std::string_view str) noexcept {
   if (str == "COPY") return Directive::kCopy;
   if (str == "REPLACE") return Directive::kReplace;
 
@@ -62,7 +61,7 @@ minio::s3::Directive minio::s3::StringToDirective(
   return Directive::kCopy;  // never reaches here.
 }
 
-std::string minio::s3::SelectRequest::ToXML() const {
+std::string SelectRequest::ToXML() const {
   std::stringstream ss;
   ss << "<SelectObjectContentRequest>";
 
@@ -180,9 +179,8 @@ std::string minio::s3::SelectRequest::ToXML() const {
   return ss.str();
 }
 
-minio::s3::NotificationRecord minio::s3::NotificationRecord::ParseJSON(
-    nlohmann::json j_record) {
-  minio::s3::NotificationRecord record;
+NotificationRecord NotificationRecord::ParseJSON(nlohmann::json j_record) {
+  NotificationRecord record;
 
   record.event_version = j_record.value("eventVersion", "");
   record.event_source = j_record.value("eventSource", "");
@@ -225,7 +223,7 @@ minio::s3::NotificationRecord minio::s3::NotificationRecord::ParseJSON(
     if (j_s3.contains("object")) {
       auto& j_object = j_s3["object"];
       record.s3.object.key = j_object.value("key", "");
-      record.s3.object.size = j_object.value("size", 0);
+      record.s3.object.size = j_object.value("size", size_t(0));
       record.s3.object.etag = j_object.value("eTag", "");
       record.s3.object.content_type = j_object.value("contentType", "");
       record.s3.object.sequencer = j_object.value("sequencer", "");
@@ -246,7 +244,7 @@ minio::s3::NotificationRecord minio::s3::NotificationRecord::ParseJSON(
   return record;
 }
 
-std::string minio::s3::NotificationConfig::ToXML() const {
+std::string NotificationConfig::ToXML() const {
   std::stringstream ss;
   ss << "<NotificationConfiguration>";
 
@@ -321,7 +319,7 @@ std::string minio::s3::NotificationConfig::ToXML() const {
   return ss.str();
 }
 
-std::string minio::s3::ReplicationConfig::ToXML() const {
+std::string ReplicationConfig::ToXML() const {
   auto status_xml = [](bool status) -> std::string {
     std::stringstream ss;
     ss << "<Status>" << (status ? "Enabled" : "Disabled") << "</Status>";
@@ -463,7 +461,7 @@ std::string minio::s3::ReplicationConfig::ToXML() const {
   return ss.str();
 }
 
-minio::error::Error minio::s3::LifecycleRule::Validate() const {
+error::Error LifecycleRule::Validate() const {
   if (!abort_incomplete_multipart_upload_days_after_initiation &&
       !expiration_date && !expiration_days &&
       !expiration_expired_object_delete_marker &&
@@ -502,7 +500,7 @@ minio::error::Error minio::s3::LifecycleRule::Validate() const {
   return error::SUCCESS;
 }
 
-std::string minio::s3::LifecycleConfig::ToXML() const {
+std::string LifecycleConfig::ToXML() const {
   std::stringstream ss;
 
   ss << "<LifecycleConfiguration>";
@@ -606,7 +604,7 @@ std::string minio::s3::LifecycleConfig::ToXML() const {
   return ss.str();
 }
 
-minio::error::Error minio::s3::ObjectLockConfig::Validate() const {
+error::Error ObjectLockConfig::Validate() const {
   if (IsRetentionModeValid(retention_mode)) {
     if (!(static_cast<bool>(retention_duration_days) ^
           static_cast<bool>(retention_duration_years))) {
@@ -623,15 +621,17 @@ minio::error::Error minio::s3::ObjectLockConfig::Validate() const {
   return error::SUCCESS;
 }
 
-minio::s3::SseConfig minio::s3::SseConfig::S3() {
+SseConfig SseConfig::S3() {
   SseConfig config;
   config.sse_algorithm = "AES256";
   return config;
 }
 
-minio::s3::SseConfig minio::s3::SseConfig::Kms(std::string masterkeyid) {
+SseConfig SseConfig::Kms(std::string masterkeyid) {
   SseConfig config;
   config.sse_algorithm = "aws:kms";
   config.kms_master_key_id = masterkeyid;
   return config;
 }
+
+}  // namespace minio::s3

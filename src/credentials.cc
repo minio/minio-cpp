@@ -24,15 +24,17 @@
 #include "miniocpp/error.h"
 #include "miniocpp/utils.h"
 
-bool minio::creds::expired(const utils::UtcTime& expiration) {
+namespace minio::creds {
+
+bool expired(const utils::UtcTime& expiration) {
   if (!expiration) return false;
   utils::UtcTime now = utils::UtcTime::Now();
   now.Add(10);
   return expiration < now;
 }
 
-minio::creds::Credentials minio::creds::Credentials::ParseXML(
-    std::string_view data, const std::string& root) {
+Credentials Credentials::ParseXML(std::string_view data,
+                                  const std::string& root) {
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(data.data());
   if (!result) {
@@ -56,3 +58,5 @@ minio::creds::Credentials minio::creds::Credentials::ParseXML(
                      std::move(secret_key), std::move(session_token),
                      expiration);
 }
+
+}  // namespace minio::creds

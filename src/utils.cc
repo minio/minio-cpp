@@ -59,16 +59,19 @@
 #include <type_traits>
 #include <vector>
 
-const std::string WEEK_DAYS[] = {"Sun", "Mon", "Tue", "Wed",
-                                 "Thu", "Fri", "Sat"};
-const std::string MONTHS[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-const std::regex MULTI_SPACE_REGEX("( +)");
+namespace minio::utils {
 
-const std::regex BUCKET_NAME_REGEX("^[a-z0-9][a-z0-9\\.\\-]{1,61}[a-z0-9]$");
-const std::regex OLD_BUCKET_NAME_REGEX(
+static const std::string WEEK_DAYS[] = {"Sun", "Mon", "Tue", "Wed",
+                                        "Thu", "Fri", "Sat"};
+static const std::string MONTHS[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+static const std::regex MULTI_SPACE_REGEX("( +)");
+
+static const std::regex BUCKET_NAME_REGEX(
+    "^[a-z0-9][a-z0-9\\.\\-]{1,61}[a-z0-9]$");
+static const std::regex OLD_BUCKET_NAME_REGEX(
     "^[a-z0-9][a-z0-9_\\.\\-\\:]{1,61}[a-z0-9]$", std::regex_constants::icase);
-const std::regex IPV4_REGEX(
+static const std::regex IPV4_REGEX(
     "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\\.){3}"
     "(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$");
 
@@ -85,7 +88,7 @@ static char* strptime(const char* s, const char* f, struct tm* tm) {
 }
 #endif
 
-bool minio::utils::GetEnv(std::string& var, const char* name) {
+bool GetEnv(std::string& var, const char* name) {
   if (const char* value = std::getenv(name)) {
     var = value;
     return true;
@@ -93,7 +96,7 @@ bool minio::utils::GetEnv(std::string& var, const char* name) {
   return false;
 }
 
-std::string minio::utils::GetHomeDir() {
+std::string GetHomeDir() {
   std::string home;
 #ifdef _WIN32
   GetEnv(home, "USERPROFILE");
@@ -104,7 +107,7 @@ std::string minio::utils::GetHomeDir() {
 #endif
 }
 
-std::string minio::utils::Printable(const std::string& s) {
+std::string Printable(const std::string& s) {
   std::stringstream ss;
   for (auto& ch : s) {
     if (ch < 33 || ch > 126) {
@@ -118,17 +121,20 @@ std::string minio::utils::Printable(const std::string& s) {
   return ss.str();
 }
 
-unsigned long minio::utils::CRC32(std::string_view str) {
+unsigned long CRC32(std::string_view str) {
   return crc32(0, reinterpret_cast<const unsigned char*>(str.data()),
                static_cast<uInt>(str.size()));
 }
 
-unsigned int minio::utils::Int(std::string_view str) {
-  unsigned char* data = (unsigned char*)str.data();
-  return data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3];
+unsigned int Int(std::string_view str) {
+  const unsigned char* data =
+      reinterpret_cast<const unsigned char*>(str.data());
+
+  return (unsigned(data[0]) << 24) | (unsigned(data[1]) << 16) |
+         (unsigned(data[2]) << 8) | (unsigned(data[3]));
 }
 
-bool minio::utils::StringToBool(const std::string& str) {
+bool StringToBool(const std::string& str) {
   std::string s = ToLower(str);
   if (s == "false") return false;
   if (s == "true") return true;
@@ -140,43 +146,43 @@ bool minio::utils::StringToBool(const std::string& str) {
   return false;
 }
 
-std::string minio::utils::Trim(std::string_view str, char ch) {
+std::string Trim(std::string_view str, char ch) {
   std::size_t start, len;
   for (start = 0; start < str.size() && str[start] == ch; start++);
   for (len = str.size() - start; len > 0 && str[start + len - 1] == ch; len--);
   return std::string(str.substr(start, len));
 }
 
-bool minio::utils::CheckNonEmptyString(std::string_view str) {
+bool CheckNonEmptyString(std::string_view str) {
   return !str.empty() && Trim(str) == str;
 }
 
-std::string minio::utils::ToLower(const std::string& str) {
+std::string ToLower(const std::string& str) {
   std::string s(str);
   std::transform(s.begin(), s.end(), s.begin(), ::tolower);
   return s;
 }
 
-bool minio::utils::StartsWith(std::string_view str, std::string_view prefix) {
+bool StartsWith(std::string_view str, std::string_view prefix) {
   return (str.size() >= prefix.size() &&
           str.compare(0, prefix.size(), prefix) == 0);
 }
 
-bool minio::utils::EndsWith(std::string_view str, std::string_view suffix) {
+bool EndsWith(std::string_view str, std::string_view suffix) {
   return (str.size() >= suffix.size() &&
           str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0);
 }
 
-bool minio::utils::Contains(std::string_view str, char ch) {
+bool Contains(std::string_view str, char ch) {
   return str.find(ch) != std::string::npos;
 }
 
-bool minio::utils::Contains(std::string_view str, std::string_view substr) {
+bool Contains(std::string_view str, std::string_view substr) {
   return str.find(substr) != std::string::npos;
 }
 
-std::string minio::utils::Join(const std::list<std::string>& values,
-                               const std::string& delimiter) {
+std::string Join(const std::list<std::string>& values,
+                 const std::string& delimiter) {
   std::string result;
   for (const auto& value : values) {
     if (!result.empty()) result += delimiter;
@@ -185,8 +191,8 @@ std::string minio::utils::Join(const std::list<std::string>& values,
   return result;
 }
 
-std::string minio::utils::Join(const std::vector<std::string>& values,
-                               const std::string& delimiter) {
+std::string Join(const std::vector<std::string>& values,
+                 const std::string& delimiter) {
   std::string result;
   for (const auto& value : values) {
     if (!result.empty()) result += delimiter;
@@ -195,7 +201,7 @@ std::string minio::utils::Join(const std::vector<std::string>& values,
   return result;
 }
 
-std::string minio::utils::EncodePath(const std::string& path) {
+std::string EncodePath(const std::string& path) {
   std::stringstream str_stream(path);
   std::string token;
   std::string out;
@@ -212,7 +218,7 @@ std::string minio::utils::EncodePath(const std::string& path) {
   return out;
 }
 
-std::string minio::utils::Sha256Hash(std::string_view str) {
+std::string Sha256Hash(std::string_view str) {
   EVP_MD_CTX* ctx = EVP_MD_CTX_create();
   if (ctx == nullptr) {
     std::cerr << "failed to create EVP_MD_CTX" << std::endl;
@@ -229,7 +235,7 @@ std::string minio::utils::Sha256Hash(std::string_view str) {
     std::terminate();
   }
 
-  unsigned int length = EVP_MD_size(EVP_sha256());
+  unsigned int length = static_cast<unsigned>(EVP_MD_size(EVP_sha256()));
   unsigned char* digest = (unsigned char*)OPENSSL_malloc(length);
   if (digest == nullptr) {
     std::cerr << "failed to allocate memory for hash value" << std::endl;
@@ -256,7 +262,7 @@ std::string minio::utils::Sha256Hash(std::string_view str) {
   return hash;
 }
 
-std::string minio::utils::Base64Encode(std::string_view str) {
+std::string Base64Encode(std::string_view str) {
   const auto base64_memory = BIO_new(BIO_s_mem());
   auto base64 = BIO_new(BIO_f_base64());
   base64 = BIO_push(base64, base64_memory);
@@ -273,7 +279,7 @@ std::string minio::utils::Base64Encode(std::string_view str) {
   return base64_encoded;
 }
 
-std::string minio::utils::Md5sumHash(std::string_view str) {
+std::string Md5sumHash(std::string_view str) {
   EVP_MD_CTX* ctx = EVP_MD_CTX_create();
   if (ctx == nullptr) {
     std::cerr << "failed to create EVP_MD_CTX" << std::endl;
@@ -290,8 +296,8 @@ std::string minio::utils::Md5sumHash(std::string_view str) {
     std::terminate();
   }
 
-  unsigned int length = EVP_MD_size(EVP_md5());
-  unsigned char* digest = (unsigned char*)OPENSSL_malloc(length);
+  unsigned int length = static_cast<unsigned>(EVP_MD_size(EVP_md5()));
+  unsigned char* digest = static_cast<unsigned char*>(OPENSSL_malloc(length));
   if (digest == nullptr) {
     std::cerr << "failed to allocate memory for hash value" << std::endl;
     std::terminate();
@@ -308,16 +314,16 @@ std::string minio::utils::Md5sumHash(std::string_view str) {
   std::string hash(reinterpret_cast<const char*>(digest), length);
   OPENSSL_free(digest);
 
-  return minio::utils::Base64Encode(hash);
+  return Base64Encode(hash);
 }
 
-std::string minio::utils::FormatTime(const std::tm& time, const char* format) {
+std::string FormatTime(const std::tm& time, const char* format) {
   char buf[128];
   std::strftime(buf, 128, format, &time);
   return std::string(buf);
 }
 
-std::tm minio::utils::UtcTime::auxLocaltime(const std::time_t& time) {
+std::tm UtcTime::auxLocaltime(const std::time_t& time) {
   std::tm result{};
 #ifdef _WIN32
   localtime_s(&result, &time);
@@ -327,7 +333,7 @@ std::tm minio::utils::UtcTime::auxLocaltime(const std::time_t& time) {
   return result;
 }
 
-minio::utils::UtcTime minio::utils::UtcTime::Now() {
+UtcTime UtcTime::Now() {
   auto usec_now = std::chrono::system_clock::now().time_since_epoch() /
                   std::chrono::microseconds(1);
   auto secs_local = static_cast<time_t>(usec_now / 1000000);
@@ -335,7 +341,7 @@ minio::utils::UtcTime minio::utils::UtcTime::Now() {
   return UtcTime(secs_utc, static_cast<long>(usec_now % 1000000));
 }
 
-void minio::utils::UtcTime::ToLocalTime(std::tm& time) {
+void UtcTime::ToLocalTime(std::tm& time) {
   auto usec_now = std::chrono::system_clock::now().time_since_epoch() /
                   std::chrono::microseconds(1);
   auto secs_local = static_cast<time_t>(usec_now / 1000000);
@@ -344,15 +350,15 @@ void minio::utils::UtcTime::ToLocalTime(std::tm& time) {
   time = auxLocaltime(secs);
 }
 
-std::string minio::utils::UtcTime::ToSignerDate() const {
+std::string UtcTime::ToSignerDate() const {
   return FormatTime(getBrokenDownTime(), "%Y%m%d");
 }
 
-std::string minio::utils::UtcTime::ToAmzDate() const {
+std::string UtcTime::ToAmzDate() const {
   return FormatTime(getBrokenDownTime(), "%Y%m%dT%H%M%SZ");
 }
 
-std::string minio::utils::UtcTime::ToHttpHeaderValue() const {
+std::string UtcTime::ToHttpHeaderValue() const {
   const auto tm = getBrokenDownTime();
   std::stringstream ss;
   ss << WEEK_DAYS[tm.tm_wday] << ", " << FormatTime(tm, "%d ")
@@ -360,8 +366,7 @@ std::string minio::utils::UtcTime::ToHttpHeaderValue() const {
   return ss.str();
 }
 
-minio::utils::UtcTime minio::utils::UtcTime::FromHttpHeaderValue(
-    const char* value) {
+UtcTime UtcTime::FromHttpHeaderValue(const char* value) {
   std::string s(value);
   if (s.size() != 29) return UtcTime();
 
@@ -397,7 +402,7 @@ minio::utils::UtcTime minio::utils::UtcTime::FromHttpHeaderValue(
   return UtcTime(std::mktime(&t));
 }
 
-std::string minio::utils::UtcTime::ToISO8601UTC() const {
+std::string UtcTime::ToISO8601UTC() const {
   char buf[64];
   snprintf(buf, 64, "%03ld", (long int)usecs_);
   std::string usec_str(buf);
@@ -405,7 +410,7 @@ std::string minio::utils::UtcTime::ToISO8601UTC() const {
   return FormatTime(getBrokenDownTime(), "%Y-%m-%dT%H:%M:%S.") + usec_str + "Z";
 }
 
-minio::utils::UtcTime minio::utils::UtcTime::FromISO8601UTC(const char* value) {
+UtcTime UtcTime::FromISO8601UTC(const char* value) {
   std::tm t{};
   char* rv = strptime(value, "%Y-%m-%dT%H:%M:%S", &t);
   std::time_t secs = std::mktime(&t);
@@ -417,7 +422,7 @@ minio::utils::UtcTime minio::utils::UtcTime::FromISO8601UTC(const char* value) {
   return UtcTime(secs, usecs);
 }
 
-int minio::utils::UtcTime::Compare(const UtcTime& rhs) const {
+int UtcTime::Compare(const UtcTime& rhs) const {
   if (secs_ != rhs.secs_) {
     return (secs_ < rhs.secs_) ? -1 : 1;
   }
@@ -427,12 +432,12 @@ int minio::utils::UtcTime::Compare(const UtcTime& rhs) const {
   return 0;
 }
 
-void minio::utils::Multimap::Add(std::string key, std::string value) {
+void Multimap::Add(std::string key, std::string value) {
   map_[key].insert(std::move(value));
   keys_[ToLower(key)].insert(std::move(key));
 }
 
-void minio::utils::Multimap::AddAll(const Multimap& headers) {
+void Multimap::AddAll(const Multimap& headers) {
   auto m = headers.map_;
   for (auto& [key, values] : m) {
     map_[key].insert(values.begin(), values.end());
@@ -440,7 +445,7 @@ void minio::utils::Multimap::AddAll(const Multimap& headers) {
   }
 }
 
-std::list<std::string> minio::utils::Multimap::ToHttpHeaders() const {
+std::list<std::string> Multimap::ToHttpHeaders() const {
   std::list<std::string> headers;
   for (auto& [key, values] : map_) {
     for (auto& value : values) {
@@ -450,7 +455,7 @@ std::list<std::string> minio::utils::Multimap::ToHttpHeaders() const {
   return headers;
 }
 
-std::string minio::utils::Multimap::ToQueryString() const {
+std::string Multimap::ToQueryString() const {
   std::string query_string;
   for (auto& [key, values] : map_) {
     for (auto& value : values) {
@@ -462,11 +467,11 @@ std::string minio::utils::Multimap::ToQueryString() const {
   return query_string;
 }
 
-bool minio::utils::Multimap::Contains(std::string_view key) const {
+bool Multimap::Contains(std::string_view key) const {
   return keys_.find(ToLower(std::string(key))) != keys_.end();
 }
 
-std::list<std::string> minio::utils::Multimap::Get(std::string_view key) const {
+std::list<std::string> Multimap::Get(std::string_view key) const {
   std::list<std::string> result;
 
   if (const auto i = keys_.find(ToLower(std::string(key))); i != keys_.cend()) {
@@ -479,23 +484,23 @@ std::list<std::string> minio::utils::Multimap::Get(std::string_view key) const {
   return result;
 }
 
-std::string minio::utils::Multimap::GetFront(std::string_view key) const {
+std::string Multimap::GetFront(std::string_view key) const {
   std::list<std::string> values = Get(key);
   return (values.size() > 0) ? values.front() : std::string();
 }
 
-std::list<std::string> minio::utils::Multimap::Keys() const {
+std::list<std::string> Multimap::Keys() const {
   std::list<std::string> keys;
   for (const auto& [key, _] : keys_) keys.push_back(key);
   return keys;
 }
 
-void minio::utils::Multimap::GetCanonicalHeaders(
-    std::string& signed_headers, std::string& canonical_headers) const {
+void Multimap::GetCanonicalHeaders(std::string& signed_headers,
+                                   std::string& canonical_headers) const {
   std::vector<std::string> signed_headerslist;
   std::map<std::string, std::string> map;
 
-  for (auto& [k, values] : map_) {
+  for (const auto& [k, values] : map_) {
     std::string key = ToLower(k);
     if ("authorization" == key || "user-agent" == key) continue;
     if (std::find(signed_headerslist.begin(), signed_headerslist.end(), key) ==
@@ -504,7 +509,7 @@ void minio::utils::Multimap::GetCanonicalHeaders(
     }
 
     std::string value;
-    for (auto& v : values) {
+    for (const auto& v : values) {
       if (!value.empty()) value += ",";
       value += std::regex_replace(v, MULTI_SPACE_REGEX, " ");
     }
@@ -524,7 +529,7 @@ void minio::utils::Multimap::GetCanonicalHeaders(
   canonical_headers = utils::Join(canonical_headerslist, "\n");
 }
 
-std::string minio::utils::Multimap::GetCanonicalQueryString() const {
+std::string Multimap::GetCanonicalQueryString() const {
   std::vector<std::string> keys;
   for (auto& [key, _] : map_) {
     keys.push_back(key);
@@ -544,8 +549,7 @@ std::string minio::utils::Multimap::GetCanonicalQueryString() const {
   return utils::Join(values, "&");
 }
 
-minio::error::Error minio::utils::CheckBucketName(std::string_view bucket_name,
-                                                  bool strict) {
+error::Error CheckBucketName(std::string_view bucket_name, bool strict) {
   if (Trim(bucket_name).empty()) {
     return error::Error("bucket name cannot be empty");
   }
@@ -581,16 +585,15 @@ minio::error::Error minio::utils::CheckBucketName(std::string_view bucket_name,
   return error::SUCCESS;
 }
 
-minio::error::Error minio::utils::ReadPart(std::istream& stream, char* buf,
-                                           size_t size, size_t& bytes_read) {
+error::Error ReadPart(std::istream& stream, char* buf, size_t size,
+                      size_t& bytes_read) {
   stream.read(buf, size);
   bytes_read = stream.gcount();
-  return minio::error::SUCCESS;
+  return error::SUCCESS;
 }
 
-minio::error::Error minio::utils::CalcPartInfo(long object_size,
-                                               size_t& part_size,
-                                               long& part_count) {
+error::Error CalcPartInfo(long object_size, size_t& part_size,
+                          long& part_count) {
   if (part_size > 0) {
     if (part_size < kMinPartSize) {
       return error::Error("part size " + std::to_string(part_size) +
@@ -637,14 +640,14 @@ minio::error::Error minio::utils::CalcPartInfo(long object_size,
   return error::SUCCESS;
 }
 
-minio::utils::CharBuffer::~CharBuffer() {}
+CharBuffer::~CharBuffer() {}
 
-std::streambuf::pos_type minio::utils::CharBuffer::seekpos(
-    pos_type sp, std::ios_base::openmode which) {
+std::streambuf::pos_type CharBuffer::seekpos(pos_type sp,
+                                             std::ios_base::openmode which) {
   return seekoff(sp - pos_type(off_type(0)), std::ios_base::beg, which);
 }
 
-std::streambuf::pos_type minio::utils::CharBuffer::seekoff(
+std::streambuf::pos_type CharBuffer::seekoff(
     off_type off, std::ios_base::seekdir dir,
     std::ios_base::openmode /* which */) {
   if (dir == std::ios_base::cur)
@@ -655,3 +658,5 @@ std::streambuf::pos_type minio::utils::CharBuffer::seekoff(
     setg(eback(), eback() + off, egptr());
   return gptr() - eback();
 }
+
+}  // namespace minio::utils

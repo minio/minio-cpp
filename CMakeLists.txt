@@ -88,6 +88,7 @@ set(MINIO_CPP_SOURCES
   src/baseclient.cc
   src/client.cc
   src/credentials.cc
+  src/error.cc
   src/http.cc
   src/providers.cc
   src/request.cc

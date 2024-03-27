@@ -28,8 +28,7 @@
 #include "request.h"
 #include "response.h"
 
-namespace minio {
-namespace s3 {
+namespace minio::s3 {
 
 class Client;
 
@@ -125,7 +124,6 @@ class Client : public BaseClient {
   RemoveObjectsResult RemoveObjects(RemoveObjectsArgs args);
 };  // class Client
 
-}  // namespace s3
-}  // namespace minio
+}  // namespace minio::s3
 
 #endif  // MINIO_CPP_CLIENT_H_INCLUDED

@@ -27,10 +27,10 @@
 #include "types.h"
 #include "utils.h"
 
-namespace minio {
-namespace s3 {
+namespace minio::s3 {
 
 struct Response {
+ public:
   int status_code = 0;
   utils::Multimap headers;
   std::string data;
@@ -43,6 +43,10 @@ struct Response {
   std::string bucket_name;
   std::string object_name;
 
+ private:
+  error::Error err_;
+
+ public:
   Response();
   explicit Response(error::Error err) : err_(std::move(err)) {}
 
@@ -63,9 +67,6 @@ struct Response {
 
   static Response ParseXML(std::string_view data, int status_code,
                            utils::Multimap headers);
-
- private:
-  error::Error err_;
 };  // struct Response
 
 #define MINIO_S3_DERIVE_FROM_RESPONSE(DerivedName)                       \
@@ -569,7 +570,6 @@ struct GetPresignedPostFormDataResponse : public Response {
 #undef MINIO_S3_DERIVE_FROM_PUT_OBJECT_RESPONSE
 #undef MINIO_S3_DERIVE_FROM_RESPONSE
 
-}  // namespace s3
-}  // namespace minio
+}  // namespace minio::s3
 
 #endif  // MINIO_CPP_RESPONSE_H_INCLUDED

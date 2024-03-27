@@ -30,8 +30,7 @@
 #include "types.h"
 #include "utils.h"
 
-namespace minio {
-namespace s3 {
+namespace minio::s3 {
 
 struct BaseArgs {
   utils::Multimap extra_headers;
@@ -63,9 +62,9 @@ struct ObjectArgs : public BucketArgs {
 struct ObjectWriteArgs : public ObjectArgs {
   utils::Multimap headers;
   utils::Multimap user_metadata;
-  Sse *sse = nullptr;
+  Sse* sse = nullptr;
   std::map<std::string, std::string> tags;
-  Retention *retention = nullptr;
+  Retention* retention = nullptr;
   bool legal_hold = false;
 
   ObjectWriteArgs() = default;
@@ -82,15 +81,15 @@ struct ObjectVersionArgs : public ObjectArgs {
 };  // struct ObjectVersionArgs
 
 struct ObjectReadArgs : public ObjectVersionArgs {
-  SseCustomerKey *ssec = nullptr;
+  SseCustomerKey* ssec = nullptr;
 
   ObjectReadArgs() = default;
   ~ObjectReadArgs() = default;
 };  // struct ObjectReadArgs
 
 struct ObjectConditionalReadArgs : public ObjectReadArgs {
-  size_t *offset = nullptr;
-  size_t *length = nullptr;
+  size_t* offset = nullptr;
+  size_t* length = nullptr;
   std::string match_etag;
   std::string not_match_etag;
   utils::UtcTime modified_since;
@@ -158,7 +157,7 @@ struct PutObjectApiArgs : public PutObjectBaseArgs {
   std::string_view data;
   utils::Multimap query_params;
   http::ProgressFunction progressfunc = nullptr;
-  void *progress_userdata = nullptr;
+  void* progress_userdata = nullptr;
 
   PutObjectApiArgs() = default;
   ~PutObjectApiArgs() = default;
@@ -169,7 +168,7 @@ struct UploadPartArgs : public ObjectWriteArgs {
   unsigned int part_number;
   std::string_view data;
   http::ProgressFunction progressfunc = nullptr;
-  void *progress_userdata = nullptr;
+  void* progress_userdata = nullptr;
 
   UploadPartArgs() = default;
   ~UploadPartArgs() = default;
@@ -196,7 +195,7 @@ struct DownloadObjectArgs : public ObjectReadArgs {
   std::string filename;
   bool overwrite;
   http::ProgressFunction progressfunc = nullptr;
-  void *progress_userdata = nullptr;
+  void* progress_userdata = nullptr;
 
   DownloadObjectArgs() = default;
   ~DownloadObjectArgs() = default;
@@ -206,9 +205,9 @@ struct DownloadObjectArgs : public ObjectReadArgs {
 
 struct GetObjectArgs : public ObjectConditionalReadArgs {
   http::DataFunction datafunc;
-  void *userdata = nullptr;
+  void* userdata = nullptr;
   http::ProgressFunction progressfunc = nullptr;
-  void *progress_userdata = nullptr;
+  void* progress_userdata = nullptr;
 
   GetObjectArgs() = default;
   ~GetObjectArgs() = default;
@@ -235,11 +234,11 @@ struct ListObjectsArgs : public BucketArgs {
   ListObjectsArgs() = default;
   ~ListObjectsArgs() = default;
 
-  ListObjectsArgs(const ListObjectsArgs &) = default;
-  ListObjectsArgs &operator=(const ListObjectsArgs &) = default;
+  ListObjectsArgs(const ListObjectsArgs&) = default;
+  ListObjectsArgs& operator=(const ListObjectsArgs&) = default;
 
-  ListObjectsArgs(ListObjectsArgs &&) = default;
-  ListObjectsArgs &operator=(ListObjectsArgs &&) = default;
+  ListObjectsArgs(ListObjectsArgs&&) = default;
+  ListObjectsArgs& operator=(ListObjectsArgs&&) = default;
 };  // struct ListObjectsArgs
 
 struct ListObjectsCommonArgs : public BucketArgs {
@@ -251,11 +250,11 @@ struct ListObjectsCommonArgs : public BucketArgs {
   ListObjectsCommonArgs() = default;
   ~ListObjectsCommonArgs() = default;
 
-  ListObjectsCommonArgs(const ListObjectsCommonArgs &) = default;
-  ListObjectsCommonArgs &operator=(const ListObjectsCommonArgs &) = default;
+  ListObjectsCommonArgs(const ListObjectsCommonArgs&) = default;
+  ListObjectsCommonArgs& operator=(const ListObjectsCommonArgs&) = default;
 
-  ListObjectsCommonArgs(ListObjectsCommonArgs &&) = default;
-  ListObjectsCommonArgs &operator=(ListObjectsCommonArgs &&) = default;
+  ListObjectsCommonArgs(ListObjectsCommonArgs&&) = default;
+  ListObjectsCommonArgs& operator=(ListObjectsCommonArgs&&) = default;
 };  // struct ListObjectsCommonArgs
 
 struct ListObjectsV1Args : public ListObjectsCommonArgs {
@@ -264,15 +263,15 @@ struct ListObjectsV1Args : public ListObjectsCommonArgs {
   ListObjectsV1Args();
 
   explicit ListObjectsV1Args(ListObjectsArgs args);
-  ListObjectsV1Args &operator=(ListObjectsArgs args);
+  ListObjectsV1Args& operator=(ListObjectsArgs args);
 
   ~ListObjectsV1Args() = default;
 
-  ListObjectsV1Args(const ListObjectsV1Args &) = default;
-  ListObjectsV1Args &operator=(const ListObjectsV1Args &) = default;
+  ListObjectsV1Args(const ListObjectsV1Args&) = default;
+  ListObjectsV1Args& operator=(const ListObjectsV1Args&) = default;
 
-  ListObjectsV1Args(ListObjectsV1Args &&) = default;
-  ListObjectsV1Args &operator=(ListObjectsV1Args &&) = default;
+  ListObjectsV1Args(ListObjectsV1Args&&) = default;
+  ListObjectsV1Args& operator=(ListObjectsV1Args&&) = default;
 };  // struct ListObjectsV1Args
 
 struct ListObjectsV2Args : public ListObjectsCommonArgs {
@@ -284,15 +283,15 @@ struct ListObjectsV2Args : public ListObjectsCommonArgs {
   ListObjectsV2Args();
 
   explicit ListObjectsV2Args(ListObjectsArgs args);
-  ListObjectsV2Args &operator=(ListObjectsArgs args);
+  ListObjectsV2Args& operator=(ListObjectsArgs args);
 
   ~ListObjectsV2Args() = default;
 
-  ListObjectsV2Args(const ListObjectsV2Args &) = default;
-  ListObjectsV2Args &operator=(const ListObjectsV2Args &) = default;
+  ListObjectsV2Args(const ListObjectsV2Args&) = default;
+  ListObjectsV2Args& operator=(const ListObjectsV2Args&) = default;
 
-  ListObjectsV2Args(ListObjectsV2Args &&) = default;
-  ListObjectsV2Args &operator=(ListObjectsV2Args &&) = default;
+  ListObjectsV2Args(ListObjectsV2Args&&) = default;
+  ListObjectsV2Args& operator=(ListObjectsV2Args&&) = default;
 };  // struct ListObjectsV2Args
 
 struct ListObjectVersionsArgs : public ListObjectsCommonArgs {
@@ -302,23 +301,23 @@ struct ListObjectVersionsArgs : public ListObjectsCommonArgs {
   ListObjectVersionsArgs();
 
   explicit ListObjectVersionsArgs(ListObjectsArgs args);
-  ListObjectVersionsArgs &operator=(ListObjectsArgs args);
+  ListObjectVersionsArgs& operator=(ListObjectsArgs args);
 
   ~ListObjectVersionsArgs() = default;
 
-  ListObjectVersionsArgs(const ListObjectVersionsArgs &) = default;
-  ListObjectVersionsArgs &operator=(const ListObjectVersionsArgs &) = default;
+  ListObjectVersionsArgs(const ListObjectVersionsArgs&) = default;
+  ListObjectVersionsArgs& operator=(const ListObjectVersionsArgs&) = default;
 
-  ListObjectVersionsArgs(ListObjectVersionsArgs &&) = default;
-  ListObjectVersionsArgs &operator=(ListObjectVersionsArgs &&) = default;
+  ListObjectVersionsArgs(ListObjectVersionsArgs&&) = default;
+  ListObjectVersionsArgs& operator=(ListObjectVersionsArgs&&) = default;
 };  // struct ListObjectVersionsArgs
 
 struct PutObjectArgs : public PutObjectBaseArgs {
-  std::istream &stream;
+  std::istream& stream;
   http::ProgressFunction progressfunc = nullptr;
-  void *progress_userdata = nullptr;
+  void* progress_userdata = nullptr;
 
-  PutObjectArgs(std::istream &stream, long object_size, long part_size);
+  PutObjectArgs(std::istream& stream, long object_size, long part_size);
   ~PutObjectArgs() = default;
 
   error::Error Validate();
@@ -328,8 +327,8 @@ using CopySource = ObjectConditionalReadArgs;
 
 struct CopyObjectArgs : public ObjectWriteArgs {
   CopySource source;
-  Directive *metadata_directive = nullptr;
-  Directive *tagging_directive = nullptr;
+  Directive* metadata_directive = nullptr;
+  Directive* tagging_directive = nullptr;
 
   CopyObjectArgs() = default;
   ~CopyObjectArgs() = default;
@@ -341,7 +340,7 @@ struct ComposeSource : public ObjectConditionalReadArgs {
   ComposeSource() = default;
   ~ComposeSource() = default;
 
-  error::Error BuildHeaders(size_t object_size, const std::string &etag);
+  error::Error BuildHeaders(size_t object_size, const std::string& etag);
   size_t ObjectSize() const;
   utils::Multimap Headers() const;
 
@@ -362,7 +361,7 @@ struct ComposeObjectArgs : public ObjectWriteArgs {
 struct UploadObjectArgs : public PutObjectBaseArgs {
   std::string filename;
   http::ProgressFunction progressfunc = nullptr;
-  void *progress_userdata = nullptr;
+  void* progress_userdata = nullptr;
 
   UploadObjectArgs() = default;
   ~UploadObjectArgs() = default;
@@ -379,7 +378,7 @@ struct RemoveObjectsApiArgs : public BucketArgs {
   ~RemoveObjectsApiArgs() = default;
 };  // struct RemoveObjectsApiArgs
 
-using DeleteObjectFunction = std::function<bool(DeleteObject &)>;
+using DeleteObjectFunction = std::function<bool(DeleteObject&)>;
 
 struct RemoveObjectsArgs : public BucketArgs {
   bool bypass_governance_mode = false;
@@ -392,10 +391,10 @@ struct RemoveObjectsArgs : public BucketArgs {
 };  // struct RemoveObjectsArgs
 
 struct SelectObjectContentArgs : public ObjectReadArgs {
-  SelectRequest &request;
+  SelectRequest& request;
   SelectResultFunction resultfunc = nullptr;
 
-  SelectObjectContentArgs(SelectRequest &req, SelectResultFunction func)
+  SelectObjectContentArgs(SelectRequest& req, SelectResultFunction func)
       : request(req), resultfunc(func) {}
 
   ~SelectObjectContentArgs() = default;
@@ -433,9 +432,9 @@ using DeleteBucketNotificationArgs = BucketArgs;
 using GetBucketNotificationArgs = BucketArgs;
 
 struct SetBucketNotificationArgs : public BucketArgs {
-  NotificationConfig &config;
+  NotificationConfig& config;
 
-  explicit SetBucketNotificationArgs(NotificationConfig &configvalue)
+  explicit SetBucketNotificationArgs(NotificationConfig& configvalue)
       : config(configvalue) {}
 
   ~SetBucketNotificationArgs() = default;
@@ -446,9 +445,9 @@ using DeleteBucketEncryptionArgs = BucketArgs;
 using GetBucketEncryptionArgs = BucketArgs;
 
 struct SetBucketEncryptionArgs : public BucketArgs {
-  SseConfig &config;
+  SseConfig& config;
 
-  explicit SetBucketEncryptionArgs(SseConfig &sseconfig) : config(sseconfig) {}
+  explicit SetBucketEncryptionArgs(SseConfig& sseconfig) : config(sseconfig) {}
 
   ~SetBucketEncryptionArgs() = default;
 
@@ -472,9 +471,9 @@ using DeleteBucketReplicationArgs = BucketArgs;
 using GetBucketReplicationArgs = BucketArgs;
 
 struct SetBucketReplicationArgs : public BucketArgs {
-  ReplicationConfig &config;
+  ReplicationConfig& config;
 
-  explicit SetBucketReplicationArgs(ReplicationConfig &value) : config(value) {}
+  explicit SetBucketReplicationArgs(ReplicationConfig& value) : config(value) {}
 
   ~SetBucketReplicationArgs() = default;
 };  // struct SetBucketReplication
@@ -484,9 +483,9 @@ using DeleteBucketLifecycleArgs = BucketArgs;
 using GetBucketLifecycleArgs = BucketArgs;
 
 struct SetBucketLifecycleArgs : public BucketArgs {
-  LifecycleConfig &config;
+  LifecycleConfig& config;
 
-  explicit SetBucketLifecycleArgs(LifecycleConfig &value) : config(value) {}
+  explicit SetBucketLifecycleArgs(LifecycleConfig& value) : config(value) {}
 
   ~SetBucketLifecycleArgs() = default;
 };  // struct SetBucketLifecycle
@@ -581,14 +580,14 @@ struct PostPolicy {
                                               size_t upper_limit);
   void RemoveContentLengthRangeCondition();
 
-  error::Error FormData(std::map<std::string, std::string> &data,
+  error::Error FormData(std::map<std::string, std::string>& data,
                         std::string access_key, std::string secret_key,
                         std::string session_token, std::string region);
 
  private:
-  static constexpr const char *eq_ = "eq";
-  static constexpr const char *starts_with_ = "starts-with";
-  static constexpr const char *algorithm_ = "AWS4-HMAC-SHA256";
+  static constexpr const char* eq_ = "eq";
+  static constexpr const char* starts_with_ = "starts-with";
+  static constexpr const char* algorithm_ = "AWS4-HMAC-SHA256";
 
   utils::UtcTime expiration_;
   std::map<std::string, std::map<std::string, std::string>> conditions_;
@@ -601,7 +600,7 @@ struct PostPolicy {
                                          std::string region);
   static bool isReservedElement(std::string element);
 };  // struct PostPolicy
-}  // namespace s3
-}  // namespace minio
+
+}  // namespace minio::s3
 
 #endif  // _MINIO_CPP_ARGS_H_INCLUDED

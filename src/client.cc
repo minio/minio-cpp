@@ -37,25 +37,26 @@
 #include "miniocpp/types.h"
 #include "miniocpp/utils.h"
 
-minio::s3::ListObjectsResult::ListObjectsResult(error::Error err)
-    : failed_(true) {
+namespace minio::s3 {
+
+ListObjectsResult::ListObjectsResult(error::Error err) : failed_(true) {
   this->resp_.contents.push_back(Item(std::move(err)));
   this->itr_ = resp_.contents.begin();
 }
 
-minio::s3::ListObjectsResult::ListObjectsResult(Client* const client,
-                                                const ListObjectsArgs& args)
+ListObjectsResult::ListObjectsResult(Client* const client,
+                                     const ListObjectsArgs& args)
     : client_(client), args_(args) {
   Populate();
 }
 
-minio::s3::ListObjectsResult::ListObjectsResult(Client* const client,
-                                                ListObjectsArgs&& args)
+ListObjectsResult::ListObjectsResult(Client* const client,
+                                     ListObjectsArgs&& args)
     : client_(client), args_(std::move(args)) {
   Populate();
 }
 
-void minio::s3::ListObjectsResult::Populate() {
+void ListObjectsResult::Populate() {
   if (args_.include_versions) {
     args_.key_marker = resp_.next_key_marker;
     args_.version_id_marker = resp_.next_version_id_marker;
@@ -95,25 +96,25 @@ void minio::s3::ListObjectsResult::Populate() {
   itr_ = resp_.contents.begin();
 }
 
-minio::s3::RemoveObjectsResult::RemoveObjectsResult(error::Error err) {
+RemoveObjectsResult::RemoveObjectsResult(error::Error err) {
   done_ = true;
   resp_.errors.push_back(DeleteError(err));
   itr_ = resp_.errors.begin();
 }
 
-minio::s3::RemoveObjectsResult::RemoveObjectsResult(
-    Client* const client, const RemoveObjectsArgs& args)
+RemoveObjectsResult::RemoveObjectsResult(Client* const client,
+                                         const RemoveObjectsArgs& args)
     : client_(client), args_(args) {
   Populate();
 }
 
-minio::s3::RemoveObjectsResult::RemoveObjectsResult(Client* const client,
-                                                    RemoveObjectsArgs&& args)
+RemoveObjectsResult::RemoveObjectsResult(Client* const client,
+                                         RemoveObjectsArgs&& args)
     : client_(client), args_(args) {
   Populate();
 }
 
-void minio::s3::RemoveObjectsResult::Populate() {
+void RemoveObjectsResult::Populate() {
   while (!done_ && resp_.errors.size() == 0) {
     RemoveObjectsApiArgs args;
     args.extra_headers = args_.extra_headers;
@@ -143,10 +144,10 @@ void minio::s3::RemoveObjectsResult::Populate() {
   }
 }
 
-minio::s3::Client::Client(BaseUrl& base_url, creds::Provider* const provider)
+Client::Client(BaseUrl& base_url, creds::Provider* const provider)
     : BaseClient(base_url, provider) {}
 
-minio::s3::StatObjectResponse minio::s3::Client::CalculatePartCount(
+StatObjectResponse Client::CalculatePartCount(
     size_t& part_count, std::list<ComposeSource> sources) {
   size_t object_size = 0;
   size_t i = 0;
@@ -233,8 +234,8 @@ minio::s3::StatObjectResponse minio::s3::Client::CalculatePartCount(
   return StatObjectResponse(error::SUCCESS);
 }
 
-minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
-    ComposeObjectArgs args, std::string& upload_id) {
+ComposeObjectResponse Client::ComposeObject(ComposeObjectArgs args,
+                                            std::string& upload_id) {
   size_t part_count = 0;
   {
     StatObjectResponse resp = CalculatePartCount(part_count, args.sources);
@@ -364,8 +365,8 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
   return ComposeObjectResponse(CompleteMultipartUpload(cmu_args));
 }
 
-minio::s3::PutObjectResponse minio::s3::Client::PutObject(
-    PutObjectArgs args, std::string& upload_id, char* buf) {
+PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
+                                    char* buf) {
   utils::Multimap headers = args.Headers();
   if (!headers.Contains("Content-Type")) {
     if (args.content_type.empty()) {
@@ -537,8 +538,7 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(
   return PutObjectResponse(resp);
 }
 
-minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
-    ComposeObjectArgs args) {
+ComposeObjectResponse Client::ComposeObject(ComposeObjectArgs args) {
   if (error::Error err = args.Validate()) {
     return ComposeObjectResponse(err);
   }
@@ -562,8 +562,7 @@ minio::s3::ComposeObjectResponse minio::s3::Client::ComposeObject(
   return resp;
 }
 
-minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
-    CopyObjectArgs args) {
+CopyObjectResponse Client::CopyObject(CopyObjectArgs args) {
   if (error::Error err = args.Validate()) {
     return CopyObjectResponse(err);
   }
@@ -669,8 +668,7 @@ minio::s3::CopyObjectResponse minio::s3::Client::CopyObject(
   return resp;
 }
 
-minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
-    DownloadObjectArgs args) {
+DownloadObjectResponse Client::DownloadObject(DownloadObjectArgs args) {
   if (error::Error err = args.Validate()) {
     return DownloadObjectResponse(err);
   }
@@ -732,15 +730,14 @@ minio::s3::DownloadObjectResponse minio::s3::Client::DownloadObject(
   return DownloadObjectResponse(response);
 }
 
-minio::s3::ListObjectsResult minio::s3::Client::ListObjects(
-    ListObjectsArgs args) {
+ListObjectsResult Client::ListObjects(ListObjectsArgs args) {
   if (error::Error err = args.Validate()) {
     return ListObjectsResult(err);
   }
   return ListObjectsResult(this, std::move(args));
 }
 
-minio::s3::PutObjectResponse minio::s3::Client::PutObject(PutObjectArgs args) {
+PutObjectResponse Client::PutObject(PutObjectArgs args) {
   if (error::Error err = args.Validate()) {
     return PutObjectResponse(err);
   }
@@ -768,8 +765,7 @@ minio::s3::PutObjectResponse minio::s3::Client::PutObject(PutObjectArgs args) {
   return resp;
 }
 
-minio::s3::UploadObjectResponse minio::s3::Client::UploadObject(
-    UploadObjectArgs args) {
+UploadObjectResponse Client::UploadObject(UploadObjectArgs args) {
   if (error::Error err = args.Validate()) {
     return UploadObjectResponse(err);
   }
@@ -802,10 +798,11 @@ minio::s3::UploadObjectResponse minio::s3::Client::UploadObject(
   return UploadObjectResponse(resp);
 }
 
-minio::s3::RemoveObjectsResult minio::s3::Client::RemoveObjects(
-    RemoveObjectsArgs args) {
+RemoveObjectsResult Client::RemoveObjects(RemoveObjectsArgs args) {
   if (error::Error err = args.Validate()) {
     return RemoveObjectsResult(err);
   }
   return RemoveObjectsResult(this, std::move(args));
 }
+
+}  // namespace minio::s3

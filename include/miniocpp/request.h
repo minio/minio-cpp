@@ -18,7 +18,6 @@
 #ifndef MINIO_CPP_REQUEST_H_INCLUDED
 #define MINIO_CPP_REQUEST_H_INCLUDED
 
-#include <regex>
 #include <string>
 
 #include "error.h"
@@ -26,36 +25,7 @@
 #include "providers.h"
 #include "utils.h"
 
-namespace minio {
-namespace s3 {
-
-const std::string AWS_S3_PREFIX =
-    "^(((bucket\\.|accesspoint\\.)"
-    "vpce(-(?!_)[a-z_\\d]+)+\\.s3\\.)|"
-    "((?!s3)(?!-)(?!_)[a-z_\\d-]{1,63}\\.)"
-    "s3-control(-(?!_)[a-z_\\d]+)*\\.|"
-    "(s3(-(?!_)[a-z_\\d]+)*\\.))";
-const std::regex HOSTNAME_REGEX(
-    "^((?!-)(?!_)[a-z_\\d-]{1,63}\\.)*"
-    "((?!_)(?!-)[a-z_\\d-]{1,63})$",
-    std::regex_constants::icase);
-const std::regex AWS_ENDPOINT_REGEX(".*\\.amazonaws\\.com(|\\.cn)$",
-                                    std::regex_constants::icase);
-const std::regex AWS_S3_ENDPOINT_REGEX(
-    AWS_S3_PREFIX + "((?!s3)(?!-)(?!_)[a-z_\\d-]{1,63}\\.)*" +
-        "amazonaws\\.com(|\\.cn)$",
-    std::regex_constants::icase);
-const std::regex AWS_ELB_ENDPOINT_REGEX(
-    "^(?!-)(?!_)[a-z_\\d-]{1,63}\\."
-    "(?!-)(?!_)[a-z_\\d-]{1,63}\\."
-    "elb\\.amazonaws\\.com$",
-    std::regex_constants::icase);
-const std::regex AWS_S3_PREFIX_REGEX(AWS_S3_PREFIX,
-                                     std::regex_constants::icase);
-const std::regex REGION_REGEX("^((?!_)(?!-)[a-z_\\d-]{1,63})$",
-                              std::regex_constants::icase);
-
-bool awsRegexMatch(std::string_view value, const std::regex& regex);
+namespace minio::s3 {
 
 error::Error getAwsInfo(const std::string& host, bool https,
                         std::string& region, std::string& aws_s3_prefix,
@@ -140,7 +110,6 @@ struct Request {
   void BuildHeaders(http::Url& url, creds::Provider* const provider);
 };  // struct Request
 
-}  // namespace s3
-}  // namespace minio
+}  // namespace minio::s3
 
 #endif  // MINIO_CPP_REQUEST_H_INCLUDED
