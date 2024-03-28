@@ -58,7 +58,6 @@ endif()
 # Dependencies
 # ------------
 
-find_package(CURL REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(unofficial-curlpp CONFIG REQUIRED)
 find_package(unofficial-inih CONFIG REQUIRED)
@@ -66,7 +65,6 @@ find_package(nlohmann_json CONFIG REQUIRED)
 find_package(pugixml CONFIG REQUIRED)
 
 list(APPEND MINIO_CPP_LIBS
-  CURL::libcurl
   unofficial::curlpp::curlpp
   unofficial::inih::inireader
   nlohmann_json::nlohmann_json
@@ -77,7 +75,6 @@ list(APPEND MINIO_CPP_LIBS
 if (WIN32)
   list(APPEND MINIO_CPP_LIBS wsock32)
   list(APPEND MINIO_CPP_LIBS ws2_32)
-  list(APPEND MINIO_CPP_LIBS ZLIB::ZLIB)
 endif()
 
 # Minio C++ Library
