@@ -18,6 +18,8 @@
 #ifndef MINIO_CPP_UTILS_H_INCLUDED
 #define MINIO_CPP_UTILS_H_INCLUDED
 
+#include <stdint.h>
+
 #ifndef _WIN32
 #include <pwd.h>
 #endif
