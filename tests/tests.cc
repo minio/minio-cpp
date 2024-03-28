@@ -24,6 +24,7 @@
 #include <miniocpp/types.h>
 #include <miniocpp/utils.h>
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstdio>
