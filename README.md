@@ -76,7 +76,7 @@ $ ./configure.sh -DMINIO_CPP_TEST=ON
 ## Example:: file-uploader.cc
 
 ```c++
-#include <client.h>
+#include <miniocpp/client.h>
 
 int main(int argc, char* argv[]) {
   // Create S3 base URL.
