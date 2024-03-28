@@ -411,8 +411,10 @@ Response Request::execute() {
     args.upload_total_bytes = ultotal;
     args.uploaded_bytes = ulnow;
     args.userdata = progress_userdata;
-    progressfunc(args);
-    return CURL_PROGRESSFUNC_CONTINUE;
+    if (progressfunc(args)) {
+      return CURL_PROGRESSFUNC_CONTINUE;
+    }
+    return 1;
   };
   if (progressfunc != nullptr) {
     request.setOpt(new curlpp::options::NoProgress(false));

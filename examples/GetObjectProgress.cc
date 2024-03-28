@@ -37,7 +37,7 @@ int main() {
               << std::endl;
     return true;
   };
-  args.progressfunc = [](minio::http::ProgressFunctionArgs args) -> void {
+  args.progressfunc = [](minio::http::ProgressFunctionArgs args) -> bool {
     if (args.download_speed > 0) {
       std::cout << "downloaded speed: " << (long)args.download_speed << " bps"
                 << std::endl;
@@ -45,6 +45,7 @@ int main() {
       std::cout << "downloaded: " << (long)args.downloaded_bytes << " bytes of "
                 << (long)args.download_total_bytes << " bytes" << std::endl;
     }
+    return true;
   };
 
   // Call get object.

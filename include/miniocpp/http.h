@@ -69,7 +69,7 @@ using DataFunction = std::function<bool(DataFunctionArgs)>;
 
 struct ProgressFunctionArgs;
 
-using ProgressFunction = std::function<void(ProgressFunctionArgs)>;
+using ProgressFunction = std::function<bool(ProgressFunctionArgs)>;
 
 struct Response;
 

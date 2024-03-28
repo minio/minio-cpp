@@ -43,7 +43,7 @@ int main() {
   minio::s3::PutObjectArgs args(file, 47615315, 15728640);
   args.bucket = "my-bucket";
   args.object = "my-object";
-  args.progressfunc = [](minio::http::ProgressFunctionArgs args) -> void {
+  args.progressfunc = [](minio::http::ProgressFunctionArgs args) -> bool {
     if (args.upload_speed > 0) {
       std::cout << "uploaded speed: " << (long)args.upload_speed << " bps"
                 << std::endl;
@@ -51,6 +51,7 @@ int main() {
       std::cout << "uploaded: " << (long)args.uploaded_bytes << " bytes of "
                 << (long)args.upload_total_bytes << " bytes" << std::endl;
     }
+    return true;
   };
 
   // Call put object.
