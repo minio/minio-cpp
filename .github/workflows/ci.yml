@@ -17,11 +17,19 @@ permissions:
 
 jobs:
   coding-style:
-    name: "Coding Style Check"
+    name: "Coding Style & Version Check"
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout minio-cpp
+      uses: actions/checkout@v4
+      with:
+        path: "minio-cpp"
+
+    - name: "Python"
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.x"
 
     - name: Install dependencies if Ubuntu
       run: |
@@ -31,10 +39,15 @@ jobs:
         sudo apt-get -qy install clang-format-18
         clang-format-18 --version
 
+    - name: Version Check
+      shell: bash
+      working-directory: minio-cpp
+      run: python check-version.py
+
     - name: Coding Style Check
       shell: bash
-      run: |
-        CLANG_FORMAT=clang-format-18 ./check-style.sh
+      working-directory: minio-cpp
+      run: CLANG_FORMAT=clang-format-18 ./check-style.sh
 
   build:
     strategy:
