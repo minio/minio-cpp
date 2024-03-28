@@ -48,7 +48,31 @@
 #include <arpa/inet.h>
 #endif
 
-std::string minio::http::Url::String() const {
+namespace minio::http {
+
+// MethodToString converts http Method enum to string.
+const char* MethodToString(Method method) noexcept {
+  switch (method) {
+    case Method::kGet:
+      return "GET";
+    case Method::kHead:
+      return "HEAD";
+    case Method::kPost:
+      return "POST";
+    case Method::kPut:
+      return "PUT";
+    case Method::kDelete:
+      return "DELETE";
+    default: {
+      std::cerr << "ABORT: Unimplemented HTTP method. This should not happen."
+                << std::endl;
+      std::terminate();
+    }
+  }
+  return nullptr;
+}
+
+std::string Url::String() const {
   if (host.empty()) return {};
 
   std::string url = (https ? "https://" : "http://") + host;
@@ -62,14 +86,14 @@ std::string minio::http::Url::String() const {
   return url;
 }
 
-std::string minio::http::Url::HostHeaderValue() const {
+std::string Url::HostHeaderValue() const {
   if (!port) {
     return host;
   }
   return host + ":" + std::to_string(port);
 }
 
-minio::http::Url minio::http::Url::Parse(std::string value) {
+Url Url::Parse(std::string value) {
   std::string scheme;
   size_t pos = value.find("://");
   if (pos != std::string::npos) {
@@ -109,7 +133,9 @@ minio::http::Url minio::http::Url::Parse(std::string value) {
     }
   }
 
-  if (host.empty()) return Url{};
+  if (host.empty()) {
+    return Url{};
+  }
 
   unsigned int port = 0;
   struct sockaddr_in6 dst;
@@ -122,7 +148,7 @@ minio::http::Url minio::http::Url::Parse(std::string value) {
 
       if (!portstr.empty()) {
         try {
-          port = std::stoi(portstr);
+          port = static_cast<unsigned>(std::stoi(portstr));
           host = host.substr(0, host.rfind(":" + portstr));
         } catch (const std::invalid_argument&) {
           port = 0;
@@ -140,7 +166,7 @@ minio::http::Url minio::http::Url::Parse(std::string value) {
              std::move(query_string));
 }
 
-minio::error::Error minio::http::Response::ReadStatusCode() {
+error::Error Response::ReadStatusCode() {
   size_t pos = response_.find("\r\n");
   if (pos == std::string::npos) {
     // Not yet received the first line.
@@ -199,7 +225,7 @@ minio::error::Error minio::http::Response::ReadStatusCode() {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::http::Response::Error() const {
+error::Error Response::Error() const {
   if (!error.empty()) return error::Error(error);
   if (status_code && (status_code < 200 || status_code > 299)) {
     return error::Error("failed with HTTP status code " +
@@ -208,7 +234,7 @@ minio::error::Error minio::http::Response::Error() const {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::http::Response::ReadHeaders() {
+error::Error Response::ReadHeaders() {
   size_t pos = response_.find("\r\n\r\n");
   if (pos == std::string::npos) {
     // Not yet received the headers.
@@ -243,10 +269,10 @@ minio::error::Error minio::http::Response::ReadHeaders() {
   return error::SUCCESS;
 }
 
-size_t minio::http::Response::ResponseCallback(curlpp::Multi* const requests,
-                                               curlpp::Easy* const request,
-                                               const char* const buffer,
-                                               size_t size, size_t length) {
+size_t Response::ResponseCallback(curlpp::Multi* const requests,
+                                  curlpp::Easy* const request,
+                                  const char* const buffer, size_t size,
+                                  size_t length) {
   size_t realsize = size * length;
 
   // If error occurred previously, just cancel the request.
@@ -301,7 +327,7 @@ size_t minio::http::Response::ResponseCallback(curlpp::Multi* const requests,
   return realsize;
 }
 
-minio::http::Request::Request(Method method, Url url) {
+Request::Request(Method method, Url url) {
   this->method = method;
   this->url = url;
   std::string ssl_cert_file;
@@ -310,14 +336,13 @@ minio::http::Request::Request(Method method, Url url) {
   }
 }
 
-minio::http::Response minio::http::Request::execute() {
+Response Request::execute() {
   curlpp::Cleanup cleaner;
   curlpp::Easy request;
   curlpp::Multi requests;
 
   // Request settings.
-  request.setOpt(
-      new curlpp::options::CustomRequest{http::MethodToString(method)});
+  request.setOpt(new curlpp::options::CustomRequest{MethodToString(method)});
   std::string urlstring = url.String();
   request.setOpt(new curlpp::Options::Url(urlstring));
   if (debug) request.setOpt(new curlpp::Options::Verbose(true));
@@ -431,14 +456,18 @@ minio::http::Response minio::http::Request::execute() {
   return response;
 }
 
-minio::http::Response minio::http::Request::Execute() try {
-  return execute();
-} catch (curlpp::LogicError& e) {
-  Response response;
-  response.error = std::string("curlpp::LogicError: ") + e.what();
-  return response;
-} catch (curlpp::RuntimeError& e) {
-  Response response;
-  response.error = std::string("curlpp::RuntimeError: ") + e.what();
-  return response;
+Response Request::Execute() {
+  try {
+    return execute();
+  } catch (curlpp::LogicError& e) {
+    Response response;
+    response.error = std::string("curlpp::LogicError: ") + e.what();
+    return response;
+  } catch (curlpp::RuntimeError& e) {
+    Response response;
+    response.error = std::string("curlpp::RuntimeError: ") + e.what();
+    return response;
+  }
 }
+
+}  // namespace minio::http

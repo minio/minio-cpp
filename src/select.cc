@@ -26,7 +26,9 @@
 #include "miniocpp/types.h"
 #include "miniocpp/utils.h"
 
-void minio::s3::SelectHandler::Reset() {
+namespace minio::s3 {
+
+void SelectHandler::Reset() {
   prelude_.clear();
   prelude_read_ = false;
 
@@ -40,7 +42,7 @@ void minio::s3::SelectHandler::Reset() {
   message_crc_read_ = false;
 }
 
-bool minio::s3::SelectHandler::ReadPrelude() {
+bool SelectHandler::ReadPrelude() {
   if (response_.length() < 8) return false;
 
   prelude_read_ = true;
@@ -50,7 +52,7 @@ bool minio::s3::SelectHandler::ReadPrelude() {
   return true;
 }
 
-bool minio::s3::SelectHandler::ReadPreludeCrc() {
+bool SelectHandler::ReadPreludeCrc() {
   if (response_.length() < 4) return false;
 
   prelude_crc_read_ = true;
@@ -60,7 +62,7 @@ bool minio::s3::SelectHandler::ReadPreludeCrc() {
   return true;
 }
 
-bool minio::s3::SelectHandler::ReadData() {
+bool SelectHandler::ReadData() {
   size_t data_length = total_length_ - 8 - 4 - 4;
   if (response_.length() < data_length) return false;
 
@@ -71,7 +73,7 @@ bool minio::s3::SelectHandler::ReadData() {
   return true;
 }
 
-bool minio::s3::SelectHandler::ReadMessageCrc() {
+bool SelectHandler::ReadMessageCrc() {
   if (response_.length() < 4) return false;
 
   message_crc_read_ = true;
@@ -81,10 +83,10 @@ bool minio::s3::SelectHandler::ReadMessageCrc() {
   return true;
 }
 
-minio::error::Error minio::s3::SelectHandler::DecodeHeader(
+error::Error SelectHandler::DecodeHeader(
     std::map<std::string, std::string>& headers, std::string data) {
   while (true) {
-    size_t length = data[0];
+    size_t length = static_cast<unsigned char>(data[0]);
     data.erase(0, 1);
     if (!length) break;
 
@@ -96,7 +98,8 @@ minio::error::Error minio::s3::SelectHandler::DecodeHeader(
     }
     data.erase(0, 1);
 
-    length = data[0] << 8 | data[1];
+    length = (static_cast<unsigned>(static_cast<unsigned char>(data[0])) << 8) |
+             static_cast<unsigned char>(data[1]);
     data.erase(0, 2);
 
     std::string value = data.substr(0, length);
@@ -108,8 +111,8 @@ minio::error::Error minio::s3::SelectHandler::DecodeHeader(
   return error::SUCCESS;
 }
 
-bool minio::s3::SelectHandler::process(const http::DataFunctionArgs& /* args */,
-                                       bool& cont) {
+bool SelectHandler::process(const http::DataFunctionArgs& /* args */,
+                            bool& cont) {
   if (!prelude_read_ && !ReadPrelude()) return true;
 
   if (!prelude_crc_read_) {
@@ -167,13 +170,15 @@ bool minio::s3::SelectHandler::process(const http::DataFunctionArgs& /* args */,
     return false;
   }
 
-  long payload_length = static_cast<long>(total_length_ - header_length - 16);
-  if (headers[":event-type"] == "Cont" || payload_length < 1) {
+  if (headers[":event-type"] == "Cont" || total_length_ <= header_length ||
+      total_length_ - header_length <= 16) {
     Reset();
     return true;
   }
 
+  size_t payload_length = (total_length_ - header_length) - 16;
   std::string payload = data_.substr(0, payload_length);
+
   if (headers[":event-type"] == "Progress" ||
       headers[":event-type"] == "Stats") {
     pugi::xml_document xdoc;
@@ -226,8 +231,7 @@ bool minio::s3::SelectHandler::process(const http::DataFunctionArgs& /* args */,
   return false;
 }
 
-bool minio::s3::SelectHandler::DataFunction(
-    const http::DataFunctionArgs& args) {
+bool SelectHandler::DataFunction(const http::DataFunctionArgs& args) {
   if (done_) return false;
 
   response_ += args.datachunk;
@@ -238,3 +242,5 @@ bool minio::s3::SelectHandler::DataFunction(
     if (!cont) return true;
   }
 }
+
+}  // namespace minio::s3

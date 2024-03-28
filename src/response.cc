@@ -29,11 +29,13 @@
 #include "miniocpp/types.h"
 #include "miniocpp/utils.h"
 
-minio::s3::Response::Response() {}
+namespace minio::s3 {
 
-minio::s3::Response::~Response() {}
+Response::Response() {}
 
-minio::error::Error minio::s3::Response::Error() const {
+Response::~Response() {}
+
+error::Error Response::Error() const {
   if (err_) return err_;
   if (!code.empty()) {
     return error::Error(code + ": " + message);
@@ -45,9 +47,8 @@ minio::error::Error minio::s3::Response::Error() const {
   return error::SUCCESS;
 }
 
-minio::s3::Response minio::s3::Response::ParseXML(std::string_view data,
-                                                  int status_code,
-                                                  utils::Multimap headers) {
+Response Response::ParseXML(std::string_view data, int status_code,
+                            utils::Multimap headers) {
   Response resp;
   resp.status_code = status_code;
   resp.headers = headers;
@@ -86,8 +87,7 @@ minio::s3::Response minio::s3::Response::ParseXML(std::string_view data,
   return resp;
 }
 
-minio::s3::ListBucketsResponse minio::s3::ListBucketsResponse::ParseXML(
-    std::string_view data) {
+ListBucketsResponse ListBucketsResponse::ParseXML(std::string_view data) {
   std::list<Bucket> buckets;
 
   pugi::xml_document xdoc;
@@ -114,9 +114,8 @@ minio::s3::ListBucketsResponse minio::s3::ListBucketsResponse::ParseXML(
   return ListBucketsResponse(buckets);
 }
 
-minio::s3::CompleteMultipartUploadResponse
-minio::s3::CompleteMultipartUploadResponse::ParseXML(std::string_view data,
-                                                     std::string version_id) {
+CompleteMultipartUploadResponse CompleteMultipartUploadResponse::ParseXML(
+    std::string_view data, std::string version_id) {
   CompleteMultipartUploadResponse resp;
 
   pugi::xml_document xdoc;
@@ -145,8 +144,8 @@ minio::s3::CompleteMultipartUploadResponse::ParseXML(std::string_view data,
   return resp;
 }
 
-minio::s3::ListObjectsResponse minio::s3::ListObjectsResponse::ParseXML(
-    std::string_view data, bool version) {
+ListObjectsResponse ListObjectsResponse::ParseXML(std::string_view data,
+                                                  bool version) {
   ListObjectsResponse resp;
 
   pugi::xml_document xdoc;
@@ -180,7 +179,7 @@ minio::s3::ListObjectsResponse minio::s3::ListObjectsResponse::ParseXML(
 
   text = root.node().select_node("MaxKeys/text()");
   value = text.node().value();
-  if (!value.empty()) resp.max_keys = std::stoi(value);
+  if (!value.empty()) resp.max_keys = static_cast<unsigned>(std::stoul(value));
 
   // ListBucketResult V1
   {
@@ -199,7 +198,8 @@ minio::s3::ListObjectsResponse minio::s3::ListObjectsResponse::ParseXML(
   {
     text = root.node().select_node("KeyCount/text()");
     value = text.node().value();
-    if (!value.empty()) resp.key_count = std::stoi(value);
+    if (!value.empty())
+      resp.key_count = static_cast<unsigned>(std::stoul(value));
 
     text = root.node().select_node("StartAfter/text()");
     value = text.node().value();
@@ -262,7 +262,7 @@ minio::s3::ListObjectsResponse minio::s3::ListObjectsResponse::ParseXML(
 
       text = content.node().select_node("Size/text()");
       value = text.node().value();
-      if (!value.empty()) item.size = std::stol(value);
+      if (!value.empty()) item.size = static_cast<size_t>(std::stoull(value));
 
       text = content.node().select_node("StorageClass/text()");
       item.storage_class = text.node().value();
@@ -313,8 +313,7 @@ minio::s3::ListObjectsResponse minio::s3::ListObjectsResponse::ParseXML(
   return resp;
 }
 
-minio::s3::RemoveObjectsResponse minio::s3::RemoveObjectsResponse::ParseXML(
-    std::string_view data) {
+RemoveObjectsResponse RemoveObjectsResponse::ParseXML(std::string_view data) {
   RemoveObjectsResponse resp;
 
   pugi::xml_document xdoc;
@@ -370,9 +369,9 @@ minio::s3::RemoveObjectsResponse minio::s3::RemoveObjectsResponse::ParseXML(
   return resp;
 }
 
-minio::s3::GetBucketNotificationResponse
-minio::s3::GetBucketNotificationResponse::ParseXML(std::string_view data) {
-  minio::s3::NotificationConfig config;
+GetBucketNotificationResponse GetBucketNotificationResponse::ParseXML(
+    std::string_view data) {
+  NotificationConfig config;
 
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(data.data());
@@ -465,8 +464,8 @@ minio::s3::GetBucketNotificationResponse::ParseXML(std::string_view data) {
   return GetBucketNotificationResponse(config);
 }
 
-minio::s3::GetBucketEncryptionResponse
-minio::s3::GetBucketEncryptionResponse::ParseXML(std::string_view data) {
+GetBucketEncryptionResponse GetBucketEncryptionResponse::ParseXML(
+    std::string_view data) {
   SseConfig config;
 
   pugi::xml_document xdoc;
@@ -487,8 +486,8 @@ minio::s3::GetBucketEncryptionResponse::ParseXML(std::string_view data) {
   return GetBucketEncryptionResponse(config);
 }
 
-minio::s3::GetBucketReplicationResponse
-minio::s3::GetBucketReplicationResponse::ParseXML(std::string_view data) {
+GetBucketReplicationResponse GetBucketReplicationResponse::ParseXML(
+    std::string_view data) {
   ReplicationConfig config;
 
   pugi::xml_document xdoc;
@@ -547,7 +546,8 @@ minio::s3::GetBucketReplicationResponse::ParseXML(std::string_view data) {
       text = destination.node().select_node(
           "Metrics/EventThreshold/Minutes/text()");
       value = text.node().value();
-      rrule.destination.metrics.event_threshold_minutes = std::stoi(value);
+      rrule.destination.metrics.event_threshold_minutes =
+          static_cast<unsigned>(std::stoul(value));
 
       text = destination.node().select_node(
           "Metrics/EventThreshold/Status/text()");
@@ -559,7 +559,8 @@ minio::s3::GetBucketReplicationResponse::ParseXML(std::string_view data) {
 
       text = destination.node().select_node("ReplicationTime/Time/text()");
       value = text.node().value();
-      rrule.destination.replication_time.time_minutes = std::stoi(value);
+      rrule.destination.replication_time.time_minutes =
+          static_cast<unsigned>(std::stoul(value));
 
       text = destination.node().select_node("ReplicationTime/Status/text()");
       value = text.node().value();
@@ -651,8 +652,8 @@ minio::s3::GetBucketReplicationResponse::ParseXML(std::string_view data) {
   return GetBucketReplicationResponse(config);
 }
 
-minio::s3::GetBucketLifecycleResponse
-minio::s3::GetBucketLifecycleResponse::ParseXML(std::string_view data) {
+GetBucketLifecycleResponse GetBucketLifecycleResponse::ParseXML(
+    std::string_view data) {
   LifecycleConfig config;
 
   pugi::xml_document xdoc;
@@ -779,8 +780,7 @@ minio::s3::GetBucketLifecycleResponse::ParseXML(std::string_view data) {
   return GetBucketLifecycleResponse(config);
 }
 
-minio::s3::GetBucketTagsResponse minio::s3::GetBucketTagsResponse::ParseXML(
-    std::string_view data) {
+GetBucketTagsResponse GetBucketTagsResponse::ParseXML(std::string_view data) {
   std::map<std::string, std::string> map;
 
   pugi::xml_document xdoc;
@@ -805,8 +805,7 @@ minio::s3::GetBucketTagsResponse minio::s3::GetBucketTagsResponse::ParseXML(
   return map;
 }
 
-minio::s3::GetObjectTagsResponse minio::s3::GetObjectTagsResponse::ParseXML(
-    std::string_view data) {
+GetObjectTagsResponse GetObjectTagsResponse::ParseXML(std::string_view data) {
   std::map<std::string, std::string> map;
 
   pugi::xml_document xdoc;
@@ -830,3 +829,5 @@ minio::s3::GetObjectTagsResponse minio::s3::GetObjectTagsResponse::ParseXML(
 
   return map;
 }
+
+}  // namespace minio::s3

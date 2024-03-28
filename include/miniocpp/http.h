@@ -29,32 +29,12 @@
 #include "error.h"
 #include "utils.h"
 
-namespace minio {
-namespace http {
+namespace minio::http {
 
 enum class Method { kGet, kHead, kPost, kPut, kDelete };
 
-// MethodToString converts http Method enum to string.
-constexpr const char* MethodToString(Method method) noexcept {
-  switch (method) {
-    case Method::kGet:
-      return "GET";
-    case Method::kHead:
-      return "HEAD";
-    case Method::kPost:
-      return "POST";
-    case Method::kPut:
-      return "PUT";
-    case Method::kDelete:
-      return "DELETE";
-    default: {
-      std::cerr << "ABORT: Unimplemented HTTP method. This should not happen."
-                << std::endl;
-      std::terminate();
-    }
-  }
-  return nullptr;
-}
+//! MethodToString converts http Method enum to string.
+const char* MethodToString(Method method) noexcept;
 
 /**
  * Url represents HTTP URL and it's components.
@@ -100,11 +80,10 @@ struct DataFunctionArgs {
   void* userdata = nullptr;
 
   DataFunctionArgs() = default;
-  explicit DataFunctionArgs(curlpp::Easy* handle, Response* response,
-                            void* userdata)
+  DataFunctionArgs(curlpp::Easy* handle, Response* response, void* userdata)
       : handle(handle), response(response), userdata(userdata) {}
-  explicit DataFunctionArgs(curlpp::Easy* handle, Response* response,
-                            std::string datachunk, void* userdata)
+  DataFunctionArgs(curlpp::Easy* handle, Response* response,
+                   std::string datachunk, void* userdata)
       : handle(handle),
         response(response),
         datachunk(std::move(datachunk)),
@@ -121,9 +100,6 @@ struct ProgressFunctionArgs {
   double download_speed = 0.0;
   double upload_speed = 0.0;
   void* userdata = nullptr;
-
-  ProgressFunctionArgs() = default;
-  ~ProgressFunctionArgs() = default;
 };  // struct ProgressFunctionArgs
 
 struct Request {
@@ -186,7 +162,6 @@ struct Response {
   error::Error ReadHeaders();
 };  // struct Response
 
-}  // namespace http
-}  // namespace minio
+}  // namespace minio::http
 
 #endif  // MINIO_CPP_HTTP_H_INCLUDED

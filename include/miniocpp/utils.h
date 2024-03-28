@@ -33,8 +33,7 @@
 
 #include "error.h"
 
-namespace minio {
-namespace utils {
+namespace minio::utils {
 
 inline constexpr unsigned int kMaxMultipartCount = 10000;      // 10000 parts
 inline constexpr uint64_t kMaxObjectSize = 5'497'558'138'880;  // 5TiB
@@ -227,7 +226,6 @@ struct CharBuffer : std::streambuf {
       std::ios_base::openmode which = std::ios_base::in) override;
 };  // struct CharBuffer
 
-}  // namespace utils
-}  // namespace minio
+}  // namespace minio::utils
 
 #endif  // MINIO_CPP_UTILS_H_INCLUDED

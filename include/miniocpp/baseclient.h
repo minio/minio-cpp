@@ -31,8 +31,8 @@
 #include "response.h"
 #include "utils.h"
 
-namespace minio {
-namespace s3 {
+namespace minio::s3 {
+
 utils::Multimap GetCommonListObjectsQueryParams(
     const std::string& delimiter, const std::string& encoding_type,
     unsigned int max_keys, const std::string& prefix);
@@ -151,7 +151,7 @@ class BaseClient {
   UploadPartResponse UploadPart(UploadPartArgs args);
   UploadPartCopyResponse UploadPartCopy(UploadPartCopyArgs args);
 };  // class BaseClient
-}  // namespace s3
-}  // namespace minio
+
+}  // namespace minio::s3
 
 #endif  // MINIO_CPP_BASECLIENT_H_INCLUDED

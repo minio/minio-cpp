@@ -26,8 +26,8 @@
 #include "http.h"
 #include "types.h"
 
-namespace minio {
-namespace s3 {
+namespace minio::s3 {
+
 class SelectHandler {
  private:
   SelectResultFunction result_func_ = nullptr;
@@ -41,7 +41,7 @@ class SelectHandler {
   std::string prelude_crc_;
   bool prelude_crc_read_ = false;
 
-  unsigned int total_length_ = 0;
+  size_t total_length_ = 0;
 
   std::string data_;
   bool data_read_ = false;
@@ -66,7 +66,7 @@ class SelectHandler {
 
   bool DataFunction(const http::DataFunctionArgs& args);
 };  // struct SelectHandler
-}  // namespace s3
-}  // namespace minio
+
+}  // namespace minio::s3
 
 #endif  // MINIO_CPP_SELECT_H_INCLUDED

@@ -31,8 +31,7 @@
 #include "error.h"
 #include "utils.h"
 
-namespace minio {
-namespace s3 {
+namespace minio::s3 {
 
 enum class RetentionMode { kGovernance, kCompliance };
 
@@ -767,7 +766,6 @@ struct ObjectLockConfig {
   error::Error Validate() const;
 };  // struct ObjectLockConfig
 
-}  // namespace s3
-}  // namespace minio
+}  // namespace minio::s3
 
 #endif  // MINIO_CPP_TYPES_H_INCLUDED

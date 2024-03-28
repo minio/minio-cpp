@@ -22,8 +22,8 @@
 
 #include "utils.h"
 
-namespace minio {
-namespace s3 {
+namespace minio::s3 {
+
 class Sse {
  protected:
   utils::Multimap headers_;
@@ -62,7 +62,7 @@ class SseS3 : public Sse {
 
   virtual bool TlsRequired() const override;
 };  // class SseS3
-}  // namespace s3
-}  // namespace minio
+
+}  // namespace minio::s3
 
 #endif  // MINIO_CPP_SSE_H_INCLUDED

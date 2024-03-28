@@ -22,8 +22,7 @@
 #include <string>
 #include <type_traits>
 
-namespace minio {
-namespace error {
+namespace minio::error {
 
 class Error {
  private:
@@ -31,17 +30,18 @@ class Error {
 
  public:
   Error() = default;
-  Error(std::string_view msg) : msg_(msg) {}
+
+  explicit Error(std::string msg) : msg_(std::move(msg)) {}
 
   Error(const Error&) = default;
-  Error& operator=(const Error&) = default;
-
   Error(Error&& v) = default;
+
+  Error& operator=(const Error&) = default;
   Error& operator=(Error&& v) = default;
 
   ~Error() = default;
 
-  std::string String() const { return msg_; }
+  const std::string& String() const { return msg_; }
   explicit operator bool() const { return !msg_.empty(); }
 
   friend std::ostream& operator<<(std::ostream& s, const Error& e) {
@@ -49,14 +49,13 @@ class Error {
   }
 };  // class Error
 
-const static Error SUCCESS;
+extern const Error SUCCESS;
 
 template <typename T_RESULT, typename... TA>
 inline T_RESULT make(TA&&... args) {
   return T_RESULT{Error(std::forward<TA>(args)...)};
 }
 
-}  // namespace error
-}  // namespace minio
+}  // namespace minio::error
 
 #endif  // MINIO_CPP_ERROR_H_INCLUDED

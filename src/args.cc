@@ -33,11 +33,13 @@
 #include "miniocpp/types.h"
 #include "miniocpp/utils.h"
 
-minio::error::Error minio::s3::BucketArgs::Validate() const {
+namespace minio::s3 {
+
+error::Error BucketArgs::Validate() const {
   return utils::CheckBucketName(bucket);
 }
 
-minio::error::Error minio::s3::ObjectArgs::Validate() const {
+error::Error ObjectArgs::Validate() const {
   if (error::Error err = BucketArgs::Validate()) {
     return err;
   }
@@ -48,7 +50,7 @@ minio::error::Error minio::s3::ObjectArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::utils::Multimap minio::s3::ObjectWriteArgs::Headers() const {
+utils::Multimap ObjectWriteArgs::Headers() const {
   utils::Multimap result_headers;
   result_headers.AddAll(extra_headers);
   result_headers.AddAll(headers);
@@ -82,7 +84,7 @@ minio::utils::Multimap minio::s3::ObjectWriteArgs::Headers() const {
   return result_headers;
 }
 
-minio::utils::Multimap minio::s3::ObjectConditionalReadArgs::Headers() const {
+utils::Multimap ObjectConditionalReadArgs::Headers() const {
   size_t* off = offset;
   size_t* len = length;
 
@@ -122,8 +124,7 @@ minio::utils::Multimap minio::s3::ObjectConditionalReadArgs::Headers() const {
   return result_headers;
 }
 
-minio::utils::Multimap minio::s3::ObjectConditionalReadArgs::CopyHeaders()
-    const {
+utils::Multimap ObjectConditionalReadArgs::CopyHeaders() const {
   utils::Multimap result_headers;
 
   std::string copy_source = curlpp::escape("/" + bucket + "/" + object);
@@ -154,11 +155,11 @@ minio::utils::Multimap minio::s3::ObjectConditionalReadArgs::CopyHeaders()
   return result_headers;
 }
 
-minio::error::Error minio::s3::MakeBucketArgs::Validate() const {
+error::Error MakeBucketArgs::Validate() const {
   return utils::CheckBucketName(bucket, true);
 }
 
-minio::error::Error minio::s3::AbortMultipartUploadArgs::Validate() const {
+error::Error AbortMultipartUploadArgs::Validate() const {
   if (error::Error err = ObjectArgs::Validate()) {
     return err;
   }
@@ -169,7 +170,7 @@ minio::error::Error minio::s3::AbortMultipartUploadArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::CompleteMultipartUploadArgs::Validate() const {
+error::Error CompleteMultipartUploadArgs::Validate() const {
   if (error::Error err = ObjectArgs::Validate()) {
     return err;
   }
@@ -180,21 +181,7 @@ minio::error::Error minio::s3::CompleteMultipartUploadArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::UploadPartArgs::Validate() const {
-  if (error::Error err = ObjectArgs::Validate()) {
-    return err;
-  }
-  if (!utils::CheckNonEmptyString(upload_id)) {
-    return error::Error("upload ID cannot be empty");
-  }
-  if (part_number < 1 || part_number > 10000) {
-    return error::Error("part number must be between 1 and 10000");
-  }
-
-  return error::SUCCESS;
-}
-
-minio::error::Error minio::s3::UploadPartCopyArgs::Validate() const {
+error::Error UploadPartArgs::Validate() const {
   if (error::Error err = ObjectArgs::Validate()) {
     return err;
   }
@@ -208,7 +195,21 @@ minio::error::Error minio::s3::UploadPartCopyArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::DownloadObjectArgs::Validate() const {
+error::Error UploadPartCopyArgs::Validate() const {
+  if (error::Error err = ObjectArgs::Validate()) {
+    return err;
+  }
+  if (!utils::CheckNonEmptyString(upload_id)) {
+    return error::Error("upload ID cannot be empty");
+  }
+  if (part_number < 1 || part_number > 10000) {
+    return error::Error("part number must be between 1 and 10000");
+  }
+
+  return error::SUCCESS;
+}
+
+error::Error DownloadObjectArgs::Validate() const {
   if (error::Error err = ObjectReadArgs::Validate()) {
     return err;
   }
@@ -223,7 +224,7 @@ minio::error::Error minio::s3::DownloadObjectArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::GetObjectArgs::Validate() const {
+error::Error GetObjectArgs::Validate() const {
   if (error::Error err = ObjectConditionalReadArgs::Validate()) {
     return err;
   }
@@ -234,9 +235,9 @@ minio::error::Error minio::s3::GetObjectArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::s3::ListObjectsV1Args::ListObjectsV1Args() {}
+ListObjectsV1Args::ListObjectsV1Args() {}
 
-minio::s3::ListObjectsV1Args::ListObjectsV1Args(ListObjectsArgs args) {
+ListObjectsV1Args::ListObjectsV1Args(ListObjectsArgs args) {
   this->extra_headers = args.extra_headers;
   this->extra_query_params = args.extra_query_params;
   this->bucket = args.bucket;
@@ -248,14 +249,13 @@ minio::s3::ListObjectsV1Args::ListObjectsV1Args(ListObjectsArgs args) {
   this->marker = args.marker;
 }
 
-minio::s3::ListObjectsV1Args& minio::s3::ListObjectsV1Args::operator=(
-    ListObjectsArgs args) {
+ListObjectsV1Args& ListObjectsV1Args::operator=(ListObjectsArgs args) {
   return this->operator=(ListObjectsV1Args(std::move(args)));
 }
 
-minio::s3::ListObjectsV2Args::ListObjectsV2Args() {}
+ListObjectsV2Args::ListObjectsV2Args() {}
 
-minio::s3::ListObjectsV2Args::ListObjectsV2Args(ListObjectsArgs args) {
+ListObjectsV2Args::ListObjectsV2Args(ListObjectsArgs args) {
   this->extra_headers = args.extra_headers;
   this->extra_query_params = args.extra_query_params;
   this->bucket = args.bucket;
@@ -270,15 +270,13 @@ minio::s3::ListObjectsV2Args::ListObjectsV2Args(ListObjectsArgs args) {
   this->include_user_metadata = args.include_user_metadata;
 }
 
-minio::s3::ListObjectsV2Args& minio::s3::ListObjectsV2Args::operator=(
-    ListObjectsArgs args) {
+ListObjectsV2Args& ListObjectsV2Args::operator=(ListObjectsArgs args) {
   return this->operator=(ListObjectsV2Args(std::move(args)));
 }
 
-minio::s3::ListObjectVersionsArgs::ListObjectVersionsArgs() {}
+ListObjectVersionsArgs::ListObjectVersionsArgs() {}
 
-minio::s3::ListObjectVersionsArgs::ListObjectVersionsArgs(
-    ListObjectsArgs args) {
+ListObjectVersionsArgs::ListObjectVersionsArgs(ListObjectsArgs args) {
   this->extra_headers = args.extra_headers;
   this->extra_query_params = args.extra_query_params;
   this->bucket = args.bucket;
@@ -291,24 +289,24 @@ minio::s3::ListObjectVersionsArgs::ListObjectVersionsArgs(
   this->version_id_marker = args.version_id_marker;
 }
 
-minio::s3::ListObjectVersionsArgs& minio::s3::ListObjectVersionsArgs::operator=(
+ListObjectVersionsArgs& ListObjectVersionsArgs::operator=(
     ListObjectsArgs args) {
   return this->operator=(ListObjectVersionsArgs(args));
 }
 
-minio::s3::PutObjectArgs::PutObjectArgs(std::istream& istream, long object_size,
-                                        long part_size)
+PutObjectArgs::PutObjectArgs(std::istream& istream, long object_size,
+                             long part_size)
     : stream(istream) {
   this->object_size = object_size;
   this->part_size = part_size;
 }
 
-minio::error::Error minio::s3::PutObjectArgs::Validate() {
+error::Error PutObjectArgs::Validate() {
   if (error::Error err = ObjectArgs::Validate()) return err;
   return utils::CalcPartInfo(object_size, part_size, part_count);
 }
 
-minio::error::Error minio::s3::CopyObjectArgs::Validate() const {
+error::Error CopyObjectArgs::Validate() const {
   if (error::Error err = ObjectArgs::Validate()) {
     return err;
   }
@@ -334,8 +332,8 @@ minio::error::Error minio::s3::CopyObjectArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::ComposeSource::BuildHeaders(
-    size_t object_size, const std::string& etag) {
+error::Error ComposeSource::BuildHeaders(size_t object_size,
+                                         const std::string& etag) {
   std::string msg = "source " + bucket + "/" + object;
   if (!version_id.empty()) {
     msg += "?versionId=" + version_id;
@@ -373,7 +371,7 @@ minio::error::Error minio::s3::ComposeSource::BuildHeaders(
   return error::SUCCESS;
 }
 
-size_t minio::s3::ComposeSource::ObjectSize() const {
+size_t ComposeSource::ObjectSize() const {
   if (object_size_ == -1) {
     std::cerr << "ABORT: ComposeSource::BuildHeaders() must be called prior to "
                  "this method invocation. This should not happen."
@@ -384,7 +382,7 @@ size_t minio::s3::ComposeSource::ObjectSize() const {
   return object_size_;
 }
 
-minio::utils::Multimap minio::s3::ComposeSource::Headers() const {
+utils::Multimap ComposeSource::Headers() const {
   if (!headers_) {
     std::cerr << "ABORT: ComposeSource::BuildHeaders() must be called prior to "
                  "this method invocation. This should not happen."
@@ -395,7 +393,7 @@ minio::utils::Multimap minio::s3::ComposeSource::Headers() const {
   return headers_;
 }
 
-minio::error::Error minio::s3::ComposeObjectArgs::Validate() const {
+error::Error ComposeObjectArgs::Validate() const {
   if (error::Error err = ObjectArgs::Validate()) {
     return err;
   }
@@ -413,7 +411,7 @@ minio::error::Error minio::s3::ComposeObjectArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::UploadObjectArgs::Validate() {
+error::Error UploadObjectArgs::Validate() {
   if (error::Error err = ObjectArgs::Validate()) {
     return err;
   }
@@ -431,7 +429,7 @@ minio::error::Error minio::s3::UploadObjectArgs::Validate() {
   return utils::CalcPartInfo(object_size, part_size, part_count);
 }
 
-minio::error::Error minio::s3::RemoveObjectsArgs::Validate() const {
+error::Error RemoveObjectsArgs::Validate() const {
   if (error::Error err = BucketArgs::Validate()) {
     return err;
   }
@@ -442,7 +440,7 @@ minio::error::Error minio::s3::RemoveObjectsArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::SelectObjectContentArgs::Validate() const {
+error::Error SelectObjectContentArgs::Validate() const {
   if (error::Error err = ObjectReadArgs::Validate()) {
     return err;
   }
@@ -466,7 +464,7 @@ minio::error::Error minio::s3::SelectObjectContentArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::ListenBucketNotificationArgs::Validate() const {
+error::Error ListenBucketNotificationArgs::Validate() const {
   if (error::Error err = BucketArgs::Validate()) {
     return err;
   }
@@ -476,7 +474,7 @@ minio::error::Error minio::s3::ListenBucketNotificationArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::SetBucketPolicyArgs::Validate() const {
+error::Error SetBucketPolicyArgs::Validate() const {
   if (error::Error err = BucketArgs::Validate()) {
     return err;
   }
@@ -487,7 +485,7 @@ minio::error::Error minio::s3::SetBucketPolicyArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::SetBucketEncryptionArgs::Validate() const {
+error::Error SetBucketEncryptionArgs::Validate() const {
   if (error::Error err = BucketArgs::Validate()) {
     return err;
   }
@@ -498,7 +496,7 @@ minio::error::Error minio::s3::SetBucketEncryptionArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::SetBucketVersioningArgs::Validate() const {
+error::Error SetBucketVersioningArgs::Validate() const {
   if (error::Error err = BucketArgs::Validate()) {
     return err;
   }
@@ -508,7 +506,7 @@ minio::error::Error minio::s3::SetBucketVersioningArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::SetBucketTagsArgs::Validate() const {
+error::Error SetBucketTagsArgs::Validate() const {
   if (error::Error err = BucketArgs::Validate()) {
     return err;
   }
@@ -530,14 +528,14 @@ minio::error::Error minio::s3::SetBucketTagsArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::SetObjectLockConfigArgs::Validate() const {
+error::Error SetObjectLockConfigArgs::Validate() const {
   if (error::Error err = BucketArgs::Validate()) {
     return err;
   }
   return config.Validate();
 }
 
-minio::error::Error minio::s3::SetObjectTagsArgs::Validate() const {
+error::Error SetObjectTagsArgs::Validate() const {
   if (error::Error err = ObjectArgs::Validate()) {
     return err;
   }
@@ -559,7 +557,7 @@ minio::error::Error minio::s3::SetObjectTagsArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::SetObjectRetentionArgs::Validate() const {
+error::Error SetObjectRetentionArgs::Validate() const {
   if (error::Error err = ObjectArgs::Validate()) {
     return err;
   }
@@ -573,7 +571,7 @@ minio::error::Error minio::s3::SetObjectRetentionArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::GetPresignedObjectUrlArgs::Validate() const {
+error::Error GetPresignedObjectUrlArgs::Validate() const {
   if (error::Error err = ObjectArgs::Validate()) {
     return err;
   }
@@ -588,8 +586,8 @@ minio::error::Error minio::s3::GetPresignedObjectUrlArgs::Validate() const {
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::PostPolicy::AddEqualsCondition(
-    std::string element, std::string value) {
+error::Error PostPolicy::AddEqualsCondition(std::string element,
+                                            std::string value) {
   if (element.empty()) {
     return error::Error("condition element cannot be empty");
   }
@@ -608,8 +606,7 @@ minio::error::Error minio::s3::PostPolicy::AddEqualsCondition(
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::PostPolicy::RemoveEqualsCondition(
-    std::string element) {
+error::Error PostPolicy::RemoveEqualsCondition(std::string element) {
   if (element.empty()) {
     return error::Error("condition element cannot be empty");
   }
@@ -617,8 +614,8 @@ minio::error::Error minio::s3::PostPolicy::RemoveEqualsCondition(
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::PostPolicy::AddStartsWithCondition(
-    std::string element, std::string value) {
+error::Error PostPolicy::AddStartsWithCondition(std::string element,
+                                                std::string value) {
   if (element.empty()) {
     return error::Error("condition element cannot be empty");
   }
@@ -638,8 +635,7 @@ minio::error::Error minio::s3::PostPolicy::AddStartsWithCondition(
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::PostPolicy::RemoveStartsWithCondition(
-    std::string element) {
+error::Error PostPolicy::RemoveStartsWithCondition(std::string element) {
   if (element.empty()) {
     return error::Error("condition element cannot be empty");
   }
@@ -647,8 +643,8 @@ minio::error::Error minio::s3::PostPolicy::RemoveStartsWithCondition(
   return error::SUCCESS;
 }
 
-minio::error::Error minio::s3::PostPolicy::AddContentLengthRangeCondition(
-    size_t lower_limit, size_t upper_limit) {
+error::Error PostPolicy::AddContentLengthRangeCondition(size_t lower_limit,
+                                                        size_t upper_limit) {
   if (lower_limit > upper_limit) {
     return error::Error("lower limit cannot be greater than upper limit");
   }
@@ -657,14 +653,16 @@ minio::error::Error minio::s3::PostPolicy::AddContentLengthRangeCondition(
   return error::SUCCESS;
 }
 
-void minio::s3::PostPolicy::RemoveContentLengthRangeCondition() {
+void PostPolicy::RemoveContentLengthRangeCondition() {
   lower_limit_ = Integer();
   upper_limit_ = Integer();
 }
 
-minio::error::Error minio::s3::PostPolicy::FormData(
-    std::map<std::string, std::string>& data, std::string access_key,
-    std::string secret_key, std::string session_token, std::string region) {
+error::Error PostPolicy::FormData(std::map<std::string, std::string>& data,
+                                  std::string access_key,
+                                  std::string secret_key,
+                                  std::string session_token,
+                                  std::string region) {
   if (region.empty()) {
     return error::Error("region cannot be empty");
   }
@@ -714,22 +712,24 @@ minio::error::Error minio::s3::PostPolicy::FormData(
   return error::SUCCESS;
 }
 
-std::string minio::s3::PostPolicy::trimDollar(std::string value) {
+std::string PostPolicy::trimDollar(std::string value) {
   if (value.front() == '$') {
     value.erase(0, 1);
   }
   return value;
 }
 
-std::string minio::s3::PostPolicy::getCredentialString(std::string access_key,
-                                                       utils::UtcTime date,
-                                                       std::string region) {
+std::string PostPolicy::getCredentialString(std::string access_key,
+                                            utils::UtcTime date,
+                                            std::string region) {
   return access_key + "/" + date.ToSignerDate() + "/" + region +
          "/s3/aws4_request";
 }
 
-bool minio::s3::PostPolicy::isReservedElement(std::string element) {
+bool PostPolicy::isReservedElement(std::string element) {
   return element == "bucket" || element == "x-amz-algorithm" ||
          element == "x-amz-credential" || element == "x-amz-date" ||
          element == "policy" || element == "x-amz-signature";
 }
+
+}  // namespace minio::s3

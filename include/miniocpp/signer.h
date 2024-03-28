@@ -23,8 +23,7 @@
 #include "http.h"
 #include "utils.h"
 
-namespace minio {
-namespace signer {
+namespace minio::signer {
 
 std::string GetScope(const utils::UtcTime& time, const std::string& region,
                      const std::string& service_name);
@@ -78,7 +77,7 @@ std::string PostPresignV4(const std::string& data,
                           const std::string& secret_key,
                           const utils::UtcTime& date,
                           const std::string& region);
-}  // namespace signer
-}  // namespace minio
+
+}  // namespace minio::signer
 
 #endif  // MINIO_CPP_SIGNER_H_INCLUDED

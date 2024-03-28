@@ -43,7 +43,9 @@
 #include "miniocpp/types.h"
 #include "miniocpp/utils.h"
 
-minio::utils::Multimap minio::s3::GetCommonListObjectsQueryParams(
+namespace minio::s3 {
+
+utils::Multimap GetCommonListObjectsQueryParams(
     const std::string& delimiter, const std::string& encoding_type,
     unsigned int max_keys, const std::string& prefix) {
   utils::Multimap query_params;
@@ -54,7 +56,7 @@ minio::utils::Multimap minio::s3::GetCommonListObjectsQueryParams(
   return query_params;
 }
 
-minio::s3::BaseClient::BaseClient(BaseUrl base_url, creds::Provider* provider)
+BaseClient::BaseClient(BaseUrl base_url, creds::Provider* provider)
     : base_url_(std::move(base_url)), provider_(provider) {
   if (!base_url_) {
     std::cerr << "valid base url must be provided; " << base_url_.Error()
@@ -63,8 +65,8 @@ minio::s3::BaseClient::BaseClient(BaseUrl base_url, creds::Provider* provider)
   }
 }
 
-minio::error::Error minio::s3::BaseClient::SetAppInfo(
-    std::string_view app_name, std::string_view app_version) {
+error::Error BaseClient::SetAppInfo(std::string_view app_name,
+                                    std::string_view app_version) {
   if (app_name.empty() || app_version.empty()) {
     return error::Error("Application name/version cannot be empty");
   }
@@ -74,10 +76,11 @@ minio::error::Error minio::s3::BaseClient::SetAppInfo(
   return error::SUCCESS;
 }
 
-void minio::s3::BaseClient::HandleRedirectResponse(
-    std::string& code, std::string& message, int status_code,
-    http::Method method, const utils::Multimap& headers,
-    const std::string& bucket_name, bool retry) {
+void BaseClient::HandleRedirectResponse(std::string& code, std::string& message,
+                                        int status_code, http::Method method,
+                                        const utils::Multimap& headers,
+                                        const std::string& bucket_name,
+                                        bool retry) {
   switch (status_code) {
     case 301:
       code = "PermanentRedirect";
@@ -110,9 +113,11 @@ void minio::s3::BaseClient::HandleRedirectResponse(
   }
 }
 
-minio::s3::Response minio::s3::BaseClient::GetErrorResponse(
-    http::Response resp, std::string_view resource, http::Method method,
-    const std::string& bucket_name, const std::string& object_name) {
+Response BaseClient::GetErrorResponse(http::Response resp,
+                                      std::string_view resource,
+                                      http::Method method,
+                                      const std::string& bucket_name,
+                                      const std::string& object_name) {
   if (!resp.error.empty()) {
     return error::make<Response>(resp.error);
   }
@@ -199,7 +204,7 @@ minio::s3::Response minio::s3::BaseClient::GetErrorResponse(
   return response;
 }
 
-minio::s3::Response minio::s3::BaseClient::execute(Request& req) {
+Response BaseClient::execute(Request& req) {
   req.user_agent = user_agent_;
   req.ignore_cert_check = ignore_cert_check_;
   if (!ssl_cert_file_.empty()) req.ssl_cert_file = ssl_cert_file_;
@@ -223,7 +228,7 @@ minio::s3::Response minio::s3::BaseClient::execute(Request& req) {
   return resp;
 }
 
-minio::s3::Response minio::s3::BaseClient::Execute(Request& req) {
+Response BaseClient::Execute(Request& req) {
   Response resp = execute(req);
   if (resp || resp.code != "RetryHead") return resp;
 
@@ -241,8 +246,8 @@ minio::s3::Response minio::s3::BaseClient::Execute(Request& req) {
   return resp;
 }
 
-minio::s3::GetRegionResponse minio::s3::BaseClient::GetRegion(
-    const std::string& bucket_name, const std::string& region) {
+GetRegionResponse BaseClient::GetRegion(const std::string& bucket_name,
+                                        const std::string& region) {
   std::string base_region = base_url_.region;
   if (!region.empty()) {
     if (!base_region.empty() && base_region != region) {
@@ -294,8 +299,8 @@ minio::s3::GetRegionResponse minio::s3::BaseClient::GetRegion(
   return GetRegionResponse(value);
 }
 
-minio::s3::AbortMultipartUploadResponse
-minio::s3::BaseClient::AbortMultipartUpload(AbortMultipartUploadArgs args) {
+AbortMultipartUploadResponse BaseClient::AbortMultipartUpload(
+    AbortMultipartUploadArgs args) {
   if (error::Error err = args.Validate()) {
     return AbortMultipartUploadResponse(err);
   }
@@ -316,8 +321,7 @@ minio::s3::BaseClient::AbortMultipartUpload(AbortMultipartUploadArgs args) {
   return AbortMultipartUploadResponse(Execute(req));
 }
 
-minio::s3::BucketExistsResponse minio::s3::BaseClient::BucketExists(
-    BucketExistsArgs args) {
+BucketExistsResponse BaseClient::BucketExists(BucketExistsArgs args) {
   if (error::Error err = args.Validate()) {
     return BucketExistsResponse(err);
   }
@@ -340,8 +344,7 @@ minio::s3::BucketExistsResponse minio::s3::BaseClient::BucketExists(
   }
 }
 
-minio::s3::CompleteMultipartUploadResponse
-minio::s3::BaseClient::CompleteMultipartUpload(
+CompleteMultipartUploadResponse BaseClient::CompleteMultipartUpload(
     CompleteMultipartUploadArgs args) {
   if (error::Error err = args.Validate()) {
     return CompleteMultipartUploadResponse(err);
@@ -383,8 +386,8 @@ minio::s3::BaseClient::CompleteMultipartUpload(
       response.data, response.headers.GetFront("x-amz-version-id"));
 }
 
-minio::s3::CreateMultipartUploadResponse
-minio::s3::BaseClient::CreateMultipartUpload(CreateMultipartUploadArgs args) {
+CreateMultipartUploadResponse BaseClient::CreateMultipartUpload(
+    CreateMultipartUploadArgs args) {
   if (error::Error err = args.Validate()) {
     return CreateMultipartUploadResponse(err);
   }
@@ -421,8 +424,8 @@ minio::s3::BaseClient::CreateMultipartUpload(CreateMultipartUploadArgs args) {
   }
 }
 
-minio::s3::DeleteBucketEncryptionResponse
-minio::s3::BaseClient::DeleteBucketEncryption(DeleteBucketEncryptionArgs args) {
+DeleteBucketEncryptionResponse BaseClient::DeleteBucketEncryption(
+    DeleteBucketEncryptionArgs args) {
   if (error::Error err = args.Validate()) {
     return DeleteBucketEncryptionResponse(err);
   }
@@ -449,8 +452,8 @@ minio::s3::BaseClient::DeleteBucketEncryption(DeleteBucketEncryptionArgs args) {
   return DeleteBucketEncryptionResponse();
 }
 
-minio::s3::DisableObjectLegalHoldResponse
-minio::s3::BaseClient::DisableObjectLegalHold(DisableObjectLegalHoldArgs args) {
+DisableObjectLegalHoldResponse BaseClient::DisableObjectLegalHold(
+    DisableObjectLegalHoldArgs args) {
   if (error::Error err = args.Validate()) {
     return DisableObjectLegalHoldResponse(err);
   }
@@ -477,8 +480,8 @@ minio::s3::BaseClient::DisableObjectLegalHold(DisableObjectLegalHoldArgs args) {
   return DisableObjectLegalHoldResponse(Execute(req));
 }
 
-minio::s3::DeleteBucketLifecycleResponse
-minio::s3::BaseClient::DeleteBucketLifecycle(DeleteBucketLifecycleArgs args) {
+DeleteBucketLifecycleResponse BaseClient::DeleteBucketLifecycle(
+    DeleteBucketLifecycleArgs args) {
   if (error::Error err = args.Validate()) {
     return DeleteBucketLifecycleResponse(err);
   }
@@ -498,8 +501,7 @@ minio::s3::BaseClient::DeleteBucketLifecycle(DeleteBucketLifecycleArgs args) {
   return DeleteBucketLifecycleResponse(Execute(req));
 }
 
-minio::s3::DeleteBucketNotificationResponse
-minio::s3::BaseClient::DeleteBucketNotification(
+DeleteBucketNotificationResponse BaseClient::DeleteBucketNotification(
     DeleteBucketNotificationArgs args) {
   if (error::Error err = args.Validate()) {
     return DeleteBucketNotificationResponse(err);
@@ -515,7 +517,7 @@ minio::s3::BaseClient::DeleteBucketNotification(
   return DeleteBucketNotificationResponse(SetBucketNotification(sbnargs));
 }
 
-minio::s3::DeleteBucketPolicyResponse minio::s3::BaseClient::DeleteBucketPolicy(
+DeleteBucketPolicyResponse BaseClient::DeleteBucketPolicy(
     DeleteBucketPolicyArgs args) {
   if (error::Error err = args.Validate()) {
     return DeleteBucketPolicyResponse(err);
@@ -536,8 +538,7 @@ minio::s3::DeleteBucketPolicyResponse minio::s3::BaseClient::DeleteBucketPolicy(
   return DeleteBucketPolicyResponse(Execute(req));
 }
 
-minio::s3::DeleteBucketReplicationResponse
-minio::s3::BaseClient::DeleteBucketReplication(
+DeleteBucketReplicationResponse BaseClient::DeleteBucketReplication(
     DeleteBucketReplicationArgs args) {
   if (error::Error err = args.Validate()) {
     return DeleteBucketReplicationResponse(err);
@@ -565,7 +566,7 @@ minio::s3::BaseClient::DeleteBucketReplication(
   return DeleteBucketReplicationResponse();
 }
 
-minio::s3::DeleteBucketTagsResponse minio::s3::BaseClient::DeleteBucketTags(
+DeleteBucketTagsResponse BaseClient::DeleteBucketTags(
     DeleteBucketTagsArgs args) {
   if (error::Error err = args.Validate()) {
     return DeleteBucketTagsResponse(err);
@@ -586,8 +587,8 @@ minio::s3::DeleteBucketTagsResponse minio::s3::BaseClient::DeleteBucketTags(
   return DeleteBucketTagsResponse(Execute(req));
 }
 
-minio::s3::DeleteObjectLockConfigResponse
-minio::s3::BaseClient::DeleteObjectLockConfig(DeleteObjectLockConfigArgs args) {
+DeleteObjectLockConfigResponse BaseClient::DeleteObjectLockConfig(
+    DeleteObjectLockConfigArgs args) {
   if (error::Error err = args.Validate()) {
     return DeleteObjectLockConfigResponse(err);
   }
@@ -607,7 +608,7 @@ minio::s3::BaseClient::DeleteObjectLockConfig(DeleteObjectLockConfigArgs args) {
   return DeleteObjectLockConfigResponse(Execute(req));
 }
 
-minio::s3::DeleteObjectTagsResponse minio::s3::BaseClient::DeleteObjectTags(
+DeleteObjectTagsResponse BaseClient::DeleteObjectTags(
     DeleteObjectTagsArgs args) {
   if (error::Error err = args.Validate()) {
     return DeleteObjectTagsResponse(err);
@@ -632,8 +633,8 @@ minio::s3::DeleteObjectTagsResponse minio::s3::BaseClient::DeleteObjectTags(
   return DeleteObjectTagsResponse(Execute(req));
 }
 
-minio::s3::EnableObjectLegalHoldResponse
-minio::s3::BaseClient::EnableObjectLegalHold(EnableObjectLegalHoldArgs args) {
+EnableObjectLegalHoldResponse BaseClient::EnableObjectLegalHold(
+    EnableObjectLegalHoldArgs args) {
   if (error::Error err = args.Validate()) {
     return EnableObjectLegalHoldResponse(err);
   }
@@ -661,8 +662,8 @@ minio::s3::BaseClient::EnableObjectLegalHold(EnableObjectLegalHoldArgs args) {
   return EnableObjectLegalHoldResponse(Execute(req));
 }
 
-minio::s3::GetBucketEncryptionResponse
-minio::s3::BaseClient::GetBucketEncryption(GetBucketEncryptionArgs args) {
+GetBucketEncryptionResponse BaseClient::GetBucketEncryption(
+    GetBucketEncryptionArgs args) {
   if (error::Error err = args.Validate()) {
     return GetBucketEncryptionResponse(err);
   }
@@ -686,7 +687,7 @@ minio::s3::BaseClient::GetBucketEncryption(GetBucketEncryptionArgs args) {
   return GetBucketEncryptionResponse(resp);
 }
 
-minio::s3::GetBucketLifecycleResponse minio::s3::BaseClient::GetBucketLifecycle(
+GetBucketLifecycleResponse BaseClient::GetBucketLifecycle(
     GetBucketLifecycleArgs args) {
   if (error::Error err = args.Validate()) {
     return GetBucketLifecycleResponse(err);
@@ -716,8 +717,8 @@ minio::s3::GetBucketLifecycleResponse minio::s3::BaseClient::GetBucketLifecycle(
   return GetBucketLifecycleResponse::ParseXML(resp.data);
 }
 
-minio::s3::GetBucketNotificationResponse
-minio::s3::BaseClient::GetBucketNotification(GetBucketNotificationArgs args) {
+GetBucketNotificationResponse BaseClient::GetBucketNotification(
+    GetBucketNotificationArgs args) {
   if (error::Error err = args.Validate()) {
     return GetBucketNotificationResponse(err);
   }
@@ -741,8 +742,7 @@ minio::s3::BaseClient::GetBucketNotification(GetBucketNotificationArgs args) {
   return GetBucketNotificationResponse(resp);
 }
 
-minio::s3::GetBucketPolicyResponse minio::s3::BaseClient::GetBucketPolicy(
-    GetBucketPolicyArgs args) {
+GetBucketPolicyResponse BaseClient::GetBucketPolicy(GetBucketPolicyArgs args) {
   if (error::Error err = args.Validate()) {
     return GetBucketPolicyResponse(err);
   }
@@ -766,8 +766,8 @@ minio::s3::GetBucketPolicyResponse minio::s3::BaseClient::GetBucketPolicy(
   return GetBucketPolicyResponse(resp);
 }
 
-minio::s3::GetBucketReplicationResponse
-minio::s3::BaseClient::GetBucketReplication(GetBucketReplicationArgs args) {
+GetBucketReplicationResponse BaseClient::GetBucketReplication(
+    GetBucketReplicationArgs args) {
   if (error::Error err = args.Validate()) {
     return GetBucketReplicationResponse(err);
   }
@@ -791,8 +791,7 @@ minio::s3::BaseClient::GetBucketReplication(GetBucketReplicationArgs args) {
   return GetBucketReplicationResponse(resp);
 }
 
-minio::s3::GetBucketTagsResponse minio::s3::BaseClient::GetBucketTags(
-    GetBucketTagsArgs args) {
+GetBucketTagsResponse BaseClient::GetBucketTags(GetBucketTagsArgs args) {
   if (error::Error err = args.Validate()) {
     return GetBucketTagsResponse(err);
   }
@@ -816,8 +815,8 @@ minio::s3::GetBucketTagsResponse minio::s3::BaseClient::GetBucketTags(
   return GetBucketTagsResponse(resp);
 }
 
-minio::s3::GetBucketVersioningResponse
-minio::s3::BaseClient::GetBucketVersioning(GetBucketVersioningArgs args) {
+GetBucketVersioningResponse BaseClient::GetBucketVersioning(
+    GetBucketVersioningArgs args) {
   if (error::Error err = args.Validate()) {
     return GetBucketVersioningResponse(err);
   }
@@ -862,8 +861,7 @@ minio::s3::BaseClient::GetBucketVersioning(GetBucketVersioningArgs args) {
   return GetBucketVersioningResponse(response);
 }
 
-minio::s3::GetObjectResponse minio::s3::BaseClient::GetObject(
-    GetObjectArgs args) {
+GetObjectResponse BaseClient::GetObject(GetObjectArgs args) {
   if (error::Error err = args.Validate()) {
     return GetObjectResponse(err);
   }
@@ -896,8 +894,8 @@ minio::s3::GetObjectResponse minio::s3::BaseClient::GetObject(
   return GetObjectResponse(Execute(req));
 }
 
-minio::s3::GetObjectLockConfigResponse
-minio::s3::BaseClient::GetObjectLockConfig(GetObjectLockConfigArgs args) {
+GetObjectLockConfigResponse BaseClient::GetObjectLockConfig(
+    GetObjectLockConfigArgs args) {
   if (error::Error err = args.Validate()) {
     return GetObjectLockConfigResponse(err);
   }
@@ -947,7 +945,7 @@ minio::s3::BaseClient::GetObjectLockConfig(GetObjectLockConfigArgs args) {
   return GetObjectLockConfigResponse(config);
 }
 
-minio::s3::GetObjectRetentionResponse minio::s3::BaseClient::GetObjectRetention(
+GetObjectRetentionResponse BaseClient::GetObjectRetention(
     GetObjectRetentionArgs args) {
   if (error::Error err = args.Validate()) {
     return GetObjectRetentionResponse(err);
@@ -995,8 +993,7 @@ minio::s3::GetObjectRetentionResponse minio::s3::BaseClient::GetObjectRetention(
   return GetObjectRetentionResponse(response);
 }
 
-minio::s3::GetObjectTagsResponse minio::s3::BaseClient::GetObjectTags(
-    GetObjectTagsArgs args) {
+GetObjectTagsResponse BaseClient::GetObjectTags(GetObjectTagsArgs args) {
   if (error::Error err = args.Validate()) {
     return GetObjectTagsResponse(err);
   }
@@ -1024,8 +1021,8 @@ minio::s3::GetObjectTagsResponse minio::s3::BaseClient::GetObjectTags(
   return GetObjectTagsResponse(resp);
 }
 
-minio::s3::GetPresignedObjectUrlResponse
-minio::s3::BaseClient::GetPresignedObjectUrl(GetPresignedObjectUrlArgs args) {
+GetPresignedObjectUrlResponse BaseClient::GetPresignedObjectUrl(
+    GetPresignedObjectUrlArgs args) {
   if (error::Error err = args.Validate()) {
     return GetPresignedObjectUrlResponse(err);
   }
@@ -1068,8 +1065,8 @@ minio::s3::BaseClient::GetPresignedObjectUrl(GetPresignedObjectUrlArgs args) {
   return GetPresignedObjectUrlResponse(url.String());
 }
 
-minio::s3::GetPresignedPostFormDataResponse
-minio::s3::BaseClient::GetPresignedPostFormData(PostPolicy policy) {
+GetPresignedPostFormDataResponse BaseClient::GetPresignedPostFormData(
+    PostPolicy policy) {
   if (!policy) {
     return error::make<GetPresignedPostFormDataResponse>(
         "valid policy must be provided");
@@ -1097,8 +1094,7 @@ minio::s3::BaseClient::GetPresignedPostFormData(PostPolicy policy) {
   return GetPresignedPostFormDataResponse(data);
 }
 
-minio::s3::IsObjectLegalHoldEnabledResponse
-minio::s3::BaseClient::IsObjectLegalHoldEnabled(
+IsObjectLegalHoldEnabledResponse BaseClient::IsObjectLegalHoldEnabled(
     IsObjectLegalHoldEnabledArgs args) {
   if (error::Error err = args.Validate()) {
     return IsObjectLegalHoldEnabledResponse(err);
@@ -1138,8 +1134,7 @@ minio::s3::BaseClient::IsObjectLegalHoldEnabled(
   return IsObjectLegalHoldEnabledResponse(value == "ON");
 }
 
-minio::s3::ListBucketsResponse minio::s3::BaseClient::ListBuckets(
-    ListBucketsArgs args) {
+ListBucketsResponse BaseClient::ListBuckets(ListBucketsArgs args) {
   Request req(http::Method::kGet, base_url_.region, base_url_,
               args.extra_headers, args.extra_query_params);
   Response resp = Execute(req);
@@ -1149,12 +1144,11 @@ minio::s3::ListBucketsResponse minio::s3::BaseClient::ListBuckets(
   return ListBucketsResponse::ParseXML(resp.data);
 }
 
-minio::s3::ListBucketsResponse minio::s3::BaseClient::ListBuckets() {
+ListBucketsResponse BaseClient::ListBuckets() {
   return ListBuckets(ListBucketsArgs());
 }
 
-minio::s3::ListenBucketNotificationResponse
-minio::s3::BaseClient::ListenBucketNotification(
+ListenBucketNotificationResponse BaseClient::ListenBucketNotification(
     ListenBucketNotificationArgs args) {
   if (error::Error err = args.Validate()) {
     return ListenBucketNotificationResponse(err);
@@ -1202,7 +1196,7 @@ minio::s3::BaseClient::ListenBucketNotification(
       if (!json.contains("Records")) continue;
 
       nlohmann::json j_records = json["Records"];
-      std::list<minio::s3::NotificationRecord> records;
+      std::list<NotificationRecord> records;
       for (auto& j_record : j_records) {
         records.push_back(NotificationRecord::ParseJSON(j_record));
       }
@@ -1218,8 +1212,7 @@ minio::s3::BaseClient::ListenBucketNotification(
   return ListenBucketNotificationResponse(Execute(req));
 }
 
-minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectsV1(
-    ListObjectsV1Args args) {
+ListObjectsResponse BaseClient::ListObjectsV1(ListObjectsV1Args args) {
   if (error::Error err = args.Validate()) {
     return ListObjectsResponse(err);
   }
@@ -1246,8 +1239,7 @@ minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectsV1(
   return ListObjectsResponse::ParseXML(resp.data, false);
 }
 
-minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectsV2(
-    ListObjectsV2Args args) {
+ListObjectsResponse BaseClient::ListObjectsV2(ListObjectsV2Args args) {
   if (error::Error err = args.Validate()) {
     return ListObjectsResponse(err);
   }
@@ -1284,7 +1276,7 @@ minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectsV2(
   return ListObjectsResponse::ParseXML(resp.data, false);
 }
 
-minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectVersions(
+ListObjectsResponse BaseClient::ListObjectVersions(
     ListObjectVersionsArgs args) {
   if (error::Error err = args.Validate()) {
     return ListObjectsResponse(err);
@@ -1317,8 +1309,7 @@ minio::s3::ListObjectsResponse minio::s3::BaseClient::ListObjectVersions(
   return ListObjectsResponse::ParseXML(resp.data, true);
 }
 
-minio::s3::MakeBucketResponse minio::s3::BaseClient::MakeBucket(
-    MakeBucketArgs args) {
+MakeBucketResponse BaseClient::MakeBucket(MakeBucketArgs args) {
   if (error::Error err = args.Validate()) {
     return MakeBucketResponse(err);
   }
@@ -1359,8 +1350,7 @@ minio::s3::MakeBucketResponse minio::s3::BaseClient::MakeBucket(
   return MakeBucketResponse(resp);
 }
 
-minio::s3::PutObjectResponse minio::s3::BaseClient::PutObject(
-    PutObjectApiArgs args) {
+PutObjectResponse BaseClient::PutObject(PutObjectApiArgs args) {
   if (error::Error err = args.Validate()) {
     return PutObjectResponse(err);
   }
@@ -1393,8 +1383,7 @@ minio::s3::PutObjectResponse minio::s3::BaseClient::PutObject(
   return resp;
 }
 
-minio::s3::RemoveBucketResponse minio::s3::BaseClient::RemoveBucket(
-    RemoveBucketArgs args) {
+RemoveBucketResponse BaseClient::RemoveBucket(RemoveBucketArgs args) {
   if (error::Error err = args.Validate()) {
     return RemoveBucketResponse(err);
   }
@@ -1413,8 +1402,7 @@ minio::s3::RemoveBucketResponse minio::s3::BaseClient::RemoveBucket(
   return RemoveBucketResponse(Execute(req));
 }
 
-minio::s3::RemoveObjectResponse minio::s3::BaseClient::RemoveObject(
-    RemoveObjectArgs args) {
+RemoveObjectResponse BaseClient::RemoveObject(RemoveObjectArgs args) {
   if (error::Error err = args.Validate()) {
     return RemoveObjectResponse(err);
   }
@@ -1437,8 +1425,7 @@ minio::s3::RemoveObjectResponse minio::s3::BaseClient::RemoveObject(
   return RemoveObjectResponse(Execute(req));
 }
 
-minio::s3::RemoveObjectsResponse minio::s3::BaseClient::RemoveObjects(
-    RemoveObjectsApiArgs args) {
+RemoveObjectsResponse BaseClient::RemoveObjects(RemoveObjectsApiArgs args) {
   if (error::Error err = args.Validate()) {
     return RemoveObjectsResponse(err);
   }
@@ -1482,8 +1469,8 @@ minio::s3::RemoveObjectsResponse minio::s3::BaseClient::RemoveObjects(
   return RemoveObjectsResponse::ParseXML(response.data);
 }
 
-minio::s3::SelectObjectContentResponse
-minio::s3::BaseClient::SelectObjectContent(SelectObjectContentArgs args) {
+SelectObjectContentResponse BaseClient::SelectObjectContent(
+    SelectObjectContentArgs args) {
   if (error::Error err = args.Validate()) {
     return SelectObjectContentResponse(err);
   }
@@ -1517,8 +1504,8 @@ minio::s3::BaseClient::SelectObjectContent(SelectObjectContentArgs args) {
   return SelectObjectContentResponse(Execute(req));
 }
 
-minio::s3::SetBucketEncryptionResponse
-minio::s3::BaseClient::SetBucketEncryption(SetBucketEncryptionArgs args) {
+SetBucketEncryptionResponse BaseClient::SetBucketEncryption(
+    SetBucketEncryptionArgs args) {
   if (error::Error err = args.Validate()) {
     return SetBucketEncryptionResponse(err);
   }
@@ -1552,7 +1539,7 @@ minio::s3::BaseClient::SetBucketEncryption(SetBucketEncryptionArgs args) {
   return SetBucketEncryptionResponse(Execute(req));
 }
 
-minio::s3::SetBucketLifecycleResponse minio::s3::BaseClient::SetBucketLifecycle(
+SetBucketLifecycleResponse BaseClient::SetBucketLifecycle(
     SetBucketLifecycleArgs args) {
   if (error::Error err = args.Validate()) {
     return SetBucketLifecycleResponse(err);
@@ -1577,8 +1564,8 @@ minio::s3::SetBucketLifecycleResponse minio::s3::BaseClient::SetBucketLifecycle(
   return SetBucketLifecycleResponse(Execute(req));
 }
 
-minio::s3::SetBucketNotificationResponse
-minio::s3::BaseClient::SetBucketNotification(SetBucketNotificationArgs args) {
+SetBucketNotificationResponse BaseClient::SetBucketNotification(
+    SetBucketNotificationArgs args) {
   if (error::Error err = args.Validate()) {
     return SetBucketNotificationResponse(err);
   }
@@ -1602,8 +1589,7 @@ minio::s3::BaseClient::SetBucketNotification(SetBucketNotificationArgs args) {
   return SetBucketNotificationResponse(Execute(req));
 }
 
-minio::s3::SetBucketPolicyResponse minio::s3::BaseClient::SetBucketPolicy(
-    SetBucketPolicyArgs args) {
+SetBucketPolicyResponse BaseClient::SetBucketPolicy(SetBucketPolicyArgs args) {
   if (error::Error err = args.Validate()) {
     return SetBucketPolicyResponse(err);
   }
@@ -1625,8 +1611,8 @@ minio::s3::SetBucketPolicyResponse minio::s3::BaseClient::SetBucketPolicy(
   return SetBucketPolicyResponse(Execute(req));
 }
 
-minio::s3::SetBucketReplicationResponse
-minio::s3::BaseClient::SetBucketReplication(SetBucketReplicationArgs args) {
+SetBucketReplicationResponse BaseClient::SetBucketReplication(
+    SetBucketReplicationArgs args) {
   if (error::Error err = args.Validate()) {
     return SetBucketReplicationResponse(err);
   }
@@ -1650,8 +1636,7 @@ minio::s3::BaseClient::SetBucketReplication(SetBucketReplicationArgs args) {
   return SetBucketReplicationResponse(Execute(req));
 }
 
-minio::s3::SetBucketTagsResponse minio::s3::BaseClient::SetBucketTags(
-    SetBucketTagsArgs args) {
+SetBucketTagsResponse BaseClient::SetBucketTags(SetBucketTagsArgs args) {
   if (error::Error err = args.Validate()) {
     return SetBucketTagsResponse(err);
   }
@@ -1687,8 +1672,8 @@ minio::s3::SetBucketTagsResponse minio::s3::BaseClient::SetBucketTags(
   return SetBucketTagsResponse(Execute(req));
 }
 
-minio::s3::SetBucketVersioningResponse
-minio::s3::BaseClient::SetBucketVersioning(SetBucketVersioningArgs args) {
+SetBucketVersioningResponse BaseClient::SetBucketVersioning(
+    SetBucketVersioningArgs args) {
   if (error::Error err = args.Validate()) {
     return SetBucketVersioningResponse(err);
   }
@@ -1723,8 +1708,8 @@ minio::s3::BaseClient::SetBucketVersioning(SetBucketVersioningArgs args) {
   return SetBucketVersioningResponse(Execute(req));
 }
 
-minio::s3::SetObjectLockConfigResponse
-minio::s3::BaseClient::SetObjectLockConfig(SetObjectLockConfigArgs args) {
+SetObjectLockConfigResponse BaseClient::SetObjectLockConfig(
+    SetObjectLockConfigArgs args) {
   if (error::Error err = args.Validate()) {
     return SetObjectLockConfigResponse(err);
   }
@@ -1769,7 +1754,7 @@ minio::s3::BaseClient::SetObjectLockConfig(SetObjectLockConfigArgs args) {
   return SetObjectLockConfigResponse(Execute(req));
 }
 
-minio::s3::SetObjectRetentionResponse minio::s3::BaseClient::SetObjectRetention(
+SetObjectRetentionResponse BaseClient::SetObjectRetention(
     SetObjectRetentionArgs args) {
   if (error::Error err = args.Validate()) {
     return SetObjectRetentionResponse(err);
@@ -1804,8 +1789,7 @@ minio::s3::SetObjectRetentionResponse minio::s3::BaseClient::SetObjectRetention(
   return SetObjectRetentionResponse(Execute(req));
 }
 
-minio::s3::SetObjectTagsResponse minio::s3::BaseClient::SetObjectTags(
-    SetObjectTagsArgs args) {
+SetObjectTagsResponse BaseClient::SetObjectTags(SetObjectTagsArgs args) {
   if (error::Error err = args.Validate()) {
     return SetObjectTagsResponse(err);
   }
@@ -1845,8 +1829,7 @@ minio::s3::SetObjectTagsResponse minio::s3::BaseClient::SetObjectTags(
   return SetObjectTagsResponse(Execute(req));
 }
 
-minio::s3::StatObjectResponse minio::s3::BaseClient::StatObject(
-    StatObjectArgs args) {
+StatObjectResponse BaseClient::StatObject(StatObjectArgs args) {
   if (error::Error err = args.Validate()) {
     return StatObjectResponse(err);
   }
@@ -1920,8 +1903,7 @@ minio::s3::StatObjectResponse minio::s3::BaseClient::StatObject(
   return resp;
 }
 
-minio::s3::UploadPartResponse minio::s3::BaseClient::UploadPart(
-    UploadPartArgs args) {
+UploadPartResponse BaseClient::UploadPart(UploadPartArgs args) {
   if (error::Error err = args.Validate()) {
     return UploadPartResponse(err);
   }
@@ -1944,8 +1926,7 @@ minio::s3::UploadPartResponse minio::s3::BaseClient::UploadPart(
   return UploadPartResponse(PutObject(api_args));
 }
 
-minio::s3::UploadPartCopyResponse minio::s3::BaseClient::UploadPartCopy(
-    UploadPartCopyArgs args) {
+UploadPartCopyResponse BaseClient::UploadPartCopy(UploadPartCopyArgs args) {
   if (error::Error err = args.Validate()) {
     return UploadPartCopyResponse(err);
   }
@@ -1975,3 +1956,5 @@ minio::s3::UploadPartCopyResponse minio::s3::BaseClient::UploadPartCopy(
 
   return resp;
 }
+
+}  // namespace minio::s3

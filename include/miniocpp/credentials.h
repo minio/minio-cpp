@@ -24,8 +24,7 @@
 #include "error.h"
 #include "utils.h"
 
-namespace minio {
-namespace creds {
+namespace minio::creds {
 
 bool expired(const utils::UtcTime& expiration);
 
@@ -76,7 +75,6 @@ struct Credentials {
   static Credentials ParseXML(std::string_view data, const std::string& root);
 };  // class Credentials
 
-}  // namespace creds
-}  // namespace minio
+}  // namespace minio::creds
 
 #endif  // MINIO_CPP_CREDENTIALS_H_INCLUDED
