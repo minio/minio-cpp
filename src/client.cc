@@ -484,21 +484,21 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
           [&object_size = object_size, &uploaded_bytes = uploaded_bytes,
            &upload_speed = upload_speed, &progressfunc = args.progressfunc,
            &progress_userdata = args.progress_userdata](
-              http::ProgressFunctionArgs args) -> void {
+              http::ProgressFunctionArgs args) -> bool {
         if (args.upload_speed > 0) {
           if (upload_speed == -1) {
             upload_speed = args.upload_speed;
           } else {
             upload_speed = (upload_speed + args.upload_speed) / 2;
           }
-          return;
+          return true;
         }
 
         http::ProgressFunctionArgs actual_args;
         actual_args.upload_total_bytes = static_cast<double>(object_size);
         actual_args.uploaded_bytes = uploaded_bytes + args.uploaded_bytes;
         actual_args.userdata = progress_userdata;
-        progressfunc(actual_args);
+        return progressfunc(actual_args);
       };
     }
     if (args.sse != nullptr) {
@@ -514,7 +514,10 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
         actual_args.upload_total_bytes = static_cast<double>(object_size);
         actual_args.uploaded_bytes = uploaded_bytes;
         actual_args.userdata = args.progress_userdata;
-        args.progressfunc(actual_args);
+        if (!args.progressfunc(actual_args)) {
+          return UploadPartResponse(
+              error::Error("aborted by progress function"));
+        }
       }
       parts.push_back(Part(part_number, std::move(resp.etag)));
     } else {
@@ -533,6 +536,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
     http::ProgressFunctionArgs actual_args;
     actual_args.upload_speed = upload_speed;
     actual_args.userdata = args.progress_userdata;
+    // ignore the return value as we completed the upload
     args.progressfunc(actual_args);
   }
   return PutObjectResponse(resp);
@@ -792,6 +796,8 @@ UploadObjectResponse Client::UploadObject(UploadObjectArgs args) {
   po_args.retention = std::move(args.retention);
   po_args.legal_hold = std::move(args.legal_hold);
   po_args.content_type = std::move(args.content_type);
+  po_args.progressfunc = std::move(args.progressfunc);
+  po_args.progress_userdata = std::move(args.progress_userdata);
 
   PutObjectResponse resp = PutObject(std::move(po_args));
   file.close();
