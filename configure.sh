@@ -3,7 +3,6 @@
 BUILD_OPTIONS="-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
 
 if [ -n "$VCPKG_ROOT" ]; then
-  $VCPKG_ROOT/vcpkg install
   BUILD_OPTIONS="${BUILD_OPTIONS} -DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
 fi
 

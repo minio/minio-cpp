@@ -31,6 +31,30 @@ Typically `minio-cpp` will be part of dependencies specified in `vcpkg.json` fil
 }
 ```
 
+## Using `minio-cpp` with cmake
+
+MinIO C++ cliend SDK can be consumed as a dependency in CMakeLists.txt, the following can be used as an example:
+
+```cmake
+cmake_minimum_required(VERSION 3.10)
+
+project(miniocpp_example LANGUAGES C CXX)
+
+# This will try to find miniocpp package and all its dependencies.
+find_package(miniocpp REQUIRED)
+
+# Create an executable called miniocpp-example:
+add_executable(miniocpp-example example.cpp)
+
+# Link the executable to miniocpp and all its dependencies:
+target_link_libraries(miniocpp-example PRIVATE miniocpp::miniocpp)
+
+# Make sure you are using at least C++17:
+target_compile_features(miniocpp-example PUBLIC cxx_std_17)
+```
+
+Note that `miniocpp::miniocpp` is a cmake imported target, which contains all the instructions necessary to use `minio-cpp` library from your cmake projet file.
+
 ## Hacking minio-cpp
 
 In order to run minio-cpp tests and examples, you can do the following assuming `VCPKG_ROOT` points to a valid `vcpkg` installation:
