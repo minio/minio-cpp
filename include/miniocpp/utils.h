@@ -120,6 +120,7 @@ class UtcTime {
 
   static std::tm auxLocaltime(const std::time_t& time);
   std::tm getBrokenDownTime() const { return auxLocaltime(secs_); }
+  static std::time_t toUtcSeconds(const std::time_t time);
 
  public:
   UtcTime() = default;

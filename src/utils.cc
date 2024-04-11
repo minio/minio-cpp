@@ -333,20 +333,29 @@ std::tm UtcTime::auxLocaltime(const std::time_t& time) {
   return result;
 }
 
+std::time_t UtcTime::toUtcSeconds(const std::time_t secs_local) {
+  std::tm result{};
+#ifdef _WIN32
+  gmtime_s(&result, &secs_local);
+#else
+  gmtime_r(&secs_local, &result);
+#endif
+  result.tm_isdst = -1;
+  return std::mktime(&result);
+}
+
 UtcTime UtcTime::Now() {
   auto usec_now = std::chrono::system_clock::now().time_since_epoch() /
                   std::chrono::microseconds(1);
-  auto secs_local = static_cast<time_t>(usec_now / 1000000);
-  auto secs_utc = std::mktime(std::gmtime(&secs_local));
-  return UtcTime(secs_utc, static_cast<long>(usec_now % 1000000));
+  return UtcTime(toUtcSeconds(static_cast<time_t>(usec_now / 1000000)),
+                 static_cast<long>(usec_now % 1000000));
 }
 
 void UtcTime::ToLocalTime(std::tm& time) {
   auto usec_now = std::chrono::system_clock::now().time_since_epoch() /
                   std::chrono::microseconds(1);
   auto secs_local = static_cast<time_t>(usec_now / 1000000);
-  auto secs_utc = std::mktime(std::gmtime(&secs_local));
-  auto secs = secs_ + (secs_local - secs_utc);
+  auto secs = secs_ + (secs_local - toUtcSeconds(secs_local));
   time = auxLocaltime(secs);
 }
 
@@ -416,7 +425,11 @@ UtcTime UtcTime::FromISO8601UTC(const char* value) {
   std::time_t secs = std::mktime(&t);
 
   unsigned long ul = 0;
+#ifdef _WIN32
+  static_cast<void>(sscanf_s(rv, ".%lu", &ul));
+#else
   static_cast<void>(sscanf(rv, ".%lu", &ul));
+#endif
   long usecs = (long)ul;
 
   return UtcTime(secs, usecs);
