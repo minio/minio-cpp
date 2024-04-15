@@ -570,9 +570,7 @@ struct PostPolicy {
 
   ~PostPolicy() = default;
 
-  explicit operator bool() const {
-    return !bucket.empty() && (bool)expiration_;
-  }
+explicit operator bool() const { return !bucket.empty() && expiration_; }
 
   error::Error AddEqualsCondition(std::string element, std::string value);
   error::Error RemoveEqualsCondition(std::string element);
