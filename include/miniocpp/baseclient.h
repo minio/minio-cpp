@@ -31,6 +31,12 @@
 #include "response.h"
 #include "utils.h"
 
+#if defined(_WIN32) && defined(GetObject)
+#pragma push_macro("GetObject")
+#undef GetObject
+#define MINIO_CPP_GET_OBJECT_DEFINED
+#endif
+
 namespace minio::s3 {
 
 utils::Multimap GetCommonListObjectsQueryParams(
@@ -150,8 +156,31 @@ class BaseClient {
   StatObjectResponse StatObject(StatObjectArgs args);
   UploadPartResponse UploadPart(UploadPartArgs args);
   UploadPartCopyResponse UploadPartCopy(UploadPartCopyArgs args);
+
+  // Windows API fix:
+  //
+  // Windows API headers define `GetObject()` as a macro that expands to either
+  // `GetObjectA()` or `GetObjectW()`. This means that users can get link errors
+  // in case that one compilation unit used `GetObject()` macro and other
+  // didn't. This fixes the issue by providing both functions `GetObject()` can
+  // expand to as inline wrappers.
+#if defined(_WIN32)
+  inline GetObjectResponse GetObjectA(const GetObjectArgs& args) {
+    return GetObject(args);
+  }
+
+  inline GetObjectResponse GetObjectW(const GetObjectArgs& args) {
+    return GetObject(args);
+  }
+#endif  // _WIN32
+
 };  // class BaseClient
 
 }  // namespace minio::s3
+
+#if defined(_WIN32) && defined(MINIO_CPP_GET_OBJECT_DEFINED)
+#undef MINIO_CPP_GET_OBJECT_DEFINED
+#pragma pop_macro("GetObject")
+#endif
 
 #endif  // MINIO_CPP_BASECLIENT_H_INCLUDED
