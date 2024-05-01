@@ -326,14 +326,14 @@ ComposeObjectResponse Client::ComposeObject(ComposeObjectArgs args,
       while (size > 0) {
         part_number++;
 
-        size_t start_bytes = offset;
-        size_t end_bytes = start_bytes + utils::kMaxPartSize;
-        if (size < utils::kMaxPartSize) end_bytes = start_bytes + size;
+        size_t length = size;
+        if (length > utils::kMaxPartSize) length = utils::kMaxPartSize;
+        size_t end_bytes = offset + length - 1;
 
         utils::Multimap headerscopy;
         headerscopy.AddAll(headers);
         headerscopy.Add("x-amz-copy-source-range",
-                        "bytes=" + std::to_string(start_bytes) + "-" +
+                        "bytes=" + std::to_string(offset) + "-" +
                             std::to_string(end_bytes));
 
         UploadPartCopyArgs upc_args;
@@ -350,8 +350,8 @@ ComposeObjectResponse Client::ComposeObject(ComposeObjectArgs args,
           }
           parts.push_back(Part(part_number, std::move(resp.etag)));
         }
-        offset = start_bytes;
-        size -= (end_bytes - start_bytes);
+        offset += length;
+        size -= length;
       }
     }
   }
