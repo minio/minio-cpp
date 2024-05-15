@@ -16,39 +16,6 @@ permissions:
   contents: read
 
 jobs:
-  coding-style:
-    name: "Coding Style & Version Check"
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout minio-cpp
-      uses: actions/checkout@v4
-      with:
-        path: "minio-cpp"
-
-    - name: "Python"
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.x"
-
-    - name: Install dependencies if Ubuntu
-      run: |
-        wget --quiet -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-        echo 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-18 main' | sudo tee -a /etc/apt/sources.list
-        sudo apt-get -qy update
-        sudo apt-get -qy install clang-format-18
-        clang-format-18 --version
-
-    - name: Version Check
-      shell: bash
-      working-directory: minio-cpp
-      run: python check-version.py
-
-    - name: Coding Style Check
-      shell: bash
-      working-directory: minio-cpp
-      run: CLANG_FORMAT=clang-format-18 ./check-style.sh
-
   build:
     strategy:
       fail-fast: false

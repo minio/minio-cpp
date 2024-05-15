@@ -1,0 +1,47 @@
+name: Linters
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# This ensures that previous jobs for the PR are canceled when the PR is
+# updated.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  coding-style:
+    name: "Coding Style & Version Check"
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: Checkout minio-cpp
+      uses: actions/checkout@v4
+      with:
+        path: "minio-cpp"
+
+    - name: "Python"
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.x"
+
+    - name: Install dependencies
+      run: |
+        sudo apt -qy install clang-format-18
+        clang-format-18 --version
+
+    - name: Version Check
+      shell: bash
+      working-directory: minio-cpp
+      run: python check-version.py
+
+    - name: Coding Style Check
+      shell: bash
+      working-directory: minio-cpp
+      run: CLANG_FORMAT=clang-format-18 ./check-style.sh
