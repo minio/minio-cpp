@@ -15,6 +15,11 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#ifdef _WIN32
+#define UNICODE
+#include <windows.h>  // To Test https://github.com/minio/minio-cpp/issues/134
+#endif
+
 #include <miniocpp/args.h>
 #include <miniocpp/client.h>
 #include <miniocpp/http.h>
