@@ -165,7 +165,7 @@ utils::Multimap SignV4STS(http::Method method, const std::string& uri,
 
 utils::Multimap PresignV4(http::Method method, const std::string& host,
                           const std::string& uri, const std::string& region,
-                          utils::Multimap query_params,
+                          utils::Multimap& query_params,
                           const std::string& access_key,
                           const std::string& secret_key,
                           const utils::UtcTime& date, unsigned int expires) {
