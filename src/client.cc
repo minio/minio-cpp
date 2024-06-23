@@ -777,7 +777,7 @@ UploadObjectResponse Client::UploadObject(UploadObjectArgs args) {
   std::ifstream file;
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   try {
-    file.open(args.filename, args.openmode);
+    file.open(args.filename);
   } catch (std::system_error& err) {
     return error::make<UploadObjectResponse>(
         "unable to open file " + args.filename + "; " + err.code().message());
