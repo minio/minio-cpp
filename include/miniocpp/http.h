@@ -112,6 +112,7 @@ struct Request {
   ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
   bool debug = false;
+  timeval* timeout_val = nullptr;
   bool ignore_cert_check = false;
   std::string ssl_cert_file;
   std::string key_file;

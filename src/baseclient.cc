@@ -210,6 +210,7 @@ Response BaseClient::execute(Request& req) {
   if (!ssl_cert_file_.empty()) req.ssl_cert_file = ssl_cert_file_;
   http::Request request = req.ToHttpRequest(provider_);
   request.debug = debug_;
+  request.timeout_val = timeout_val_;
   http::Response response = request.Execute();
   if (response) {
     Response resp;

@@ -439,9 +439,12 @@ Response Request::execute() {
 
     requests.fdset(&fdread, &fdwrite, &fdexcep, &maxfd);
 
-    if (select(maxfd + 1, &fdread, &fdwrite, &fdexcep, nullptr) < 0) {
+    int select_res = select(maxfd + 1, &fdread, &fdwrite, &fdexcep, timeout_val);
+    if (select_res < 0) {
       std::cerr << "select() failed; this should not happen" << std::endl;
       std::terminate();
+    } else if (select_res == 0) {
+      //break?
     }
     while (!requests.perform(&left)) {
     }

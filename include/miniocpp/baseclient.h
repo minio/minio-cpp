@@ -46,6 +46,7 @@ class BaseClient {
   creds::Provider* const provider_ = nullptr;
   std::map<std::string, std::string> region_map_;
   bool debug_ = false;
+  timeval* timeout_val_ = nullptr;
   bool ignore_cert_check_ = false;
   std::string ssl_cert_file_;
   std::string user_agent_ = DEFAULT_USER_AGENT;
@@ -57,6 +58,8 @@ class BaseClient {
   virtual ~BaseClient() = default;
 
   void Debug(bool flag) { debug_ = flag; }
+
+  void Timeout(timeval* timeout_val) { timeout_val_ = timeout_val; }
 
   void IgnoreCertCheck(bool flag) { ignore_cert_check_ = flag; }
 
