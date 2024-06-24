@@ -780,8 +780,9 @@ UploadObjectResponse Client::UploadObject(UploadObjectArgs args) {
   try {
     file.open(args.filename);
   } catch (std::system_error& err) {
-    return error::make<UploadObjectResponse>(
-        "unable to open file " + args.filename.u8string() + "; " + err.code().message());
+    return error::make<UploadObjectResponse>("unable to open file " +
+                                             args.filename.u8string() + "; " +
+                                             err.code().message());
   }
 
   PutObjectArgs po_args(file, args.object_size, 0);
