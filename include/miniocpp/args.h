@@ -23,6 +23,7 @@
 #include <map>
 #include <string>
 #include <type_traits>
+#include <filesystem>
 
 #include "error.h"
 #include "http.h"
@@ -192,7 +193,7 @@ using StatObjectArgs = ObjectConditionalReadArgs;
 using RemoveObjectArgs = ObjectVersionArgs;
 
 struct DownloadObjectArgs : public ObjectReadArgs {
-  std::string filename;
+  std::filesystem::path filename;
   bool overwrite;
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
@@ -359,7 +360,7 @@ struct ComposeObjectArgs : public ObjectWriteArgs {
 };  // struct ComposeObjectArgs
 
 struct UploadObjectArgs : public PutObjectBaseArgs {
-  std::string filename;
+  std::filesystem::path filename;
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
 

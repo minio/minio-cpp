@@ -697,12 +697,13 @@ DownloadObjectResponse Client::DownloadObject(DownloadObjectArgs args) {
     etag = resp.etag;
   }
 
-  std::string temp_filename =
-      args.filename + "." + curlpp::escape(etag) + ".part.minio";
+  std::filesystem::path temp_filename = args.filename;
+  temp_filename.concat("." + curlpp::escape(etag) + ".part.minio");
+
   std::ofstream fout(temp_filename, std::ios::trunc | std::ios::out);
   if (!fout.is_open()) {
     return error::make<DownloadObjectResponse>("unable to open file " +
-                                               temp_filename);
+                                               temp_filename.u8string());
   }
 
   std::string region;
@@ -780,7 +781,7 @@ UploadObjectResponse Client::UploadObject(UploadObjectArgs args) {
     file.open(args.filename);
   } catch (std::system_error& err) {
     return error::make<UploadObjectResponse>(
-        "unable to open file " + args.filename + "; " + err.code().message());
+        "unable to open file " + args.filename.u8string() + "; " + err.code().message());
   }
 
   PutObjectArgs po_args(file, args.object_size, 0);
