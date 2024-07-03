@@ -43,6 +43,11 @@
 #include "miniocpp/types.h"
 #include "miniocpp/utils.h"
 
+// We want exactly `minio::s3::BaseClient::GetObject()` symbol and nothing else.
+#if defined(GetObject)
+#undef GetObject
+#endif
+
 namespace minio::s3 {
 
 utils::Multimap GetCommonListObjectsQueryParams(
