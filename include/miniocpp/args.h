@@ -360,6 +360,7 @@ struct ComposeObjectArgs : public ObjectWriteArgs {
 
 struct UploadObjectArgs : public PutObjectBaseArgs {
   std::string filename;
+  std::ios_base::openmode openmode = std::ios_base::in;
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
 
