@@ -524,7 +524,7 @@ void Multimap::GetCanonicalHeaders(std::string& signed_headers,
     std::string value;
     for (const auto& v : values) {
       if (!value.empty()) value += ",";
-      value += std::regex_replace(v, MULTI_SPACE_REGEX, " ");
+      value += utils::Trim(std::regex_replace(v, MULTI_SPACE_REGEX, " "));
     }
 
     map[key] = value;
