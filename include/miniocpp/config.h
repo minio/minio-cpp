@@ -22,7 +22,7 @@
 #define MINIO_CPP_TO_STRING(x) MINIO_CPP_STRINGIFY(x)
 
 #define MINIO_CPP_MAJOR_VERSION 0
-#define MINIO_CPP_MINOR_VERSION 2
+#define MINIO_CPP_MINOR_VERSION 3
 #define MINIO_CPP_PATCH_VERSION 0
 
 #define MINIO_CPP_VERSION                                                  \
