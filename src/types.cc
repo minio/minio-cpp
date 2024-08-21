@@ -567,7 +567,7 @@ std::string LifecycleConfig::ToXML() const {
       ss << "<NoncurrentVersionTransition>";
       if (rule.noncurrent_version_transition_noncurrent_days) {
         ss << "<NoncurrentDays>"
-           << rule.noncurrent_version_expiration_noncurrent_days
+           << rule.noncurrent_version_transition_noncurrent_days
            << "</NoncurrentDays>";
       }
       if (!rule.noncurrent_version_transition_storage_class.empty()) {
