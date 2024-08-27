@@ -97,7 +97,7 @@ error::Error getAwsInfo(const std::string& host, bool https,
 
   std::smatch match;
   std::regex_search(host, match, AWS_S3_PREFIX_REGEX);
-  aws_s3_prefix = host.substr(static_cast<size_t>(match.length()));
+  aws_s3_prefix = host.substr(0, static_cast<size_t>(match.length()));
 
   if (utils::Contains(aws_s3_prefix, "s3-accesspoint") && !https) {
     return error::Error("use HTTPS scheme for host " + host);
