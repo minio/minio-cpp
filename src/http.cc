@@ -140,18 +140,22 @@ Url Url::Parse(std::string value) {
   unsigned int port = 0;
   struct sockaddr_in6 dst;
   if (inet_pton(AF_INET6, host.c_str(), &(dst.sin6_addr)) <= 0) {
-    if (host.front() != '[' || host.back() != ']') {
+    if ((host.front() != '[' || host.back() != ']') && utils::Contains(host, ':')) {
       std::stringstream ss(host);
       std::string portstr;
       while (std::getline(ss, portstr, ':')) {
       }
 
       if (!portstr.empty()) {
-        try {
-          port = static_cast<unsigned>(std::stoi(portstr));
+        char* str_end{};
+        const long l = std::strtol(portstr.c_str(), &str_end, 10);
+        size_t length = std::distance(portstr.c_str(), const_cast<const char*>(str_end));
+        if (length == portstr.size()) {
+          if (l < 1 || l > 65535) {
+            return Url{};
+          }
+          port = static_cast<int>(l);
           host = host.substr(0, host.rfind(":" + portstr));
-        } catch (const std::invalid_argument&) {
-          port = 0;
         }
       }
     }
