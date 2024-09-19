@@ -115,7 +115,18 @@ set(MINIO_CPP_HEADERS
   include/miniocpp/utils.h
 )
 
-add_library(miniocpp STATIC ${MINIO_CPP_SOURCES} ${MINIO_CPP_HEADERS})
+option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
+
+IF (BUILD_SHARED_LIBS)
+  IF (WIN32)
+    message(FATAL_ERROR "Unable to build shared library on Windows yet, this library lacks decorator support.")
+  ELSE ()
+    add_library(miniocpp SHARED ${MINIO_CPP_SOURCES} ${MINIO_CPP_HEADERS})
+  ENDIF ()
+ELSE ()
+  add_library(miniocpp STATIC ${MINIO_CPP_SOURCES} ${MINIO_CPP_HEADERS})
+ENDIF ()
+
 target_compile_options(miniocpp PRIVATE ${MINIO_CPP_CFLAGS})
 target_compile_features(miniocpp PUBLIC cxx_std_${MINIO_CPP_STD})
 target_include_directories(miniocpp PUBLIC
