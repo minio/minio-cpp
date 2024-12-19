@@ -854,11 +854,11 @@ GetBucketVersioningResponse BaseClient::GetBucketVersioning(
 
   pugi::xpath_node text;
 
-  if (!root.node().select_node("Status")) {
+  if (root.node().select_node("Status")) {
     text = root.node().select_node("Status/text()");
     response.status = (strcmp(text.node().value(), "Enabled") == 0);
   }
-  if (!root.node().select_node("MFADelete")) {
+  if (root.node().select_node("MFADelete")) {
     text = root.node().select_node("MFADelete/text()");
     response.mfa_delete = (strcmp(text.node().value(), "Enabled") == 0);
   }
