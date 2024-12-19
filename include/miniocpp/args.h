@@ -18,6 +18,7 @@
 #ifndef MINIO_CPP_ARGS_H_INCLUDED
 #define MINIO_CPP_ARGS_H_INCLUDED
 
+#include <filesystem>
 #include <functional>
 #include <list>
 #include <map>
@@ -192,7 +193,7 @@ using StatObjectArgs = ObjectConditionalReadArgs;
 using RemoveObjectArgs = ObjectVersionArgs;
 
 struct DownloadObjectArgs : public ObjectReadArgs {
-  std::string filename;
+  std::filesystem::path filename;
   bool overwrite;
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
@@ -359,7 +360,7 @@ struct ComposeObjectArgs : public ObjectWriteArgs {
 };  // struct ComposeObjectArgs
 
 struct UploadObjectArgs : public PutObjectBaseArgs {
-  std::string filename;
+  std::filesystem::path filename;
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
 
