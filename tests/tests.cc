@@ -461,9 +461,7 @@ class Tests {
       std::string object_name = RandObjectName();
       std::string data = "PutObject()";
       std::stringstream ss(data);
-      minio::s3::PutObjectArgs args(
-          ss, static_cast<long>(data.length()),
-          0);  // PWTODO: PutObjectArgs should accept size_t instead of long
+      minio::s3::PutObjectArgs args(ss, data.length(), 0);
       args.bucket = bucket_name_;
       args.object = object_name;
       minio::s3::PutObjectResponse resp = client_.PutObject(args);
@@ -475,15 +473,18 @@ class Tests {
 
     {
       std::string object_name = RandObjectName();
-      size_t size = 13930573;
+      size_t size = 67108865;  // (64MiB + 1) bytes
       RandCharStream stream(size);
-      minio::s3::PutObjectArgs args(stream, static_cast<long>(size), 0);
+      minio::s3::PutObjectArgs args(stream, size, 0);
       args.bucket = bucket_name_;
       args.object = object_name;
       minio::s3::PutObjectResponse resp = client_.PutObject(args);
       if (!resp) {
         throw std::runtime_error("<Multipart> PutObject(): " +
                                  resp.Error().String());
+      }
+      if (resp.etag == "") {
+        throw std::runtime_error("<Multipart> PutObject(): etag is missing");
       }
       RemoveObject(bucket_name_, object_name);
     }

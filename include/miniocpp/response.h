@@ -153,6 +153,10 @@ struct CompleteMultipartUploadResponse : public Response {
   std::string location;
   std::string etag;
   std::string version_id;
+  std::string checksumCRC32;
+  std::string checksumCRC32C;
+  std::string checksumSHA1;
+  std::string checksumSHA256;
 
   CompleteMultipartUploadResponse() = default;
 
