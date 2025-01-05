@@ -1384,6 +1384,10 @@ PutObjectResponse BaseClient::PutObject(PutObjectApiArgs args) {
   PutObjectResponse resp;
   resp.etag = utils::Trim(response.headers.GetFront("etag"), '"');
   resp.version_id = response.headers.GetFront("x-amz-version-id");
+  resp.checksumCRC32 = response.headers.GetFront("x-amz-checksum-crc32");
+  resp.checksumCRC32C = response.headers.GetFront("x-amz-checksum-crc32c");
+  resp.checksumSHA1 = response.headers.GetFront("x-amz-checksum-sha1");
+  resp.checksumSHA256 = response.headers.GetFront("x-amz-checksum-sha256");
 
   return resp;
 }
