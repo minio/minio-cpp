@@ -123,8 +123,7 @@ CompleteMultipartUploadResponse CompleteMultipartUploadResponse::ParseXML(
   if (!result) {
     return error::make<CompleteMultipartUploadResponse>("unable to parse XML");
   }
-  auto root = xdoc.select_node("/CompleteMultipartUploadOutput");
-
+  auto root = xdoc.select_node("/CompleteMultipartUploadResult");
   pugi::xpath_node text;
 
   text = root.node().select_node("Bucket/text()");
@@ -138,6 +137,18 @@ CompleteMultipartUploadResponse CompleteMultipartUploadResponse::ParseXML(
 
   text = root.node().select_node("ETag/text()");
   resp.etag = utils::Trim(text.node().value(), '"');
+
+  text = root.node().select_node("ChecksumCRC32/text()");
+  resp.checksumCRC32 = text.node().value();
+
+  text = root.node().select_node("ChecksumCRC32/text()");
+  resp.checksumCRC32C = text.node().value();
+
+  text = root.node().select_node("ChecksumSHA1/text()");
+  resp.checksumSHA1 = text.node().value();
+
+  text = root.node().select_node("ChecksumSHA256/text()");
+  resp.checksumSHA256 = text.node().value();
 
   resp.version_id = version_id;
 
