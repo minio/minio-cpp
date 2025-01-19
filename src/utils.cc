@@ -24,6 +24,10 @@
 #include <corecrt.h>
 #endif
 
+#ifndef _MSC_VER
+#include <unistd.h>
+#endif
+
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 #include <openssl/crypto.h>
