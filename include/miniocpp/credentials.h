@@ -69,7 +69,7 @@ struct Credentials {
   bool IsExpired() const { return expired(expiration); }
 
   explicit operator bool() const {
-    return !err && !access_key.empty() && expired(expiration);
+    return !err && !access_key.empty() && !expired(expiration);
   }
 
   static Credentials ParseXML(std::string_view data, const std::string& root);
