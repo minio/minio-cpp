@@ -894,7 +894,7 @@ GetObjectResponse BaseClient::GetObject(GetObjectArgs args) {
   req.userdata = args.userdata;
   req.progressfunc = args.progressfunc;
   req.progress_userdata = args.progress_userdata;
-  if (args.ssec != nullptr) req.headers.AddAll(args.ssec->Headers());
+  req.headers.AddAll(args.Headers());
 
   return GetObjectResponse(Execute(req));
 }
