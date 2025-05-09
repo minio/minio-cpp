@@ -69,6 +69,9 @@ std::string Trim(std::string_view str, char ch = ' ');
 // whitespaces.
 bool CheckNonEmptyString(std::string_view str);
 
+// Replace all occurrences of pattern with replacement
+void ReplaceAll(std::string& str, std::string_view pattern, std::string_view replacement);
+
 // ToLower converts string to lower case.
 std::string ToLower(const std::string& str);
 

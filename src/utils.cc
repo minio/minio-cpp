@@ -160,7 +160,15 @@ std::string Trim(std::string_view str, char ch) {
 bool CheckNonEmptyString(std::string_view str) {
   return !str.empty() && Trim(str) == str;
 }
-
+void ReplaceAll(std::string& str, std::string_view pattern, std::string_view replacement){
+  size_t start{0};
+  while ((start = str.find(pattern, start)) !=
+         std::string::npos)
+  {
+    str.replace(start, pattern.length(), replacement);
+    start += replacement.length();
+  }
+}
 std::string ToLower(const std::string& str) {
   std::string s(str);
   std::transform(s.begin(), s.end(), s.begin(), ::tolower);
