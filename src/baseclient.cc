@@ -1459,8 +1459,7 @@ RemoveObjectsResponse BaseClient::RemoveObjects(RemoveObjectsApiArgs args) {
   if (args.quiet) ss << "<Quiet>true</Quiet>";
   for (auto& object : args.objects) {
     ss << "<Object>";
-    utils::ReplaceAll(object.name,"&","&amp;");
-    ss << "<Key>" << object.name << "</Key>";
+    ss << "<Key>" << utils::XMLEncode(object.name) << "</Key>";
     if (!object.version_id.empty()) {
       ss << "<VersionId>" << object.version_id << "</VersionId>";
     }

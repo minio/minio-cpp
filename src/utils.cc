@@ -62,6 +62,7 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+#include <pugixml.hpp>
 
 namespace minio::utils {
 
@@ -160,15 +161,7 @@ std::string Trim(std::string_view str, char ch) {
 bool CheckNonEmptyString(std::string_view str) {
   return !str.empty() && Trim(str) == str;
 }
-void ReplaceAll(std::string& str, std::string_view pattern, std::string_view replacement){
-  size_t start{0};
-  while ((start = str.find(pattern, start)) !=
-         std::string::npos)
-  {
-    str.replace(start, pattern.length(), replacement);
-    start += replacement.length();
-  }
-}
+
 std::string ToLower(const std::string& str) {
   std::string s(str);
   std::transform(s.begin(), s.end(), s.begin(), ::tolower);
@@ -228,6 +221,14 @@ std::string EncodePath(const std::string& path) {
   if (*(path.end() - 1) == '/' && out != "/") out += "/";
 
   return out;
+}
+
+std::string XMLEncode(const std::string& value) {
+  pugi::xml_document doc;
+  doc.append_child(pugi::node_pcdata).set_value(value);
+  std::ostringstream out;
+  doc.print(out);
+  return out.str();
 }
 
 std::string Sha256Hash(std::string_view str) {

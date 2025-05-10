@@ -69,9 +69,6 @@ std::string Trim(std::string_view str, char ch = ' ');
 // whitespaces.
 bool CheckNonEmptyString(std::string_view str);
 
-// Replace all occurrences of pattern with replacement
-void ReplaceAll(std::string& str, std::string_view pattern, std::string_view replacement);
-
 // ToLower converts string to lower case.
 std::string ToLower(const std::string& str);
 
@@ -97,6 +94,9 @@ std::string Join(const std::vector<std::string>& values,
 
 // EncodePath does URL encoding of path. It also normalizes multiple slashes.
 std::string EncodePath(const std::string& path);
+
+// XMLEncode does XML encoding of value.
+std::string XMLEncode(const std::string& value);
 
 // Sha256hash computes SHA-256 of data and return hash as hex encoded value.
 std::string Sha256Hash(std::string_view str);
