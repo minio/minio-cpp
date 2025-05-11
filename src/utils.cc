@@ -56,13 +56,13 @@
 #include <map>
 #include <memory>
 #include <ostream>
+#include <pugixml.hpp>
 #include <regex>
 #include <sstream>
 #include <streambuf>
 #include <string>
 #include <type_traits>
 #include <vector>
-#include <pugixml.hpp>
 
 namespace minio::utils {
 
