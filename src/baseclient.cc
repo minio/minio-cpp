@@ -43,8 +43,6 @@
 #include "miniocpp/types.h"
 #include "miniocpp/utils.h"
 
-#include <iostream>
-
 // We want exactly `minio::s3::BaseClient::GetObject()` symbol and nothing else.
 #if defined(GetObject)
 #undef GetObject
@@ -329,7 +327,6 @@ AbortMultipartUploadResponse BaseClient::AbortMultipartUpload(
 }
 
 BucketExistsResponse BaseClient::BucketExists(BucketExistsArgs args) {
-  std::cout << "BaseClient::BucketExists" << std::endl;
   if (error::Error err = args.Validate()) {
     return BucketExistsResponse(err);
   }
