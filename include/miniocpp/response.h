@@ -567,6 +567,28 @@ struct GetPresignedPostFormDataResponse : public Response {
   ~GetPresignedPostFormDataResponse() = default;
 };  // struct GetPresignedPostFormDataResponse
 
+struct ListMultipartUploadsResponse : public Response {
+  std::map<std::string, std::string> uploads;
+
+  ListMultipartUploadsResponse()
+      {}
+  void Add(const std::string &object, const std::string &upload_id) {
+    uploads[object] = upload_id;
+  }
+
+  bool Contains(const std::string &object) {
+    return uploads.contains(object);
+  }
+
+  explicit ListMultipartUploadsResponse(error::Error err)
+      : Response(std::move(err)) {}
+
+  explicit ListMultipartUploadsResponse(const Response& resp)
+      : Response(resp) {}
+
+  ~ListMultipartUploadsResponse() = default;
+};  // struct CreateMultipartUploadResponse
+
 #undef MINIO_S3_DERIVE_FROM_PUT_OBJECT_RESPONSE
 #undef MINIO_S3_DERIVE_FROM_RESPONSE
 

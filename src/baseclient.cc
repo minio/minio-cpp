@@ -1962,4 +1962,42 @@ UploadPartCopyResponse BaseClient::UploadPartCopy(UploadPartCopyArgs args) {
   return resp;
 }
 
+ListMultipartUploadsResponse BaseClient::ListMultipartUploads(
+    ListMultipartUploadsArgs args) {
+  if (error::Error err = args.Validate()) {
+    return ListMultipartUploadsResponse(err);
+  }
+
+  std::string region;
+  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+    region = resp.region;
+  } else {
+    return ListMultipartUploadsResponse(resp);
+  }
+
+  Request req(http::Method::kGet, region, base_url_, args.extra_headers,
+              args.extra_query_params);
+  req.bucket_name = args.bucket;
+  req.query_params.Add("uploads", "");
+
+  if (Response resp = Execute(req)) {
+    pugi::xml_document xdoc;
+    pugi::xml_parse_result result = xdoc.load_string(resp.data.data());
+    if (!result) {
+      return error::make<ListMultipartUploadsResponse>("unable to parse XML");
+    }
+
+    ListMultipartUploadsResponse lmu_resp;
+    for (auto upload : xdoc.select_nodes("/ListMultipartUploadsResult/Upload")) {
+      std::string key = upload.node().select_node(".//Key/text()").node().value();
+      std::string id = upload.node().select_node(".//UploadId/text()").node().value();
+      lmu_resp.Add(key, id);
+    }
+
+    return lmu_resp;
+  } else {
+    return ListMultipartUploadsResponse(resp);
+  }
+}
+
 }  // namespace minio::s3

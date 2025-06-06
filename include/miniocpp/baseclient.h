@@ -157,6 +157,8 @@ class BaseClient {
   UploadPartResponse UploadPart(UploadPartArgs args);
   UploadPartCopyResponse UploadPartCopy(UploadPartCopyArgs args);
 
+  ListMultipartUploadsResponse ListMultipartUploads(ListMultipartUploadsArgs args);
+
   // Windows API fix:
   //
   // Windows API headers define `GetObject()` as a macro that expands to either

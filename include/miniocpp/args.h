@@ -547,6 +547,8 @@ struct SetObjectRetentionArgs : public ObjectVersionArgs {
   error::Error Validate() const;
 };  // struct SetObjectRetention
 
+using ListMultipartUploadsArgs = BucketArgs;
+
 inline constexpr unsigned int kDefaultExpirySeconds =
     (60 * 60 * 24 * 7);  // 7 days
 
