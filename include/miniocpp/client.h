@@ -108,7 +108,7 @@ class Client : public BaseClient {
                                         std::list<ComposeSource> sources);
   ComposeObjectResponse ComposeObject(ComposeObjectArgs args,
                                       std::string& upload_id);
-  PutObjectResponse PutObject(PutObjectArgs args, std::string& upload_id,
+  PutObjectResponse PutObject(PutObjectArgs &args, std::string& upload_id,
                               char* buf);
 
  public:
@@ -119,7 +119,7 @@ class Client : public BaseClient {
   CopyObjectResponse CopyObject(CopyObjectArgs args);
   DownloadObjectResponse DownloadObject(DownloadObjectArgs args);
   ListObjectsResult ListObjects(ListObjectsArgs args);
-  PutObjectResponse PutObject(PutObjectArgs args);
+  PutObjectResponse PutObject(PutObjectArgs &&args);
   UploadObjectResponse UploadObject(UploadObjectArgs args);
   RemoveObjectsResult RemoveObjects(RemoveObjectsArgs args);
 };  // class Client
