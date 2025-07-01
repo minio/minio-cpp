@@ -798,7 +798,7 @@ UploadObjectResponse Client::UploadObject(UploadObjectArgs args) {
   if (!args.filename.empty()) {
     filePtr->exceptions(std::ifstream::failbit | std::ifstream::badbit);
     try {
-      filePtr->open(args.filename);
+      filePtr->open(args.filename, std::ios::binary);
     } catch (std::system_error& err) {
       return error::make<UploadObjectResponse>(
           "unable to open file " + args.filename + "; " + err.code().message());
