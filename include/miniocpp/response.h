@@ -577,7 +577,8 @@ struct ListMultipartUploadsResponse : public Response {
   }
 
   bool Contains(const std::string &object) {
-    return uploads.contains(object);
+    // return uploads.contains(object);       // c++ 20
+    return uploads.find(object) != uploads.end();
   }
 
   explicit ListMultipartUploadsResponse(error::Error err)
