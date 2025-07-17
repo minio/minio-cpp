@@ -158,6 +158,8 @@ class BaseClient {
   UploadPartCopyResponse UploadPartCopy(UploadPartCopyArgs args);
 
   ListMultipartUploadsResponse ListMultipartUploads(ListMultipartUploadsArgs args);
+  
+  ListPartsResponse ListParts(ListPartsArgs args);
 
   // Windows API fix:
   //

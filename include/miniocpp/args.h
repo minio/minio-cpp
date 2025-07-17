@@ -187,6 +187,22 @@ struct UploadPartCopyArgs : public ObjectWriteArgs {
   error::Error Validate() const;
 };  // struct UploadPartCopyArgs
 
+struct ListPartsArgs : public BucketArgs {
+  std::string object;
+  std::string upload_id;
+  int max_parts = 0;
+  int part_number_marker = 0;
+
+  ListPartsArgs() = default;
+  
+  // ListPartsArgs(std::string_view bucket, std::string_view object, 
+  //              std::string_view upload_id)
+  //     : BucketArgs{bucket}, object(object), upload_id(upload_id) {}
+
+  error::Error Validate() const override; 
+  
+};  // struct ListPartsArgs
+
 using StatObjectArgs = ObjectConditionalReadArgs;
 
 using RemoveObjectArgs = ObjectVersionArgs;

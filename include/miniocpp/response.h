@@ -589,6 +589,30 @@ struct ListMultipartUploadsResponse : public Response {
   ~ListMultipartUploadsResponse() = default;
 };  // struct CreateMultipartUploadResponse
 
+struct Part {
+  int part_number;
+  std::string etag;
+  size_t size;
+  utils::Time last_modified;
+};  // struct Part
+
+struct ListPartsResponse : public Response {
+  std::string bucket;
+  std::string object;
+  std::string upload_id;
+  std::vector<Part> parts;
+  bool is_truncated = false;
+  int next_part_number_marker = 0;
+
+  ListPartsResponse() = default;
+  explicit ListPartsResponse(error::Error err) : Response(std::move(err)) {}
+  explicit ListPartsResponse(const Response& resp) : Response(resp) {}
+
+  void AddPart(const Part& part) {
+    parts.push_back(part);
+  }
+};  // struct ListPartsResponse
+
 #undef MINIO_S3_DERIVE_FROM_PUT_OBJECT_RESPONSE
 #undef MINIO_S3_DERIVE_FROM_RESPONSE
 

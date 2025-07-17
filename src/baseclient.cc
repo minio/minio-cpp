@@ -2000,4 +2000,66 @@ ListMultipartUploadsResponse BaseClient::ListMultipartUploads(
   }
 }
 
+ListPartsResponse BaseClient::ListParts(ListPartsArgs args) {
+  // Автоматическая валидация через BucketArgs
+  if (error::Error err = args.Validate()) {
+    return ListPartsResponse(err);
+  }
+
+  // Определение региона
+  if (args.region.empty()) {
+    args.region = GetRegion(args.bucket, "").region;
+  }
+
+  Request req(http::Method::kGet, args.region, base_url_, {}, {});
+  req.bucket_name = args.bucket;
+  req.object_name = args.object;
+  req.query_params.Add("uploadId", args.upload_id);
+
+  // Добавляем опциональные параметры
+  if (args.max_parts > 0) {
+    req.query_params.Add("max-parts", std::to_string(args.max_parts));
+  }
+  if (args.part_number_marker > 0) {
+    req.query_params.Add("part-number-marker", 
+                       std::to_string(args.part_number_marker));
+  }
+  
+  Response resp = Execute(req);
+  if (!resp) {
+    return ListPartsResponse(resp.Error());
+  }
+
+  ListPartsResponse result(resp);
+  result.bucket = args.bucket;
+  result.object = args.object;
+  result.upload_id = args.upload_id;
+
+  pugi::xml_document doc;
+  if (!doc.load_string(resp.data.c_str())) {
+    return ListPartsResponse(error::Error("Invalid XML response"));
+  }
+
+  auto root = doc.child("ListPartsResult");
+  result.is_truncated = root.child("IsTruncated").text().as_bool();
+  
+  if (auto marker = root.child("NextPartNumberMarker")) {
+    result.next_part_number_marker = marker.text().as_int();
+  }
+
+  for (auto part : root.children("Part")) {
+    Part p;
+    p.part_number = part.child("PartNumber").text().as_int();
+    p.etag = utils::Trim(part.child("ETag").text().as_string(), "\"");
+    p.size = part.child("Size").text().as_ullong();
+    if (auto last_modified = part.child("LastModified")) {
+      p.last_modified = utils::Time::FromHttpHeaderValue(
+        last_modified.text().as_string());
+    }
+    result.AddPart(p);
+  }
+
+  return result;
+}
+
 }  // namespace minio::s3

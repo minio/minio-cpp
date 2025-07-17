@@ -209,6 +209,15 @@ error::Error UploadPartCopyArgs::Validate() const {
   return error::SUCCESS;
 }
 
+error::Error ListPartsArgs::Validate() const {
+  if (!utils::CheckNonEmptyString(object)) 
+    return error::Error("empty object name");
+  if (!utils::CheckNonEmptyString(upload_id))
+    return error::Error("empty upload ID");
+  
+  return BucketArgs::Validate();
+}
+
 error::Error DownloadObjectArgs::Validate() const {
   if (error::Error err = ObjectReadArgs::Validate()) {
     return err;
