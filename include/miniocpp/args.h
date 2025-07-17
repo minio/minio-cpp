@@ -199,7 +199,7 @@ struct ListPartsArgs : public BucketArgs {
   //              std::string_view upload_id)
   //     : BucketArgs{bucket}, object(object), upload_id(upload_id) {}
 
-  error::Error Validate() const override; 
+  error::Error Validate() const; 
   
 };  // struct ListPartsArgs
 
