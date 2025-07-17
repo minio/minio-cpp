@@ -589,13 +589,6 @@ struct ListMultipartUploadsResponse : public Response {
   ~ListMultipartUploadsResponse() = default;
 };  // struct CreateMultipartUploadResponse
 
-struct Part {
-  int part_number;
-  std::string etag;
-  size_t size;
-  utils::Time last_modified;
-};  // struct Part
-
 struct ListPartsResponse : public Response {
   std::string bucket;
   std::string object;

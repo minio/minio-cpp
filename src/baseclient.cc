@@ -2050,10 +2050,10 @@ ListPartsResponse BaseClient::ListParts(ListPartsArgs args) {
   for (auto part : root.children("Part")) {
     Part p;
     p.part_number = part.child("PartNumber").text().as_int();
-    p.etag = utils::Trim(part.child("ETag").text().as_string(), "\"");
+    p.etag = utils::Trim(part.child("ETag").text().as_string(), '"');
     p.size = part.child("Size").text().as_ullong();
     if (auto last_modified = part.child("LastModified")) {
-      p.last_modified = utils::Time::FromHttpHeaderValue(
+      p.last_modified = minio::utils::UtcTime::FromHttpHeaderValue(
         last_modified.text().as_string());
     }
     result.AddPart(p);
