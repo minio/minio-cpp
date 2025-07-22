@@ -329,11 +329,11 @@ struct ListObjectVersionsArgs : public ListObjectsCommonArgs {
 };  // struct ListObjectVersionsArgs
 
 struct PutObjectArgs : public PutObjectBaseArgs {
-  std::istream& stream;
+  std::unique_ptr<std::istream> stream;
+  char *buf = nullptr;
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
 
-  PutObjectArgs(std::istream& stream, long object_size, long part_size);
   ~PutObjectArgs() = default;
 
   error::Error Validate();
@@ -376,6 +376,7 @@ struct ComposeObjectArgs : public ObjectWriteArgs {
 
 struct UploadObjectArgs : public PutObjectBaseArgs {
   std::string filename;
+  char *buf = nullptr;
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
 

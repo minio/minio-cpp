@@ -104,6 +104,17 @@ StaticProvider::~StaticProvider() {}
 
 Credentials StaticProvider::Fetch() { return creds_; }
 
+DynamicProvider::DynamicProvider(std::string access_key, std::string secret_key,
+                               std::string session_token) {
+  this->creds_ = Credentials(error::SUCCESS, std::move(access_key),
+                             std::move(secret_key), std::move(session_token));
+  this->use_sts = true;
+}
+
+DynamicProvider::~DynamicProvider() {}
+
+Credentials DynamicProvider::Fetch() { return creds_; }
+
 EnvAwsProvider::EnvAwsProvider() {
   std::string access_key;
   std::string secret_key;

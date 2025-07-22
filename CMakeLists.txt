@@ -16,6 +16,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 cmake_minimum_required(VERSION 3.10)
+set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
 cmake_policy(SET CMP0091 NEW)
 
 # Minio C++ Project
@@ -41,7 +42,7 @@ option(MINIO_CPP_MAKE_DOC "Build documentation" OFF)
 
 set(MINIO_CPP_CFLAGS)
 set(MINIO_CPP_LIBS)
-set(MINIO_CPP_STD "17")
+set(MINIO_CPP_STD "20")
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_COMPILER_FRONTEND_VARIANT}" STREQUAL "xMSVC")
   # MSVC

@@ -339,8 +339,16 @@ void Request::BuildHeaders(http::Url& url, creds::Provider* const provider) {
       headers.Add("X-Amz-Security-Token", creds.session_token);
     }
 
-    signer::SignV4S3(method, url.path, region, headers, query_params,
+    if (provider->UseSts())
+    {
+      signer::SignV4STS(method, url.path, region, headers, query_params,
                      creds.access_key, creds.secret_key, sha256, date);
+    }
+    else
+    {
+      signer::SignV4S3(method, url.path, region, headers, query_params,
+                     creds.access_key, creds.secret_key, sha256, date);
+    }
   }
 }
 

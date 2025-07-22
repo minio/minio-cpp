@@ -365,7 +365,7 @@ ComposeObjectResponse Client::ComposeObject(ComposeObjectArgs args,
   return ComposeObjectResponse(CompleteMultipartUpload(cmu_args));
 }
 
-PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
+PutObjectResponse Client::PutObject(PutObjectArgs &args, std::string& upload_id,
                                     char* buf) {
   utils::Multimap headers = args.Headers();
   if (!headers.Contains("Content-Type")) {
@@ -398,9 +398,16 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
         stop = true;
       }
 
-      if (error::Error err =
-              utils::ReadPart(args.stream, buf, part_size, bytes_read)) {
-        return PutObjectResponse(err);
+      if (args.stream)
+      {
+        if (error::Error err =
+              utils::ReadPart(*args.stream.get(), buf, part_size, bytes_read)) {
+          return PutObjectResponse(err);
+        }
+      }
+      else
+      {
+        bytes_read = part_size;
       }
 
       if (bytes_read != part_size) {
@@ -422,8 +429,12 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
       }
 
       size_t n = 0;
-      if (error::Error err = utils::ReadPart(args.stream, b, size, n)) {
-        return PutObjectResponse(err);
+      if (args.stream) {
+        if (error::Error err = utils::ReadPart(*args.stream.get(), b, size, n)) {
+          return PutObjectResponse(err);
+        }
+      } else {
+        n = size;
       }
 
       bytes_read += n;
@@ -741,7 +752,7 @@ ListObjectsResult Client::ListObjects(ListObjectsArgs args) {
   return ListObjectsResult(this, std::move(args));
 }
 
-PutObjectResponse Client::PutObject(PutObjectArgs args) {
+PutObjectResponse Client::PutObject(PutObjectArgs &&args) {
   if (error::Error err = args.Validate()) {
     return PutObjectResponse(err);
   }
@@ -752,10 +763,19 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
   }
 
   std::string upload_id;
-  auto buf = std::make_unique<char[]>(
-      (args.part_count > 0) ? args.part_size : args.part_size + 1);
-  PutObjectResponse resp = PutObject(args, upload_id, buf.get());
-  buf.reset();
+  PutObjectResponse resp;
+  if (!args.buf)
+  {
+    auto buf = std::make_unique<char[]>(
+     (args.part_count > 0) ? args.part_size : args.part_size + 1);
+  
+    resp = PutObject(args, upload_id, buf.get());
+    buf.reset();
+  }
+  else
+  {
+    resp = PutObject(args, upload_id, args.buf);
+  }
 
   if (!resp && !upload_id.empty()) {
     AbortMultipartUploadArgs amu_args;
@@ -774,16 +794,28 @@ UploadObjectResponse Client::UploadObject(UploadObjectArgs args) {
     return UploadObjectResponse(err);
   }
 
-  std::ifstream file;
-  file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-  try {
-    file.open(args.filename);
-  } catch (std::system_error& err) {
-    return error::make<UploadObjectResponse>(
-        "unable to open file " + args.filename + "; " + err.code().message());
+  std::unique_ptr<std::ifstream> filePtr(new std::ifstream());
+  if (!args.filename.empty()) {
+    filePtr->exceptions(std::ifstream::failbit | std::ifstream::badbit);
+    try {
+      filePtr->open(args.filename, std::ios::binary);
+    } catch (std::system_error& err) {
+      return error::make<UploadObjectResponse>(
+          "unable to open file " + args.filename + "; " + err.code().message());
+    }
   }
 
-  PutObjectArgs po_args(file, args.object_size, 0);
+  PutObjectArgs po_args;
+  po_args.object_size = args.object_size;
+  po_args.part_size = 0;
+  if (!args.buf)
+  {
+    po_args.stream = std::move(filePtr);
+  }
+  else
+  {
+    po_args.buf = args.buf;
+  }
   po_args.extra_headers = std::move(args.extra_headers);
   po_args.extra_query_params = std::move(args.extra_query_params);
   po_args.bucket = std::move(args.bucket);
@@ -800,7 +832,6 @@ UploadObjectResponse Client::UploadObject(UploadObjectArgs args) {
   po_args.progress_userdata = std::move(args.progress_userdata);
 
   PutObjectResponse resp = PutObject(std::move(po_args));
-  file.close();
   return UploadObjectResponse(resp);
 }
 

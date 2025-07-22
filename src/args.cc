@@ -303,13 +303,6 @@ ListObjectVersionsArgs& ListObjectVersionsArgs::operator=(
   return this->operator=(ListObjectVersionsArgs(args));
 }
 
-PutObjectArgs::PutObjectArgs(std::istream& istream, long object_size,
-                             long part_size)
-    : stream(istream) {
-  this->object_size = object_size;
-  this->part_size = part_size;
-}
-
 error::Error PutObjectArgs::Validate() {
   if (error::Error err = ObjectArgs::Validate()) return err;
   return utils::CalcPartInfo(object_size, part_size, part_count);
@@ -424,17 +417,23 @@ error::Error UploadObjectArgs::Validate() {
   if (error::Error err = ObjectArgs::Validate()) {
     return err;
   }
-  if (!utils::CheckNonEmptyString(filename)) {
-    return error::Error("filename cannot be empty");
+  if (!buf) {
+    if (!utils::CheckNonEmptyString(filename)) {
+      return error::Error("filename cannot be empty");
+    }
+
+    if (!std::filesystem::exists(filename)) {
+      return error::Error("file " + filename + " does not exist");
+    }
   }
 
-  if (!std::filesystem::exists(filename)) {
-    return error::Error("file " + filename + " does not exist");
+  size_t obj_size = 0;
+  if (!buf)
+  {
+    std::filesystem::path file_path = filename;
+    size_t obj_size = std::filesystem::file_size(file_path);
+    object_size = static_cast<long>(obj_size);
   }
-
-  std::filesystem::path file_path = filename;
-  size_t obj_size = std::filesystem::file_size(file_path);
-  object_size = static_cast<long>(obj_size);
   return utils::CalcPartInfo(object_size, part_size, part_count);
 }
 

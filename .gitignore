@@ -16,3 +16,4 @@ CMakeSettings.json
 .idea/
 vcpkg-master.zip
 vcpkg-master/
+.vscode/*

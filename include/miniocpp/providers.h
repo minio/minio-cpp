@@ -61,12 +61,14 @@ class Provider {
  protected:
   error::Error err_;
   Credentials creds_;
+  bool use_sts{false};
 
  public:
   Provider() = default;
   virtual ~Provider();
 
   explicit operator bool() const { return !err_; }
+  bool UseSts() const { return use_sts; }
 
   virtual Credentials Fetch() = 0;
 };  // class Provider
@@ -93,6 +95,18 @@ class StaticProvider : public Provider {
   StaticProvider(std::string access_key, std::string secret_key,
                  std::string session_token = {});
   virtual ~StaticProvider();
+
+  virtual Credentials Fetch() override;
+};  // class StaticProvider
+
+/**
+ * Static credential provider.
+ */
+class DynamicProvider : public Provider {
+ public:
+  DynamicProvider(std::string access_key, std::string secret_key,
+                 std::string session_token = {});
+  virtual ~DynamicProvider();
 
   virtual Credentials Fetch() override;
 };  // class StaticProvider
