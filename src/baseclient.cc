@@ -2001,12 +2001,10 @@ ListMultipartUploadsResponse BaseClient::ListMultipartUploads(
 }
 
 ListPartsResponse BaseClient::ListParts(ListPartsArgs args) {
-  // Автоматическая валидация через BucketArgs
   if (error::Error err = args.Validate()) {
     return ListPartsResponse(err);
   }
 
-  // Определение региона
   if (args.region.empty()) {
     args.region = GetRegion(args.bucket, "").region;
   }
@@ -2016,7 +2014,6 @@ ListPartsResponse BaseClient::ListParts(ListPartsArgs args) {
   req.object_name = args.object;
   req.query_params.Add("uploadId", args.upload_id);
 
-  // Добавляем опциональные параметры
   if (args.max_parts > 0) {
     req.query_params.Add("max-parts", std::to_string(args.max_parts));
   }
