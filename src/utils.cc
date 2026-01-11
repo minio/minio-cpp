@@ -56,6 +56,7 @@
 #include <map>
 #include <memory>
 #include <ostream>
+#include <pugixml.hpp>
 #include <regex>
 #include <sstream>
 #include <streambuf>
@@ -220,6 +221,14 @@ std::string EncodePath(const std::string& path) {
   if (*(path.end() - 1) == '/' && out != "/") out += "/";
 
   return out;
+}
+
+std::string XMLEncode(const std::string& value) {
+  pugi::xml_document doc;
+  doc.append_child(pugi::node_pcdata).set_value(value);
+  std::ostringstream out;
+  doc.print(out);
+  return out.str();
 }
 
 std::string Sha256Hash(std::string_view str) {
