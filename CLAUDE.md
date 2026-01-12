@@ -86,3 +86,9 @@ The RDMA implementation uses `objectPut`/`objectGet` callbacks that are invoked 
 - pugixml - XML parsing for S3 responses
 
 Additional system dependencies for RDMA: libcufile, libcuobjclient, libibverbs, librdmacm
+
+## Code Style Guidelines
+
+- Do not add obvious comments (e.g., "Safe: Validate() ensures X has value")
+- Use `std::optional<T>` for values that may be uninitialized (not sentinel values like `-1` for unsigned types)
+- RDMA buffers require page-aligned memory - use `posix_memalign` or `std::aligned_alloc` (C++17)

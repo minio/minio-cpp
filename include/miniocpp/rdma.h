@@ -46,7 +46,7 @@ inline constexpr int kRDMAReplyNotImplemented = 501;
 
 // These functions are invoked by cufile rdma layer either user shadow pages or direct gpu va address
 // depending on whether nvidia-fs driver or nv peer mem is present
-inline static ssize_t objectPut(const void *handle, const char* buf, size_t size, loff_t offset, const cufileRDMAInfo_t *infop)
+inline static ssize_t objectPut(const void *handle, const char* buf, size_t size, [[maybe_unused]] loff_t offset, const cufileRDMAInfo_t *infop)
 {
   void *ctx = cuObjClient::getCtx(handle);
   s3_rdma_client_ctx_t *sctx = static_cast<s3_rdma_client_ctx_t *>(ctx);
@@ -64,10 +64,10 @@ inline static ssize_t objectPut(const void *handle, const char* buf, size_t size
 
   minio::utils::UtcTime date = minio::utils::UtcTime::Now();
   minio::creds::Credentials creds = sctx->provider->Fetch();
-  minio::utils::Multimap query_params;  
+  minio::utils::Multimap query_params;
   minio::http::Url url;
-  std::string region = "us-east-1";
-  
+  const std::string& region = sctx->region;
+
   if (sctx->uploadId != "") {
     query_params.Add("uploadId", sctx->uploadId);
     if (sctx->partNumber == 0) {
@@ -151,9 +151,14 @@ inline static ssize_t objectPut(const void *handle, const char* buf, size_t size
     return -2;
   }
 
-  int reply_code = std::stoi(rdma_reply);
-  if (reply_code != kRDMAReplySuccess && reply_code != kRDMAReplyNoContent) {
-    std::cerr << "Unexpected RDMA reply: " << reply_code << std::endl;
+  try {
+    int reply_code = std::stoi(rdma_reply);
+    if (reply_code != kRDMAReplySuccess && reply_code != kRDMAReplyNoContent) {
+      std::cerr << "Unexpected RDMA reply: " << reply_code << std::endl;
+      return -1;
+    }
+  } catch (const std::exception& e) {
+    std::cerr << "Invalid RDMA reply format: " << rdma_reply << std::endl;
     return -1;
   }
 
@@ -161,7 +166,7 @@ inline static ssize_t objectPut(const void *handle, const char* buf, size_t size
   return size;
 }
 
-inline static ssize_t objectGet(const void *handle, char* buf, size_t size, loff_t offset, const cufileRDMAInfo_t *infop)
+inline static ssize_t objectGet(const void *handle, char* buf, size_t size, [[maybe_unused]] loff_t offset, const cufileRDMAInfo_t *infop)
 {
   void *ctx = cuObjClient::getCtx(handle);
   s3_rdma_client_ctx_t *sctx = static_cast<s3_rdma_client_ctx_t *>(ctx);
@@ -179,10 +184,10 @@ inline static ssize_t objectGet(const void *handle, char* buf, size_t size, loff
 
   minio::utils::UtcTime date = minio::utils::UtcTime::Now();
   minio::creds::Credentials creds = sctx->provider->Fetch();
-  minio::utils::Multimap query_params;  
+  minio::utils::Multimap query_params;
   minio::http::Url url;
-  std::string region = "us-east-1";
-  
+  const std::string& region = sctx->region;
+
   if (minio::error::Error err = sctx->url.BuildUrl(url, minio::http::Method::kGet,
 					     region, query_params,
 					     sctx->bucket, sctx->object)) {
@@ -240,20 +245,25 @@ inline static ssize_t objectGet(const void *handle, char* buf, size_t size, loff
     return -2;
   }
 
-  int reply_code = std::stoi(rdma_reply);
-  if (reply_code != kRDMAReplySuccess && reply_code != kRDMAReplyPartialContent) {
-    std::cerr << "Unexpected RDMA reply: " << reply_code << std::endl;
-    return -1;
-  }
-
-  // Verify bytes transferred per spec
-  std::string bytes_str = res->get_header_value(kAmzRDMABytesTransferred);
-  if (!bytes_str.empty()) {
-    ssize_t bytes_transferred = std::stoll(bytes_str);
-    if (bytes_transferred != static_cast<ssize_t>(size)) {
-      std::cerr << "RDMA bytes mismatch: expected " << size
-                << ", got " << bytes_transferred << std::endl;
+  try {
+    int reply_code = std::stoi(rdma_reply);
+    if (reply_code != kRDMAReplySuccess && reply_code != kRDMAReplyPartialContent) {
+      std::cerr << "Unexpected RDMA reply: " << reply_code << std::endl;
+      return -1;
     }
+
+    // Verify bytes transferred per spec
+    std::string bytes_str = res->get_header_value(kAmzRDMABytesTransferred);
+    if (!bytes_str.empty()) {
+      ssize_t bytes_transferred = std::stoll(bytes_str);
+      if (bytes_transferred != static_cast<ssize_t>(size)) {
+        std::cerr << "RDMA bytes mismatch: expected " << size
+                  << ", got " << bytes_transferred << std::endl;
+      }
+    }
+  } catch (const std::exception& e) {
+    std::cerr << "Invalid RDMA reply format: " << rdma_reply << std::endl;
+    return -1;
   }
 
   return size;

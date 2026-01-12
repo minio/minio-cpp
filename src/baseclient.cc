@@ -1371,28 +1371,28 @@ PutObjectResponse BaseClient::PutObject(PutObjectApiArgs args) {
     return PutObjectResponse(resp);
   }
 
-  if (args.rdmaclient->isConnected()) {
-    // put the buffer + put operation.
-      // send the buffer + put operation.
-      s3_rdma_client_ctx putCtx = {
-	.provider = provider_,
-	.bucket = args.bucket,
-	.object = args.object,
-	.uploadId = "",
-	.partNumber = 0,
-	.etag = "",
-	.url = base_url_,
-	.op = CUOBJ_PUT,
-      };
+  if (args.rdmaclient != nullptr && args.rdmaclient->isConnected()) {
+    // send the buffer + put operation via RDMA.
+    s3_rdma_client_ctx putCtx = {
+      .provider = provider_,
+      .bucket = args.bucket,
+      .object = args.object,
+      .uploadId = "",
+      .partNumber = 0,
+      .etag = "",
+      .url = base_url_,
+      .region = region,
+      .op = CUOBJ_PUT,
+    };
 
-      ssize_t ret = args.rdmaclient->cuObjPut(&putCtx, args.buf, args.size);
-      if (ret < 0) {
-	return error::make<PutObjectResponse>("failed to upload the object "+ args.object);
-      }
+    ssize_t ret = args.rdmaclient->cuObjPut(&putCtx, args.buf, args.size);
+    if (ret < 0) {
+      return error::make<PutObjectResponse>("failed to upload the object "+ args.object);
+    }
 
-      PutObjectResponse resp;
-      resp.etag = putCtx.etag;
-      return resp;
+    PutObjectResponse resp;
+    resp.etag = putCtx.etag;
+    return resp;
   }
 
   Request req(http::Method::kPut, region, base_url_, args.extra_headers,
@@ -1946,8 +1946,15 @@ UploadPartResponse BaseClient::UploadPart(UploadPartArgs args) {
     return UploadPartResponse(err);
   }
 
-  if (args.rdmaclient->isConnected()) {
-    // put the buffer + put operation.
+  if (args.rdmaclient != nullptr && args.rdmaclient->isConnected()) {
+    std::string region;
+    if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+      region = resp.region;
+    } else {
+      return UploadPartResponse(resp);
+    }
+
+    // send the buffer + put operation via RDMA.
     s3_rdma_client_ctx putCtx = {
       .provider = provider_,
       .bucket = args.bucket,
@@ -1956,6 +1963,7 @@ UploadPartResponse BaseClient::UploadPart(UploadPartArgs args) {
       .partNumber = args.part_number,
       .etag = "",
       .url = base_url_,
+      .region = region,
       .op = CUOBJ_PUT,
     };
 

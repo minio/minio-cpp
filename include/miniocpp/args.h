@@ -21,6 +21,7 @@
 #include <functional>
 #include <list>
 #include <map>
+#include <optional>
 #include <string>
 #include <type_traits>
 
@@ -223,9 +224,9 @@ struct GetObjectArgs : public ObjectConditionalReadArgs {
 };  // struct GetObjectArgs
 
 struct GetObjectRDMAArgs : public GetObjectArgs {
-  char *buf;
-  size_t size = -1;
-  
+  char *buf = nullptr;
+  std::optional<size_t> size;
+
   GetObjectRDMAArgs() = default;
   ~GetObjectRDMAArgs() = default;
 
@@ -342,8 +343,8 @@ struct PutObjectArgs : public PutObjectBaseArgs {
 };  // struct PutObjectArgs
 
 struct PutObjectRDMAArgs : public PutObjectBaseArgs {
-  char *buf;
-  size_t size = -1;
+  char *buf = nullptr;
+  std::optional<size_t> size;
 
   PutObjectRDMAArgs() = default;
   ~PutObjectRDMAArgs() = default;

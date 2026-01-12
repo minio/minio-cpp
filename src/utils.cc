@@ -225,7 +225,7 @@ std::string EncodePath(const std::string& path) {
 
 std::string XMLEncode(const std::string& value) {
   pugi::xml_document doc;
-  doc.append_child(pugi::node_pcdata).set_value(value);
+  doc.append_child(pugi::node_pcdata).set_value(value.c_str());
   std::ostringstream out;
   doc.print(out);
   return out.str();

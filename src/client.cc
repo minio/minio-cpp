@@ -391,8 +391,10 @@ namespace minio::s3 {
     };
     cuObjClient rdmaclient(ops, CUOBJ_PROTO_RDMA_DC_V1);
     
+    const size_t size = *args.size;
+
     if (rdmaclient.isConnected()) {
-      int res = rdmaclient.cuMemObjGetDescriptor(args.buf, args.size);
+      int res = rdmaclient.cuMemObjGetDescriptor(args.buf, size);
       if (res) {
 	return error::make<GetObjectResponse>("unable to register RDMA buffer for object "+ args.object);
       }
@@ -406,10 +408,11 @@ namespace minio::s3 {
 	.partNumber = 0,
 	.etag = "",
 	.url = base_url_,
+	.region = region,
 	.op = CUOBJ_GET,
       };
 
-      ssize_t ret = rdmaclient.cuObjGet(&getCtx, args.buf, args.size);
+      ssize_t ret = rdmaclient.cuObjGet(&getCtx, args.buf, size);
       if (ret < 0) {
 	rdmaclient.cuMemObjPutDescriptor(args.buf);
 	return error::make<GetObjectResponse>("failed to download to object "+ args.object);
@@ -427,7 +430,7 @@ namespace minio::s3 {
 
     GetObjectArgs targs;
     std::stringstream ss(std::ios_base::in | std::ios_base::out);
-    ss.rdbuf()->pubsetbuf(args.buf, args.size);
+    ss.rdbuf()->pubsetbuf(args.buf, size);
 
     targs.bucket = args.bucket;
     targs.object = args.object;
@@ -456,9 +459,11 @@ namespace minio::s3 {
       .put  = objectPut
     };
     cuObjClient rdmaclient(ops, CUOBJ_PROTO_RDMA_DC_V1);
-    
+
+    const size_t size = *args.size;
+
     if (rdmaclient.isConnected()) {
-      int res = rdmaclient.cuMemObjGetDescriptor(args.buf, args.size);
+      int res = rdmaclient.cuMemObjGetDescriptor(args.buf, size);
       if (res) {
 	return error::make<PutObjectResponse>("unable to register RDMA buffer for object "+ args.object);
       }
@@ -472,10 +477,11 @@ namespace minio::s3 {
 	.partNumber = 0,
 	.etag = "",
 	.url = base_url_,
+	.region = region,
 	.op = CUOBJ_PUT,
       };
 
-      ssize_t ret = rdmaclient.cuObjPut(&putCtx, args.buf, args.size);
+      ssize_t ret = rdmaclient.cuObjPut(&putCtx, args.buf, size);
       if (ret < 0) {
 	rdmaclient.cuMemObjPutDescriptor(args.buf);
 	return error::make<PutObjectResponse>("failed to upload to object "+ args.object);
@@ -492,9 +498,9 @@ namespace minio::s3 {
     }
 
     std::stringstream ss(std::ios_base::in | std::ios_base::out);
-    ss.rdbuf()->pubsetbuf(args.buf, args.size);
+    ss.rdbuf()->pubsetbuf(args.buf, size);
 
-    minio::s3::PutObjectArgs aargs(ss, args.size, 16*1024*1024UL);
+    minio::s3::PutObjectArgs aargs(ss, static_cast<long>(size), 16*1024*1024UL);
 
     return PutObject(aargs);
   }

@@ -228,6 +228,9 @@ error::Error GetObjectRDMAArgs::Validate() const {
   if (!this->buf) {
     return error::Error("buffer must be set");
   }
+  if (!this->size.has_value()) {
+    return error::Error("size must be set");
+  }
 
   return error::SUCCESS;
 }
@@ -235,6 +238,9 @@ error::Error GetObjectRDMAArgs::Validate() const {
 error::Error PutObjectRDMAArgs::Validate() const {
   if (!this->buf) {
     return error::Error("buffer must be set");
+  }
+  if (!this->size.has_value()) {
+    return error::Error("size must be set");
   }
 
   return error::SUCCESS;

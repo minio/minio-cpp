@@ -230,6 +230,7 @@ typedef struct s3_rdma_client_ctx {
   size_t partNumber;
   std::string etag;
   minio::s3::BaseUrl url;
+  std::string region;
   cuObjOpType_t op;
 } s3_rdma_client_ctx_t;
 

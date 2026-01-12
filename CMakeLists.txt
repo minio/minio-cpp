@@ -216,6 +216,10 @@ if (MINIO_CPP_TEST)
     target_link_libraries(${target} PRIVATE miniocpp::miniocpp ${MINIO_CPP_LIBS})
   endforeach()
 
+  # CUDA examples need cudart
+  target_link_libraries(GetPutRDMA PRIVATE cudart)
+  target_link_libraries(GPUHostDisk PRIVATE cudart)
+
   add_executable(tests tests/tests.cc)
   target_compile_features(tests PUBLIC cxx_std_${MINIO_CPP_STD})
   target_include_directories(tests PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
