@@ -42,13 +42,13 @@ error::Error Response::Error() const {
   }
   if (status_code && (status_code < 200 || status_code > 299)) {
     return error::Error("failed with HTTP status code " +
-                        std::to_string(status_code));
+			std::to_string(status_code));
   }
   return error::SUCCESS;
 }
 
 Response Response::ParseXML(std::string_view data, int status_code,
-                            utils::Multimap headers) {
+			    utils::Multimap headers) {
   Response resp;
   resp.status_code = status_code;
   resp.headers = headers;
@@ -124,6 +124,7 @@ CompleteMultipartUploadResponse CompleteMultipartUploadResponse::ParseXML(
     return error::make<CompleteMultipartUploadResponse>("unable to parse XML");
   }
   auto root = xdoc.select_node("/CompleteMultipartUploadResult");
+
   pugi::xpath_node text;
 
   text = root.node().select_node("Bucket/text()");
@@ -156,7 +157,7 @@ CompleteMultipartUploadResponse CompleteMultipartUploadResponse::ParseXML(
 }
 
 ListObjectsResponse ListObjectsResponse::ParseXML(std::string_view data,
-                                                  bool version) {
+						  bool version) {
   ListObjectsResponse resp;
 
   pugi::xml_document xdoc;
@@ -197,12 +198,12 @@ ListObjectsResponse ListObjectsResponse::ParseXML(std::string_view data,
     text = root.node().select_node("Marker/text()");
     value = text.node().value();
     resp.marker =
-        (resp.encoding_type == "url") ? curlpp::unescape(value) : value;
+	(resp.encoding_type == "url") ? curlpp::unescape(value) : value;
 
     text = root.node().select_node("NextMarker/text()");
     value = text.node().value();
     resp.next_marker =
-        (resp.encoding_type == "url") ? curlpp::unescape(value) : value;
+	(resp.encoding_type == "url") ? curlpp::unescape(value) : value;
   }
 
   // ListBucketResult V2
@@ -215,7 +216,7 @@ ListObjectsResponse ListObjectsResponse::ParseXML(std::string_view data,
     text = root.node().select_node("StartAfter/text()");
     value = text.node().value();
     resp.start_after =
-        (resp.encoding_type == "url") ? curlpp::unescape(value) : value;
+	(resp.encoding_type == "url") ? curlpp::unescape(value) : value;
 
     text = root.node().select_node("ContinuationToken/text()");
     resp.continuation_token = text.node().value();
@@ -229,12 +230,12 @@ ListObjectsResponse ListObjectsResponse::ParseXML(std::string_view data,
     text = root.node().select_node("KeyMarker/text()");
     value = text.node().value();
     resp.key_marker =
-        (resp.encoding_type == "url") ? curlpp::unescape(value) : value;
+	(resp.encoding_type == "url") ? curlpp::unescape(value) : value;
 
     text = root.node().select_node("NextKeyMarker/text()");
     value = text.node().value();
     resp.next_key_marker =
-        (resp.encoding_type == "url") ? curlpp::unescape(value) : value;
+	(resp.encoding_type == "url") ? curlpp::unescape(value) : value;
 
     text = root.node().select_node("VersionIdMarker/text()");
     resp.version_id_marker = text.node().value();
@@ -246,8 +247,8 @@ ListObjectsResponse ListObjectsResponse::ParseXML(std::string_view data,
   Item last_item;
 
   auto populate = [&resp = resp, &last_item = last_item](
-                      std::list<Item>& items, pugi::xpath_node_set& contents,
-                      bool is_delete_marker) -> void {
+		      std::list<Item>& items, pugi::xpath_node_set& contents,
+		      bool is_delete_marker) -> void {
     for (auto content : contents) {
       pugi::xpath_node text;
       std::string value;
@@ -259,7 +260,7 @@ ListObjectsResponse ListObjectsResponse::ParseXML(std::string_view data,
       text = content.node().select_node("Key/text()");
       value = text.node().value();
       item.name =
-          (resp.encoding_type == "url") ? curlpp::unescape(value) : value;
+	  (resp.encoding_type == "url") ? curlpp::unescape(value) : value;
 
       text = content.node().select_node("LastModified/text()");
       value = text.node().value();
@@ -287,8 +288,8 @@ ListObjectsResponse ListObjectsResponse::ParseXML(std::string_view data,
 
       auto user_metadata = content.node().select_node("UserMetadata");
       for (auto metadata = user_metadata.node().first_child(); metadata;
-           metadata = metadata.next_sibling()) {
-        item.user_metadata[metadata.name()] = metadata.child_value();
+	   metadata = metadata.next_sibling()) {
+	item.user_metadata[metadata.name()] = metadata.child_value();
       }
 
       item.is_delete_marker = is_delete_marker;
@@ -404,17 +405,17 @@ GetBucketNotificationResponse GetBucketNotificationResponse::ParseXML(
     if (common.node().select_node("Filter")) {
       auto filters = common.node().select_nodes("Filter/S3Key/FilterRule");
       for (auto filter : filters) {
-        text = filter.node().select_node("Name/text()");
-        auto name = text.node().value();
+	text = filter.node().select_node("Name/text()");
+	auto name = text.node().value();
 
-        text = filter.node().select_node("Value/text()");
-        auto value = text.node().value();
+	text = filter.node().select_node("Value/text()");
+	auto value = text.node().value();
 
-        if (strcmp(name, "prefix") == 0) {
-          cfg.prefix_filter_rule = PrefixFilterRule(value);
-        } else {
-          cfg.suffix_filter_rule = SuffixFilterRule(value);
-        }
+	if (strcmp(name, "prefix") == 0) {
+	  cfg.prefix_filter_rule = PrefixFilterRule(value);
+	} else {
+	  cfg.suffix_filter_rule = SuffixFilterRule(value);
+	}
       }
     }
 
@@ -541,27 +542,27 @@ GetBucketReplicationResponse GetBucketReplicationResponse::ParseXML(
     if (destination.node().select_node("AccessControlTranslation")) {
       rrule.destination.access_control_translation.Enable();
       text = destination.node().select_node(
-          "AccessControlTranslation/Owner/text()");
+	  "AccessControlTranslation/Owner/text()");
       rrule.destination.access_control_translation.owner = text.node().value();
     }
     if (destination.node().select_node("EncryptionConfiguration")) {
       rrule.destination.encryption_config.Enable();
       text = destination.node().select_node(
-          "EncryptionConfiguration/ReplicaKmsKeyID/text()");
+	  "EncryptionConfiguration/ReplicaKmsKeyID/text()");
       rrule.destination.encryption_config.replica_kms_key_id =
-          text.node().value();
+	  text.node().value();
     }
     if (destination.node().select_node("Metrics")) {
       rrule.destination.metrics.Enable();
 
       text = destination.node().select_node(
-          "Metrics/EventThreshold/Minutes/text()");
+	  "Metrics/EventThreshold/Minutes/text()");
       value = text.node().value();
       rrule.destination.metrics.event_threshold_minutes =
-          static_cast<unsigned>(std::stoul(value));
+	  static_cast<unsigned>(std::stoul(value));
 
       text = destination.node().select_node(
-          "Metrics/EventThreshold/Status/text()");
+	  "Metrics/EventThreshold/Status/text()");
       value = text.node().value();
       rrule.destination.metrics.status = (value == "Enabled");
     }
@@ -571,7 +572,7 @@ GetBucketReplicationResponse GetBucketReplicationResponse::ParseXML(
       text = destination.node().select_node("ReplicationTime/Time/text()");
       value = text.node().value();
       rrule.destination.replication_time.time_minutes =
-          static_cast<unsigned>(std::stoul(value));
+	  static_cast<unsigned>(std::stoul(value));
 
       text = destination.node().select_node("ReplicationTime/Status/text()");
       value = text.node().value();
@@ -594,37 +595,37 @@ GetBucketReplicationResponse GetBucketReplicationResponse::ParseXML(
       auto filter = rule.node().select_node("Filter");
 
       if (filter.node().select_node("And")) {
-        if (filter.node().select_node("And/Prefix")) {
-          text = filter.node().select_node("And/Prefix/text()");
-          rrule.filter.and_operator.prefix = Prefix(text.node().value());
-        }
+	if (filter.node().select_node("And/Prefix")) {
+	  text = filter.node().select_node("And/Prefix/text()");
+	  rrule.filter.and_operator.prefix = Prefix(text.node().value());
+	}
 
-        if (filter.node().select_node("And/Tag")) {
-          auto tags = root.node().select_nodes("And/Tag");
-          for (auto& tag : tags) {
-            (void)tag;
-            text = filter.node().select_node("Key/text()");
-            std::string key = text.node().value();
+	if (filter.node().select_node("And/Tag")) {
+	  auto tags = root.node().select_nodes("And/Tag");
+	  for (auto& tag : tags) {
+	    (void)tag;
+	    text = filter.node().select_node("Key/text()");
+	    std::string key = text.node().value();
 
-            text = filter.node().select_node("Value/text()");
-            std::string value = text.node().value();
+	    text = filter.node().select_node("Value/text()");
+	    std::string value = text.node().value();
 
-            rrule.filter.and_operator.tags[key] = value;
-          }
-        }
+	    rrule.filter.and_operator.tags[key] = value;
+	  }
+	}
       }
 
       if (filter.node().select_node("Prefix")) {
-        text = filter.node().select_node("Prefix/text()");
-        rrule.filter.prefix = Prefix(text.node().value());
+	text = filter.node().select_node("Prefix/text()");
+	rrule.filter.prefix = Prefix(text.node().value());
       }
 
       if (filter.node().select_node("Tag")) {
-        text = filter.node().select_node("Tag/Key/text()");
-        rrule.filter.tag.key = text.node().value();
+	text = filter.node().select_node("Tag/Key/text()");
+	rrule.filter.tag.key = text.node().value();
 
-        text = filter.node().select_node("Tag/Value/text()");
-        rrule.filter.tag.value = text.node().value();
+	text = filter.node().select_node("Tag/Value/text()");
+	rrule.filter.tag.value = text.node().value();
       }
     }
 
@@ -642,12 +643,12 @@ GetBucketReplicationResponse GetBucketReplicationResponse::ParseXML(
     if (rule.node().select_node("SourceSelectionCriteria")) {
       rrule.source_selection_criteria.Enable();
       if (rule.node().select_node(
-              "SourceSelectionCriteria/SseKmsEncryptedObjects")) {
-        text = rule.node().select_node(
-            "SourceSelectionCriteria/SseKmsEncryptedObjects/Status/text()");
-        value = text.node().value();
-        rrule.source_selection_criteria.sse_kms_encrypted_objects_status =
-            (value == "Enabled");
+	      "SourceSelectionCriteria/SseKmsEncryptedObjects")) {
+	text = rule.node().select_node(
+	    "SourceSelectionCriteria/SseKmsEncryptedObjects/Status/text()");
+	value = text.node().value();
+	rrule.source_selection_criteria.sse_kms_encrypted_objects_status =
+	    (value == "Enabled");
       }
     }
 
@@ -683,52 +684,52 @@ GetBucketLifecycleResponse GetBucketLifecycleResponse::ParseXML(
 
     if (rule.node().select_node("AbortIncompleteMultipartUpload")) {
       text = rule.node().select_node(
-          "AbortIncompleteMultipartUpload/DaysAfterInitiation/text()");
+	  "AbortIncompleteMultipartUpload/DaysAfterInitiation/text()");
       value = text.node().value();
       lrule.abort_incomplete_multipart_upload_days_after_initiation =
-          std::stoi(value);
+	  std::stoi(value);
     }
 
     if (rule.node().select_node("Expiration")) {
       if (rule.node().select_node("Expiration/Date")) {
-        text = rule.node().select_node("Expiration/Date/text()");
-        lrule.expiration_date =
-            utils::UtcTime::FromISO8601UTC(text.node().value());
+	text = rule.node().select_node("Expiration/Date/text()");
+	lrule.expiration_date =
+	    utils::UtcTime::FromISO8601UTC(text.node().value());
       }
 
       if (rule.node().select_node("Expiration/Days")) {
-        text = rule.node().select_node("Expiration/Days/text()");
-        value = text.node().value();
-        lrule.expiration_days = std::stoi(value);
+	text = rule.node().select_node("Expiration/Days/text()");
+	value = text.node().value();
+	lrule.expiration_days = std::stoi(value);
       }
 
       if (rule.node().select_node("Expiration/ExpiredObjectDeleteMarker")) {
-        text = rule.node().select_node(
-            "Expiration/ExpiredObjectDeleteMarker/text()");
-        lrule.expiration_expired_object_delete_marker =
-            utils::BoolToString(text.node().value());
+	text = rule.node().select_node(
+	    "Expiration/ExpiredObjectDeleteMarker/text()");
+	lrule.expiration_expired_object_delete_marker =
+	    utils::BoolToString(text.node().value());
       }
     }
 
     auto filter = rule.node().select_node("Filter");
     if (filter.node().select_node("And")) {
       if (filter.node().select_node("And/Prefix")) {
-        text = filter.node().select_node("And/Prefix/text()");
-        lrule.filter.and_operator.prefix = Prefix(text.node().value());
+	text = filter.node().select_node("And/Prefix/text()");
+	lrule.filter.and_operator.prefix = Prefix(text.node().value());
       }
 
       if (filter.node().select_node("And/Tag")) {
-        auto tags = root.node().select_nodes("And/Tag");
-        for (auto& tag : tags) {
-          (void)tag;
-          text = filter.node().select_node("Key/text()");
-          std::string key = text.node().value();
+	auto tags = root.node().select_nodes("And/Tag");
+	for (auto& tag : tags) {
+	  (void)tag;
+	  text = filter.node().select_node("Key/text()");
+	  std::string key = text.node().value();
 
-          text = filter.node().select_node("Value/text()");
-          std::string value = text.node().value();
+	  text = filter.node().select_node("Value/text()");
+	  std::string value = text.node().value();
 
-          lrule.filter.and_operator.tags[key] = value;
-        }
+	  lrule.filter.and_operator.tags[key] = value;
+	}
       }
     }
     if (filter.node().select_node("Prefix")) {
@@ -748,19 +749,19 @@ GetBucketLifecycleResponse GetBucketLifecycleResponse::ParseXML(
 
     if (rule.node().select_node("NoncurrentVersionExpiration")) {
       text = rule.node().select_node(
-          "NoncurrentVersionExpiration/NoncurrentDays/text()");
+	  "NoncurrentVersionExpiration/NoncurrentDays/text()");
       value = text.node().value();
       lrule.noncurrent_version_expiration_noncurrent_days = std::stoi(value);
     }
 
     if (rule.node().select_node("NoncurrentVersionTransition")) {
       text = rule.node().select_node(
-          "NoncurrentVersionTransition/NoncurrentDays/text()");
+	  "NoncurrentVersionTransition/NoncurrentDays/text()");
       value = text.node().value();
       lrule.noncurrent_version_transition_noncurrent_days = std::stoi(value);
 
       text = rule.node().select_node(
-          "NoncurrentVersionTransition/StorageClass/text()");
+	  "NoncurrentVersionTransition/StorageClass/text()");
       lrule.noncurrent_version_transition_storage_class = text.node().value();
     }
 
@@ -770,15 +771,15 @@ GetBucketLifecycleResponse GetBucketLifecycleResponse::ParseXML(
 
     if (rule.node().select_node("Transition")) {
       if (rule.node().select_node("Transition/Date")) {
-        text = rule.node().select_node("Transition/Date/text()");
-        lrule.transition_date =
-            utils::UtcTime::FromISO8601UTC(text.node().value());
+	text = rule.node().select_node("Transition/Date/text()");
+	lrule.transition_date =
+	    utils::UtcTime::FromISO8601UTC(text.node().value());
       }
 
       if (rule.node().select_node("Transition/Days")) {
-        text = rule.node().select_node("Transition/Days/text()");
-        value = text.node().value();
-        lrule.transition_days = std::stoi(value);
+	text = rule.node().select_node("Transition/Days/text()");
+	value = text.node().value();
+	lrule.transition_days = std::stoi(value);
       }
 
       text = rule.node().select_node("Transition/StorageClass/text()");

@@ -42,6 +42,7 @@ struct Response {
   std::string host_id;
   std::string bucket_name;
   std::string object_name;
+  std::string etag;
 
  private:
   error::Error err_;

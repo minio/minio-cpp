@@ -35,11 +35,13 @@ project(miniocpp
 include(GNUInstallDirs)
 include(CheckIncludeFiles)
 include(CMakePackageConfigHelpers)
+include("${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
 
 option(MINIO_CPP_TEST "Build tests" OFF)
 option(MINIO_CPP_MAKE_DOC "Build documentation" OFF)
 
 set(MINIO_CPP_CFLAGS)
+set(MINIO_CPP_INCLUDES)
 set(MINIO_CPP_LIBS)
 set(MINIO_CPP_STD "17")
 
@@ -47,7 +49,9 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_COMPILER_FRONTEN
   # MSVC
 else()
   # GCC/Clang/AppleClang/...
-  LIST(APPEND MINIO_CPP_CFLAGS -Wall -Wextra -Wconversion)
+  list(APPEND MINIO_CPP_CFLAGS -Wall -Wextra -Wconversion)
+  list(APPEND MINIO_CPP_INCLUDES /usr/local/cuda/include)
+  list(APPEND MINIO_CPP_LIBS "-Bdynamic -L /usr/local/cuda/lib64 -lcufile -lpthread -lnuma -ldl -libverbs -lrdmacm -lrt -lcuobjclient")
   if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 8.0 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0 AND NOT MINGW)
     list(APPEND MINIO_CPP_LIBS stdc++fs)
   endif()
@@ -105,7 +109,11 @@ set(MINIO_CPP_HEADERS
   include/miniocpp/credentials.h
   include/miniocpp/error.h
   include/miniocpp/http.h
+  include/miniocpp/nvidia-cufile.h
+  include/miniocpp/nvidia-cuobjclient.h
   include/miniocpp/providers.h
+  include/miniocpp/rdma.h
+  include/miniocpp/rdma-httplib.h
   include/miniocpp/request.h
   include/miniocpp/response.h
   include/miniocpp/select.h
@@ -132,6 +140,7 @@ target_compile_features(miniocpp PUBLIC cxx_std_${MINIO_CPP_STD})
 target_include_directories(miniocpp PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  ${MINIO_CPP_INCLUDES}
 )
 target_link_libraries(miniocpp PUBLIC ${MINIO_CPP_LIBS})
 set_target_properties(miniocpp PROPERTIES VERSION "${MINIO_CPP_VERSION_STRING}")
@@ -156,6 +165,8 @@ if (MINIO_CPP_TEST)
     GetObject
     ListObjects
     PutObject
+    GetPutRDMA
+    GPUHostDisk
     CopyObject
     ComposeObject
     RemoveObjects

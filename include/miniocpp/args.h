@@ -29,6 +29,7 @@
 #include "sse.h"
 #include "types.h"
 #include "utils.h"
+#include "nvidia-cuobjclient.h"
 
 namespace minio::s3 {
 
@@ -155,10 +156,13 @@ struct PutObjectBaseArgs : public ObjectWriteArgs {
 
 struct PutObjectApiArgs : public PutObjectBaseArgs {
   std::string_view data;
+  char *buf;
+  size_t size;
   utils::Multimap query_params;
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
-
+  cuObjClient* rdmaclient = nullptr;
+  
   PutObjectApiArgs() = default;
   ~PutObjectApiArgs() = default;
 };  // struct PutObjectApiArgs
@@ -166,9 +170,12 @@ struct PutObjectApiArgs : public PutObjectBaseArgs {
 struct UploadPartArgs : public ObjectWriteArgs {
   std::string upload_id;
   unsigned int part_number;
+  char *buf;
+  size_t part_size;
   std::string_view data;
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
+  cuObjClient* rdmaclient = nullptr;
 
   UploadPartArgs() = default;
   ~UploadPartArgs() = default;
@@ -214,6 +221,16 @@ struct GetObjectArgs : public ObjectConditionalReadArgs {
 
   error::Error Validate() const;
 };  // struct GetObjectArgs
+
+struct GetObjectRDMAArgs : public GetObjectArgs {
+  char *buf;
+  size_t size = -1;
+  
+  GetObjectRDMAArgs() = default;
+  ~GetObjectRDMAArgs() = default;
+
+  error::Error Validate() const;
+};  // struct GetObjectRDMAArgs
 
 struct ListObjectsArgs : public BucketArgs {
   std::string delimiter;
@@ -316,12 +333,24 @@ struct PutObjectArgs : public PutObjectBaseArgs {
   std::istream& stream;
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
+  cuObjClient* rdmaclient = nullptr;
 
   PutObjectArgs(std::istream& stream, long object_size, long part_size);
   ~PutObjectArgs() = default;
 
   error::Error Validate();
 };  // struct PutObjectArgs
+
+struct PutObjectRDMAArgs : public PutObjectBaseArgs {
+  char *buf;
+  size_t size = -1;
+
+  PutObjectRDMAArgs() = default;
+  ~PutObjectRDMAArgs() = default;
+
+  error::Error Validate() const;
+};  // struct PutObjectRDMAArgs
+  
 
 using CopySource = ObjectConditionalReadArgs;
 
@@ -577,12 +606,12 @@ struct PostPolicy {
   error::Error AddStartsWithCondition(std::string element, std::string value);
   error::Error RemoveStartsWithCondition(std::string element);
   error::Error AddContentLengthRangeCondition(size_t lower_limit,
-                                              size_t upper_limit);
+					      size_t upper_limit);
   void RemoveContentLengthRangeCondition();
 
   error::Error FormData(std::map<std::string, std::string>& data,
-                        std::string access_key, std::string secret_key,
-                        std::string session_token, std::string region);
+			std::string access_key, std::string secret_key,
+			std::string session_token, std::string region);
 
  private:
   static constexpr const char* eq_ = "eq";
@@ -596,8 +625,8 @@ struct PostPolicy {
 
   static std::string trimDollar(std::string value);
   static std::string getCredentialString(std::string access_key,
-                                         utils::UtcTime date,
-                                         std::string region);
+					 utils::UtcTime date,
+					 std::string region);
   static bool isReservedElement(std::string element);
 };  // struct PostPolicy
 

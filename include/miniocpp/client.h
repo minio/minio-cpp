@@ -120,6 +120,9 @@ class Client : public BaseClient {
   DownloadObjectResponse DownloadObject(DownloadObjectArgs args);
   ListObjectsResult ListObjects(ListObjectsArgs args);
   PutObjectResponse PutObject(PutObjectArgs args);
+  GetObjectResponse GetObject(GetObjectArgs args);
+  GetObjectResponse GetObject(GetObjectRDMAArgs args);
+  PutObjectResponse PutObject(PutObjectRDMAArgs args);
   UploadObjectResponse UploadObject(UploadObjectArgs args);
   RemoveObjectsResult RemoveObjects(RemoveObjectsArgs args);
 };  // class Client

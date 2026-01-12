@@ -224,6 +224,22 @@ error::Error DownloadObjectArgs::Validate() const {
   return error::SUCCESS;
 }
 
+error::Error GetObjectRDMAArgs::Validate() const {
+  if (!this->buf) {
+    return error::Error("buffer must be set");
+  }
+
+  return error::SUCCESS;
+}
+
+error::Error PutObjectRDMAArgs::Validate() const {
+  if (!this->buf) {
+    return error::Error("buffer must be set");
+  }
+
+  return error::SUCCESS;
+}
+  
 error::Error GetObjectArgs::Validate() const {
   if (error::Error err = ObjectConditionalReadArgs::Validate()) {
     return err;

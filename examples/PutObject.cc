@@ -15,6 +15,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include <unistd.h>
+
 #include <miniocpp/args.h>
 #include <miniocpp/client.h>
 #include <miniocpp/providers.h>
@@ -25,14 +27,29 @@
 #include <iosfwd>
 #include <iostream>
 #include <ostream>
+#include <filesystem>
 
-int main() {
+int main(int argc, char* argv[]) {
+  std::string host;
+  std::string access_key;
+  std::string secret_key;
+
+  if (argc <= 1) {
+    printf("usage: %s <server_address>\n", argv[0]);
+    exit(1);
+  }
+
+  if (argc > 1) {
+    host = std::string(argv[1]);
+    access_key = std::string(argv[2]);
+    secret_key = std::string(argv[3]);
+  }
+
   // Create S3 base URL.
-  minio::s3::BaseUrl base_url("play.min.io");
+  minio::s3::BaseUrl base_url(host, false, "us-east-1");
 
   // Create credential provider.
-  minio::creds::StaticProvider provider(
-      "Q3AM3UQ867SPQQA43P2F", "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG");
+  minio::creds::StaticProvider provider(access_key, secret_key);
 
   // Create S3 client.
   minio::s3::Client client(base_url, &provider);
@@ -40,7 +57,10 @@ int main() {
   // Create put object arguments.
   std::ifstream file("my-object.csv");
 
-  minio::s3::PutObjectArgs args(file, 47615315, 0);
+  std::filesystem::path filePath("my-object.csv");
+  std::uintmax_t fileSize = std::filesystem::file_size(filePath);
+
+  minio::s3::PutObjectArgs args(file, fileSize, 16*1024*1024UL);
   args.bucket = "my-bucket";
   args.object = "my-object";
 
@@ -49,10 +69,10 @@ int main() {
 
   // Handle response.
   if (resp) {
-    std::cout << "my-object is successfully created" << std::endl;
+    std::cout << "my-object is successfully created etag=" << resp.etag << " " << std::endl;
   } else {
     std::cout << "unable to do put object; " << resp.Error().String()
-              << std::endl;
+	      << std::endl;
   }
 
   return 0;

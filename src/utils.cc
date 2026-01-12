@@ -648,7 +648,7 @@ error::Error CalcPartInfo(long object_size, size_t& part_size,
   }
 
   if (part_size <= 0) {
-    // Calculate part size by multiple of kMinPartSize.
+    // Calculate part size by multiple of kOptPartSize.
     double psize = std::ceil((double)object_size / kMaxMultipartCount);
     part_size = (size_t)std::ceil(psize / kMinPartSize) * kMinPartSize;
   }
