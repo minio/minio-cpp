@@ -162,6 +162,7 @@ BaseUrl::BaseUrl(std::string host, bool https, std::string region)
     return;
   }
 
+  this->https = url.https;
   this->host = url.host;
   this->port = url.port;
 
