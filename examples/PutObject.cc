@@ -15,19 +15,18 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include <unistd.h>
-
 #include <miniocpp/args.h>
 #include <miniocpp/client.h>
 #include <miniocpp/providers.h>
 #include <miniocpp/request.h>
 #include <miniocpp/response.h>
+#include <unistd.h>
 
+#include <filesystem>
 #include <fstream>
 #include <iosfwd>
 #include <iostream>
 #include <ostream>
-#include <filesystem>
 
 int main(int argc, char* argv[]) {
   std::string host;
@@ -60,7 +59,7 @@ int main(int argc, char* argv[]) {
   std::filesystem::path filePath("my-object.csv");
   std::uintmax_t fileSize = std::filesystem::file_size(filePath);
 
-  minio::s3::PutObjectArgs args(file, fileSize, 16*1024*1024UL);
+  minio::s3::PutObjectArgs args(file, fileSize, 16 * 1024 * 1024UL);
   args.bucket = "my-bucket";
   args.object = "my-object";
 
@@ -69,10 +68,11 @@ int main(int argc, char* argv[]) {
 
   // Handle response.
   if (resp) {
-    std::cout << "my-object is successfully created etag=" << resp.etag << " " << std::endl;
+    std::cout << "my-object is successfully created etag=" << resp.etag << " "
+              << std::endl;
   } else {
     std::cout << "unable to do put object; " << resp.Error().String()
-	      << std::endl;
+              << std::endl;
   }
 
   return 0;

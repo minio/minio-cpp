@@ -27,10 +27,10 @@
 
 #include "error.h"
 #include "http.h"
+#include "nvidia-cuobjclient.h"
 #include "sse.h"
 #include "types.h"
 #include "utils.h"
-#include "nvidia-cuobjclient.h"
 
 namespace minio::s3 {
 
@@ -157,13 +157,13 @@ struct PutObjectBaseArgs : public ObjectWriteArgs {
 
 struct PutObjectApiArgs : public PutObjectBaseArgs {
   std::string_view data;
-  char *buf;
+  char* buf;
   size_t size;
   utils::Multimap query_params;
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
   cuObjClient* rdmaclient = nullptr;
-  
+
   PutObjectApiArgs() = default;
   ~PutObjectApiArgs() = default;
 };  // struct PutObjectApiArgs
@@ -171,7 +171,7 @@ struct PutObjectApiArgs : public PutObjectBaseArgs {
 struct UploadPartArgs : public ObjectWriteArgs {
   std::string upload_id;
   unsigned int part_number;
-  char *buf;
+  char* buf;
   size_t part_size;
   std::string_view data;
   http::ProgressFunction progressfunc = nullptr;
@@ -224,7 +224,7 @@ struct GetObjectArgs : public ObjectConditionalReadArgs {
 };  // struct GetObjectArgs
 
 struct GetObjectRDMAArgs : public GetObjectArgs {
-  char *buf = nullptr;
+  char* buf = nullptr;
   std::optional<size_t> size;
 
   GetObjectRDMAArgs() = default;
@@ -343,7 +343,7 @@ struct PutObjectArgs : public PutObjectBaseArgs {
 };  // struct PutObjectArgs
 
 struct PutObjectRDMAArgs : public PutObjectBaseArgs {
-  char *buf = nullptr;
+  char* buf = nullptr;
   std::optional<size_t> size;
 
   PutObjectRDMAArgs() = default;
@@ -351,7 +351,6 @@ struct PutObjectRDMAArgs : public PutObjectBaseArgs {
 
   error::Error Validate() const;
 };  // struct PutObjectRDMAArgs
-  
 
 using CopySource = ObjectConditionalReadArgs;
 
@@ -607,12 +606,12 @@ struct PostPolicy {
   error::Error AddStartsWithCondition(std::string element, std::string value);
   error::Error RemoveStartsWithCondition(std::string element);
   error::Error AddContentLengthRangeCondition(size_t lower_limit,
-					      size_t upper_limit);
+                                              size_t upper_limit);
   void RemoveContentLengthRangeCondition();
 
   error::Error FormData(std::map<std::string, std::string>& data,
-			std::string access_key, std::string secret_key,
-			std::string session_token, std::string region);
+                        std::string access_key, std::string secret_key,
+                        std::string session_token, std::string region);
 
  private:
   static constexpr const char* eq_ = "eq";
@@ -626,8 +625,8 @@ struct PostPolicy {
 
   static std::string trimDollar(std::string value);
   static std::string getCredentialString(std::string access_key,
-					 utils::UtcTime date,
-					 std::string region);
+                                         utils::UtcTime date,
+                                         std::string region);
   static bool isReservedElement(std::string element);
 };  // struct PostPolicy
 

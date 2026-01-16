@@ -32,8 +32,8 @@
 #include "utils.h"
 
 // RDMA specific includes
-#include "rdma.h"
 #include "nvidia-cuobjclient.h"
+#include "rdma.h"
 
 #if defined(_WIN32) && defined(GetObject)
 #pragma push_macro("GetObject")
@@ -62,7 +62,7 @@ class BaseClient {
 
  public:
   explicit BaseClient(BaseUrl base_url,
-		      creds::Provider* const provider = nullptr);
+                      creds::Provider* const provider = nullptr);
 
   virtual ~BaseClient() = default;
 
@@ -75,20 +75,20 @@ class BaseClient {
   }
 
   error::Error SetAppInfo(std::string_view app_name,
-			  std::string_view app_version);
+                          std::string_view app_version);
 
   void HandleRedirectResponse(std::string& code, std::string& message,
-			      int status_code, http::Method method,
-			      const utils::Multimap& headers,
-			      const std::string& bucket_name,
-			      bool retry = false);
+                              int status_code, http::Method method,
+                              const utils::Multimap& headers,
+                              const std::string& bucket_name,
+                              bool retry = false);
   Response GetErrorResponse(http::Response resp, std::string_view resource,
-			    http::Method method, const std::string& bucket_name,
-			    const std::string& object_name);
+                            http::Method method, const std::string& bucket_name,
+                            const std::string& object_name);
   Response execute(Request& req);
   Response Execute(Request& req);
   GetRegionResponse GetRegion(const std::string& bucket_name,
-			      const std::string& region);
+                              const std::string& region);
 
   AbortMultipartUploadResponse AbortMultipartUpload(
       AbortMultipartUploadArgs args);

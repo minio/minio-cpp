@@ -37,11 +37,11 @@
 
 namespace minio::utils {
 
-inline constexpr unsigned int kMaxMultipartCount = 10000;       // 10000 parts
-inline constexpr unsigned int kOptPartSize = 64 * 1024 * 1024;  // 64MiB
-inline constexpr unsigned int kMinPartSize = 5 * 1024 * 1024;   // 5MiB
-inline constexpr uint64_t kMaxPartSize = kMinPartSize * 1024;   // 5GiB
-inline constexpr uint64_t kMaxObjectSize = kMaxPartSize * 1024; // 5TiB
+inline constexpr unsigned int kMaxMultipartCount = 10000;        // 10000 parts
+inline constexpr unsigned int kOptPartSize = 64 * 1024 * 1024;   // 64MiB
+inline constexpr unsigned int kMinPartSize = 5 * 1024 * 1024;    // 5MiB
+inline constexpr uint64_t kMaxPartSize = kMinPartSize * 1024;    // 5GiB
+inline constexpr uint64_t kMaxObjectSize = kMaxPartSize * 1024;  // 5TiB
 
 // GetEnv copies the environment variable name into var
 bool GetEnv(std::string& var, const char* name);

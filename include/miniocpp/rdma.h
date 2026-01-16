@@ -18,25 +18,28 @@
 #ifndef MINIO_CPP_RDMA_H_INCLUDED
 #define MINIO_CPP_RDMA_H_INCLUDED
 
-#include "error.h"
-#include "utils.h"
 #include "credentials.h"
-#include "signer.h"
-#include "rdma-httplib.h"
+#include "error.h"
 #include "nvidia-cufile.h"
 #include "nvidia-cuobjclient.h"
+#include "rdma-httplib.h"
+#include "signer.h"
+#include "utils.h"
 
-#define IO_DESC_STR							\
-  "0102030405060708:01020304:01020304:0102:010203:1:0102030405060708090a0b0c0d0e0f10:0102030405060708:0102030405060708"
+#define IO_DESC_STR                                   \
+  "0102030405060708:01020304:01020304:0102:010203:1:" \
+  "0102030405060708090a0b0c0d0e0f10:0102030405060708:0102030405060708"
 
 // SHA256 hash of empty string (for RDMA requests with no body)
-inline constexpr const char* kEmptySha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+inline constexpr const char* kEmptySha256 =
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 inline constexpr const char* kUnsignedPayload = "UNSIGNED-PAYLOAD";
 
 // S3 RDMA Protocol Headers (AWS S3 RDMA spec)
 inline constexpr const char* kAmzRDMAToken = "x-amz-rdma-token";
 inline constexpr const char* kAmzRDMAReply = "x-amz-rdma-reply";
-inline constexpr const char* kAmzRDMABytesTransferred = "x-amz-rdma-bytes-transferred";
+inline constexpr const char* kAmzRDMABytesTransferred =
+    "x-amz-rdma-bytes-transferred";
 
 // RDMA Reply Status Codes (aligned with HTTP status codes)
 inline constexpr int kRDMAReplySuccess = 200;
@@ -44,12 +47,14 @@ inline constexpr int kRDMAReplyNoContent = 204;
 inline constexpr int kRDMAReplyPartialContent = 206;
 inline constexpr int kRDMAReplyNotImplemented = 501;
 
-// These functions are invoked by cufile rdma layer either user shadow pages or direct gpu va address
-// depending on whether nvidia-fs driver or nv peer mem is present
-inline static ssize_t objectPut(const void *handle, const char* buf, size_t size, [[maybe_unused]] loff_t offset, const cufileRDMAInfo_t *infop)
-{
-  void *ctx = cuObjClient::getCtx(handle);
-  s3_rdma_client_ctx_t *sctx = static_cast<s3_rdma_client_ctx_t *>(ctx);
+// These functions are invoked by cufile rdma layer either user shadow pages or
+// direct gpu va address depending on whether nvidia-fs driver or nv peer mem is
+// present
+inline static ssize_t objectPut(const void* handle, const char* buf,
+                                size_t size, [[maybe_unused]] loff_t offset,
+                                const cufileRDMAInfo_t* infop) {
+  void* ctx = cuObjClient::getCtx(handle);
+  s3_rdma_client_ctx_t* sctx = static_cast<s3_rdma_client_ctx_t*>(ctx);
   char io_str[sizeof IO_DESC_STR];
   unsigned io_len = sizeof io_str;
 
@@ -59,8 +64,8 @@ inline static ssize_t objectPut(const void *handle, const char* buf, size_t size
   }
 
   const std::string descr = std::string(infop->desc_str, infop->desc_len);
-  snprintf(io_str, io_len,"%s:%016lx:%016lx;",
-	   infop->desc_str, (uint64_t)buf, (uint64_t)size);
+  snprintf(io_str, io_len, "%s:%016lx:%016lx;", infop->desc_str, (uint64_t)buf,
+           (uint64_t)size);
 
   minio::utils::UtcTime date = minio::utils::UtcTime::Now();
   minio::creds::Credentials creds = sctx->provider->Fetch();
@@ -81,9 +86,9 @@ inline static ssize_t objectPut(const void *handle, const char* buf, size_t size
     query_params.Add("partNumber", std::to_string(sctx->partNumber));
   }
 
-  if (minio::error::Error err = sctx->url.BuildUrl(url, minio::http::Method::kPut,
-					     region, query_params,
-					     sctx->bucket, sctx->object)) {
+  if (minio::error::Error err =
+          sctx->url.BuildUrl(url, minio::http::Method::kPut, region,
+                             query_params, sctx->bucket, sctx->object)) {
     std::cerr << "failed to build url. error=" << err
               << ". This should not happen" << std::endl;
     return -1;
@@ -107,9 +112,8 @@ inline static ssize_t objectPut(const void *handle, const char* buf, size_t size
 
   // Sign the request with SignV4S3 (adds Authorization header)
   minio::signer::SignV4S3(minio::http::Method::kPut, url.path, region,
-                          sign_headers, query_params,
-                          creds.access_key, creds.secret_key,
-                          kUnsignedPayload, date);
+                          sign_headers, query_params, creds.access_key,
+                          creds.secret_key, kUnsignedPayload, date);
 
   // Convert Multimap to httplib::Headers
   httplib::Headers headers;
@@ -123,7 +127,8 @@ inline static ssize_t objectPut(const void *handle, const char* buf, size_t size
 
   std::string path = url.path;
   std::string query_string = query_params.ToQueryString();
-  std::string full_path = query_string.empty() ? path : path + "?" + query_string;
+  std::string full_path =
+      query_string.empty() ? path : path + "?" + query_string;
 
   url.path = "";
   url.query_string = "";
@@ -166,10 +171,11 @@ inline static ssize_t objectPut(const void *handle, const char* buf, size_t size
   return size;
 }
 
-inline static ssize_t objectGet(const void *handle, char* buf, size_t size, [[maybe_unused]] loff_t offset, const cufileRDMAInfo_t *infop)
-{
-  void *ctx = cuObjClient::getCtx(handle);
-  s3_rdma_client_ctx_t *sctx = static_cast<s3_rdma_client_ctx_t *>(ctx);
+inline static ssize_t objectGet(const void* handle, char* buf, size_t size,
+                                [[maybe_unused]] loff_t offset,
+                                const cufileRDMAInfo_t* infop) {
+  void* ctx = cuObjClient::getCtx(handle);
+  s3_rdma_client_ctx_t* sctx = static_cast<s3_rdma_client_ctx_t*>(ctx);
   char io_str[sizeof IO_DESC_STR];
   unsigned io_len = sizeof io_str;
 
@@ -179,8 +185,8 @@ inline static ssize_t objectGet(const void *handle, char* buf, size_t size, [[ma
   }
 
   const std::string descr = std::string(infop->desc_str, infop->desc_len);
-  snprintf(io_str, io_len,"%s:%016lx:%016lx;",
-	   infop->desc_str, (uint64_t)buf, (uint64_t)size);
+  snprintf(io_str, io_len, "%s:%016lx:%016lx;", infop->desc_str, (uint64_t)buf,
+           (uint64_t)size);
 
   minio::utils::UtcTime date = minio::utils::UtcTime::Now();
   minio::creds::Credentials creds = sctx->provider->Fetch();
@@ -188,14 +194,14 @@ inline static ssize_t objectGet(const void *handle, char* buf, size_t size, [[ma
   minio::http::Url url;
   const std::string& region = sctx->region;
 
-  if (minio::error::Error err = sctx->url.BuildUrl(url, minio::http::Method::kGet,
-					     region, query_params,
-					     sctx->bucket, sctx->object)) {
+  if (minio::error::Error err =
+          sctx->url.BuildUrl(url, minio::http::Method::kGet, region,
+                             query_params, sctx->bucket, sctx->object)) {
     std::cerr << "failed to build url. error=" << err
               << ". This should not happen" << std::endl;
     return -1;
   }
-  
+
   std::string host = url.HostHeaderValue();
 
   // Build headers for SignV4S3
@@ -212,9 +218,8 @@ inline static ssize_t objectGet(const void *handle, char* buf, size_t size, [[ma
 
   // Sign the request with SignV4S3 (adds Authorization header)
   minio::signer::SignV4S3(minio::http::Method::kGet, url.path, region,
-                          sign_headers, query_params,
-                          creds.access_key, creds.secret_key,
-                          kUnsignedPayload, date);
+                          sign_headers, query_params, creds.access_key,
+                          creds.secret_key, kUnsignedPayload, date);
 
   // Convert Multimap to httplib::Headers
   httplib::Headers headers;
@@ -247,7 +252,8 @@ inline static ssize_t objectGet(const void *handle, char* buf, size_t size, [[ma
 
   try {
     int reply_code = std::stoi(rdma_reply);
-    if (reply_code != kRDMAReplySuccess && reply_code != kRDMAReplyPartialContent) {
+    if (reply_code != kRDMAReplySuccess &&
+        reply_code != kRDMAReplyPartialContent) {
       std::cerr << "Unexpected RDMA reply: " << reply_code << std::endl;
       return -1;
     }
@@ -257,8 +263,8 @@ inline static ssize_t objectGet(const void *handle, char* buf, size_t size, [[ma
     if (!bytes_str.empty()) {
       ssize_t bytes_transferred = std::stoll(bytes_str);
       if (bytes_transferred != static_cast<ssize_t>(size)) {
-        std::cerr << "RDMA bytes mismatch: expected " << size
-                  << ", got " << bytes_transferred << std::endl;
+        std::cerr << "RDMA bytes mismatch: expected " << size << ", got "
+                  << bytes_transferred << std::endl;
       }
     }
   } catch (const std::exception& e) {

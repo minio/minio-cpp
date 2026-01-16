@@ -245,7 +245,7 @@ error::Error PutObjectRDMAArgs::Validate() const {
 
   return error::SUCCESS;
 }
-  
+
 error::Error GetObjectArgs::Validate() const {
   if (error::Error err = ObjectConditionalReadArgs::Validate()) {
     return err;

@@ -53,12 +53,10 @@ struct Url {
         host(std::move(host)),
         port(port),
         path(std::move(path)),
-        query_string(std::move(query_string)) {};
+        query_string(std::move(query_string)){};
   explicit Url(bool https, std::string host, unsigned int port)
-      : https(https),
-        host(std::move(host)),
-        port(port) {};
-  
+      : https(https), host(std::move(host)), port(port){};
+
   ~Url() = default;
 
   explicit operator bool() const { return !host.empty(); }

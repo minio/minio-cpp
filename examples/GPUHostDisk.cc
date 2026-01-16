@@ -1,19 +1,19 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <cuda.h>
-#include <iostream>
-#include <fstream>
-#include <string.h>
-#include <sys/socket.h>
-#include <sys/types.h>
+#include <miniocpp/client.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-#include <miniocpp/client.h>
+#include <fstream>
+#include <iostream>
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   char *bufptr;
   size_t bufsize = 10 * 1024 * 1024UL;
   if (argc == 2) {
@@ -23,9 +23,9 @@ int main(int argc, char* argv[]) {
   cudaMalloc(&bufptr, bufsize);
   cudaMemset(bufptr, 'A', bufsize);
   cudaStreamSynchronize(0);
-  
+
   char *hostptr;
-  hostptr = (char *) malloc(bufsize);
+  hostptr = (char *)malloc(bufsize);
   cudaMemcpy(hostptr, bufptr, bufsize, cudaMemcpyDeviceToHost);
 
   // Open the file in binary mode for writing

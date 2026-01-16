@@ -15,22 +15,22 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <cuda_runtime.h>
-#include <iostream>
-#include <fstream>
-#include <string.h>
-#include <sys/socket.h>
-#include <sys/types.h>
+#include <miniocpp/client.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-#include <miniocpp/client.h>
+#include <fstream>
+#include <iostream>
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   std::string host;
   std::string access_key;
   std::string secret_key;
@@ -76,8 +76,7 @@ int main(int argc, char* argv[]) {
     int res = posix_memalign((void **)&bufptr, getpagesize(), bufsize);
     if (res) {
       std::cerr << "unable to allocate system memory with alignment"
-		<< getpagesize() << "buf size"
-		<< bufsize << std::endl;
+                << getpagesize() << "buf size" << bufsize << std::endl;
     }
     assert(bufptr);
     memset(bufptr, 'A', bufsize);
@@ -94,9 +93,10 @@ int main(int argc, char* argv[]) {
   // Handle response.
   if (presp) {
     std::cout << std::endl
-	      << "data uploaded successfully " << presp.etag << std::endl;
+              << "data uploaded successfully " << presp.etag << std::endl;
   } else {
-    std::cout << "unable to get object; " << presp.Error().String() << std::endl;
+    std::cout << "unable to get object; " << presp.Error().String()
+              << std::endl;
   }
 
   // Create get object arguments.
@@ -116,13 +116,13 @@ int main(int argc, char* argv[]) {
   // Handle response.
   if (resp) {
     std::cout << std::endl
-	      << "data of my-object is received successfully" << std::endl;
+              << "data of my-object is received successfully" << std::endl;
   } else {
     std::cout << "unable to get object; " << resp.Error().String() << std::endl;
   }
 
   char *hostptr;
-  hostptr = (char *) malloc(bufsize);
+  hostptr = (char *)malloc(bufsize);
   if (gpu_enabled) {
     cudaMemcpy(hostptr, bufptr, bufsize, cudaMemcpyDeviceToHost);
   } else {
