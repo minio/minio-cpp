@@ -255,6 +255,7 @@ typedef struct s3_rdma_client_ctx {
   minio::s3::BaseUrl url;
   std::string region;
   cuObjOpType_t op;
+  std::string checksum;  // CRC64NVME checksum for multipart uploads
 } s3_rdma_client_ctx_t;
 
 #endif

@@ -163,6 +163,7 @@ struct PutObjectApiArgs : public PutObjectBaseArgs {
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
   cuObjClient* rdmaclient = nullptr;
+  std::string checksum_crc64nvme;  // CRC64NVME checksum for multipart uploads
 
   PutObjectApiArgs() = default;
   ~PutObjectApiArgs() = default;
@@ -177,6 +178,7 @@ struct UploadPartArgs : public ObjectWriteArgs {
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
   cuObjClient* rdmaclient = nullptr;
+  std::string checksum_crc64nvme;  // CRC64NVME checksum for multipart uploads
 
   UploadPartArgs() = default;
   ~UploadPartArgs() = default;
@@ -335,6 +337,7 @@ struct PutObjectArgs : public PutObjectBaseArgs {
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
   cuObjClient* rdmaclient = nullptr;
+  std::string checksum_crc64nvme;  // CRC64NVME checksum for multipart uploads
 
   PutObjectArgs(std::istream& stream, long object_size, long part_size);
   ~PutObjectArgs() = default;

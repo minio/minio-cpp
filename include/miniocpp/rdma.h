@@ -105,6 +105,11 @@ inline static ssize_t objectPut(const void* handle, const char* buf,
   sign_headers.Add("Content-Type", "application/octet-stream");
   sign_headers.Add("Content-Length", "0");
 
+  // Add CRC64NVME checksum for multipart uploads
+  if (!sctx->checksum.empty()) {
+    sign_headers.Add("x-amz-checksum-crc64nvme", sctx->checksum);
+  }
+
   // Add session token if present
   if (!creds.session_token.empty()) {
     sign_headers.Add("X-Amz-Security-Token", creds.session_token);

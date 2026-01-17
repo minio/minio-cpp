@@ -158,6 +158,7 @@ struct CompleteMultipartUploadResponse : public Response {
   std::string checksumCRC32C;
   std::string checksumSHA1;
   std::string checksumSHA256;
+  std::string checksum_crc64nvme;
 
   CompleteMultipartUploadResponse() = default;
 
@@ -195,6 +196,7 @@ struct PutObjectResponse : public Response {
   std::string checksumCRC32C;
   std::string checksumSHA1;
   std::string checksumSHA256;
+  std::string checksum_crc64nvme;
 
   PutObjectResponse() = default;
 

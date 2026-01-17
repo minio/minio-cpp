@@ -1393,6 +1393,7 @@ PutObjectResponse BaseClient::PutObject(PutObjectApiArgs args) {
 
     PutObjectResponse resp;
     resp.etag = putCtx.etag;
+    resp.checksum_crc64nvme = putCtx.checksum;
     return resp;
   }
 
@@ -1966,6 +1967,7 @@ UploadPartResponse BaseClient::UploadPart(UploadPartArgs args) {
         .url = base_url_,
         .region = region,
         .op = CUOBJ_PUT,
+        .checksum = args.checksum_crc64nvme,
     };
 
     ssize_t ret = args.rdmaclient->cuObjPut(&putCtx, args.buf, args.part_size);
@@ -1977,6 +1979,7 @@ UploadPartResponse BaseClient::UploadPart(UploadPartArgs args) {
 
     UploadPartResponse resp;
     resp.etag = putCtx.etag;
+    resp.checksum_crc64nvme = putCtx.checksum;
     return resp;
   }
 
