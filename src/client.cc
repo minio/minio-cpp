@@ -397,13 +397,19 @@ GetObjectResponse Client::GetObject(GetObjectRDMAArgs args) {
             << (connected ? "true" : "false") << ", object=" << args.object
             << ", size=" << size << std::endl;
 
+  bool use_rdma = false;
   if (connected) {
     int res = rdmaclient.cuMemObjGetDescriptor(args.buf, size);
     if (res) {
-      return error::make<GetObjectResponse>(
-          "unable to register RDMA buffer for object " + args.object);
+      // Buffer registration failed (not GPU/pinned memory), fall back to HTTP
+      std::cerr << "[RDMA_DEBUG] GetObject: buffer registration failed for "
+                << args.object << ", falling back to HTTP" << std::endl;
+    } else {
+      use_rdma = true;
     }
+  }
 
+  if (use_rdma) {
     // get the buffer + get operation.
     s3_rdma_client_ctx getCtx = {
         .provider = provider_,
@@ -420,19 +426,19 @@ GetObjectResponse Client::GetObject(GetObjectRDMAArgs args) {
     ssize_t ret = rdmaclient.cuObjGet(&getCtx, args.buf, size);
     if (ret < 0) {
       rdmaclient.cuMemObjPutDescriptor(args.buf);
-      return error::make<GetObjectResponse>("failed to download to object " +
-                                            args.object);
+      // RDMA transfer failed, fall back to HTTP
+      std::cerr << "[RDMA_DEBUG] GetObject: RDMA transfer failed for "
+                << args.object << ", falling back to HTTP" << std::endl;
+    } else {
+      int res = rdmaclient.cuMemObjPutDescriptor(args.buf);
+      if (res) {
+        std::cerr << "[RDMA_DEBUG] GetObject: buffer deregistration failed for "
+                  << args.object << std::endl;
+      }
+      GetObjectResponse resp;
+      resp.etag = getCtx.etag;
+      return resp;
     }
-
-    res = rdmaclient.cuMemObjPutDescriptor(args.buf);
-    if (res) {
-      return error::make<GetObjectResponse>(
-          "unable to deregister RDMA buffer for object " + args.object);
-    }
-
-    GetObjectResponse resp;
-    resp.etag = getCtx.etag;
-    return resp;
   }
 
   GetObjectArgs targs;
@@ -471,13 +477,19 @@ PutObjectResponse Client::PutObject(PutObjectRDMAArgs args) {
             << (connected ? "true" : "false") << ", object=" << args.object
             << ", size=" << size << std::endl;
 
+  bool use_rdma = false;
   if (connected) {
     int res = rdmaclient.cuMemObjGetDescriptor(args.buf, size);
     if (res) {
-      return error::make<PutObjectResponse>(
-          "unable to register RDMA buffer for object " + args.object);
+      // Buffer registration failed (not GPU/pinned memory), fall back to HTTP
+      std::cerr << "[RDMA_DEBUG] PutObject: buffer registration failed for "
+                << args.object << ", falling back to HTTP" << std::endl;
+    } else {
+      use_rdma = true;
     }
+  }
 
+  if (use_rdma) {
     // put the buffer + put operation.
     s3_rdma_client_ctx putCtx = {
         .provider = provider_,
@@ -494,21 +506,22 @@ PutObjectResponse Client::PutObject(PutObjectRDMAArgs args) {
     ssize_t ret = rdmaclient.cuObjPut(&putCtx, args.buf, size);
     if (ret < 0) {
       rdmaclient.cuMemObjPutDescriptor(args.buf);
-      return error::make<PutObjectResponse>("failed to upload to object " +
-                                            args.object);
+      // RDMA transfer failed, fall back to HTTP
+      std::cerr << "[RDMA_DEBUG] PutObject: RDMA transfer failed for "
+                << args.object << ", falling back to HTTP" << std::endl;
+    } else {
+      int res = rdmaclient.cuMemObjPutDescriptor(args.buf);
+      if (res) {
+        std::cerr << "[RDMA_DEBUG] PutObject: buffer deregistration failed for "
+                  << args.object << std::endl;
+      }
+      PutObjectResponse resp;
+      resp.etag = putCtx.etag;
+      return resp;
     }
-
-    res = rdmaclient.cuMemObjPutDescriptor(args.buf);
-    if (res) {
-      return error::make<PutObjectResponse>(
-          "unable to deregister RDMA buffer for object " + args.object);
-    }
-
-    PutObjectResponse resp;
-    resp.etag = putCtx.etag;
-    return resp;
   }
 
+  // HTTP fallback path
   std::stringstream ss(std::ios_base::in | std::ios_base::out);
   ss.rdbuf()->pubsetbuf(args.buf, size);
 
