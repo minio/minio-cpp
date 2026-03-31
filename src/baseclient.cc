@@ -1372,29 +1372,32 @@ PutObjectResponse BaseClient::PutObject(PutObjectApiArgs args) {
   }
 
   if (args.rdmaclient != nullptr && args.rdmaclient->isConnected()) {
-    // send the buffer + put operation via RDMA.
-    s3_rdma_client_ctx putCtx = {
-        .provider = provider_,
-        .bucket = args.bucket,
-        .object = args.object,
-        .uploadId = "",
-        .partNumber = 0,
-        .etag = "",
-        .url = base_url_,
-        .region = region,
-        .op = CUOBJ_PUT,
-    };
+    char* token = nullptr;
+    cuObjErr_t terr = args.rdmaclient->cuMemObjGetRDMAToken(
+        args.buf, args.size, 0, CUOBJ_PUT, &token);
+    if (terr == CU_OBJ_SUCCESS && token != nullptr) {
+      s3_rdma_client_ctx putCtx = {
+          .provider = provider_,
+          .bucket = args.bucket,
+          .object = args.object,
+          .url = base_url_,
+          .region = region,
+          .op = CUOBJ_PUT,
+      };
 
-    ssize_t ret = args.rdmaclient->cuObjPut(&putCtx, args.buf, args.size);
-    if (ret < 0) {
-      return error::make<PutObjectResponse>("failed to upload the object " +
-                                            args.object);
+      ssize_t ret = rdmaPut(&putCtx, token, args.size);
+      args.rdmaclient->cuMemObjPutRDMAToken(token);
+
+      if (ret < 0) {
+        return error::make<PutObjectResponse>("failed to upload the object " +
+                                              args.object);
+      }
+
+      PutObjectResponse resp;
+      resp.etag = putCtx.etag;
+      resp.checksum_crc64nvme = putCtx.checksum;
+      return resp;
     }
-
-    PutObjectResponse resp;
-    resp.etag = putCtx.etag;
-    resp.checksum_crc64nvme = putCtx.checksum;
-    return resp;
   }
 
   Request req(http::Method::kPut, region, base_url_, args.extra_headers,
@@ -1956,31 +1959,36 @@ UploadPartResponse BaseClient::UploadPart(UploadPartArgs args) {
       return UploadPartResponse(resp);
     }
 
-    // send the buffer + put operation via RDMA.
-    s3_rdma_client_ctx putCtx = {
-        .provider = provider_,
-        .bucket = args.bucket,
-        .object = args.object,
-        .uploadId = args.upload_id,
-        .partNumber = args.part_number,
-        .etag = "",
-        .url = base_url_,
-        .region = region,
-        .op = CUOBJ_PUT,
-        .checksum = args.checksum_crc64nvme,
-    };
+    char* token = nullptr;
+    cuObjErr_t terr = args.rdmaclient->cuMemObjGetRDMAToken(
+        args.buf, args.part_size, 0, CUOBJ_PUT, &token);
+    if (terr == CU_OBJ_SUCCESS && token != nullptr) {
+      s3_rdma_client_ctx putCtx = {
+          .provider = provider_,
+          .bucket = args.bucket,
+          .object = args.object,
+          .uploadId = args.upload_id,
+          .partNumber = args.part_number,
+          .url = base_url_,
+          .region = region,
+          .op = CUOBJ_PUT,
+          .checksum = args.checksum_crc64nvme,
+      };
 
-    ssize_t ret = args.rdmaclient->cuObjPut(&putCtx, args.buf, args.part_size);
-    if (ret < 0) {
-      return UploadPartResponse(
-          error::Error("failed to upload to object with uploadId " +
-                       args.object + "uploadId=" + args.upload_id));
+      ssize_t ret = rdmaPut(&putCtx, token, args.part_size);
+      args.rdmaclient->cuMemObjPutRDMAToken(token);
+
+      if (ret < 0) {
+        return UploadPartResponse(
+            error::Error("failed to upload to object with uploadId " +
+                         args.object + " uploadId=" + args.upload_id));
+      }
+
+      UploadPartResponse resp;
+      resp.etag = putCtx.etag;
+      resp.checksum_crc64nvme = putCtx.checksum;
+      return resp;
     }
-
-    UploadPartResponse resp;
-    resp.etag = putCtx.etag;
-    resp.checksum_crc64nvme = putCtx.checksum;
-    return resp;
   }
 
   utils::Multimap query_params;

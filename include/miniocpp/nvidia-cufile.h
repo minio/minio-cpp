@@ -1,5 +1,5 @@
 /*
- * Copyright 1993-2020 NVIDIA Corporation.  All rights reserved.
+ * Copyright 1993-2023 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO LICENSEE:
  *
@@ -75,83 +75,110 @@ extern "C" {
 // Note :Data path errors are captured via standard error codes
 #define CUFILEOP_STATUS_ENTRIES                                                \
   CUFILE_OP(0, CU_FILE_SUCCESS, cufile success)                                \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 1, CU_FILE_DRIVER_NOT_INITIALIZED,             \
-            nvidia - fs driver is not loaded)                                  \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 2, CU_FILE_DRIVER_INVALID_PROPS,               \
-            invalid property)                                                  \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 3, CU_FILE_DRIVER_UNSUPPORTED_LIMIT,           \
-            property range error)                                              \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 4, CU_FILE_DRIVER_VERSION_MISMATCH,            \
-            nvidia - fs driver version mismatch)                               \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 5, CU_FILE_DRIVER_VERSION_READ_ERROR,          \
-            nvidia - fs driver version read error)                             \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 6, CU_FILE_DRIVER_CLOSING,                     \
-            driver shutdown in progress)                                       \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 7, CU_FILE_PLATFORM_NOT_SUPPORTED,             \
-            GPUDirect Storage not supported on current platform)               \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 8, CU_FILE_IO_NOT_SUPPORTED,                   \
-            GPUDirect Storage not supported on current file)                   \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 9, CU_FILE_DEVICE_NOT_SUPPORTED,               \
-            GPUDirect Storage not supported on current GPU)                    \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 10, CU_FILE_NVFS_DRIVER_ERROR,                 \
-            nvidia - fs driver ioctl error)                                    \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 11, CU_FILE_CUDA_DRIVER_ERROR,                 \
-            CUDA Driver API error)                                             \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 12, CU_FILE_CUDA_POINTER_INVALID,              \
-            invalid device pointer)                                            \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 13, CU_FILE_CUDA_MEMORY_TYPE_INVALID,          \
-            invalid pointer memory type)                                       \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 14, CU_FILE_CUDA_POINTER_RANGE_ERROR,          \
-            pointer range exceeds allocated address range)                     \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 15, CU_FILE_CUDA_CONTEXT_MISMATCH,             \
-            cuda context mismatch)                                             \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 16, CU_FILE_INVALID_MAPPING_SIZE,              \
-            access beyond maximum pinned size)                                 \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 17, CU_FILE_INVALID_MAPPING_RANGE,             \
-            access beyond mapped size)                                         \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 18, CU_FILE_INVALID_FILE_TYPE,                 \
-            unsupported file type)                                             \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 19, CU_FILE_INVALID_FILE_OPEN_FLAG,            \
-            unsupported file open flags)                                       \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 20, CU_FILE_DIO_NOT_SET, fd direct IO not set) \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 22, CU_FILE_INVALID_VALUE, invalid arguments)  \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 23, CU_FILE_MEMORY_ALREADY_REGISTERED,         \
-            device pointer already registered)                                 \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 24, CU_FILE_MEMORY_NOT_REGISTERED,             \
-            device pointer lookup failure)                                     \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 25, CU_FILE_PERMISSION_DENIED,                 \
-            driver or file access error)                                       \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 26, CU_FILE_DRIVER_ALREADY_OPEN,               \
-            driver is already open)                                            \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 27, CU_FILE_HANDLE_NOT_REGISTERED,             \
-            file descriptor is not registered)                                 \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 28, CU_FILE_HANDLE_ALREADY_REGISTERED,         \
-            file descriptor is already registered)                             \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 29, CU_FILE_DEVICE_NOT_FOUND,                  \
-            GPU device not found)                                              \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 30, CU_FILE_INTERNAL_ERROR, internal error)    \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 31, CU_FILE_GETNEWFD_FAILED,                   \
-            failed to obtain new file descriptor)                              \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 33, CU_FILE_NVFS_SETUP_ERROR,                  \
-            NVFS driver initialization error)                                  \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 34, CU_FILE_IO_DISABLED,                       \
-            GPUDirect Storage disabled by config on current file)              \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 35, CU_FILE_BATCH_SUBMIT_FAILED,               \
-            failes to submit batch operation)                                  \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 36, CU_FILE_GPU_MEMORY_PINNING_FAILED,         \
-            Failed to allocate pinned GPU Memory)                              \
-  CUFILE_OP(CUFILEOP_BASE_ERR + 37, CU_FILE_IO_MAX_ERROR,                      \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 1, CU_FILE_DRIVER_NOT_INITIALIZED,            \
+            nvidia - fs driver is not loaded.Set allow_compat_mode to true in  \
+                cufile.json file to enable compatible mode)                    \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 2, CU_FILE_DRIVER_INVALID_PROPS,              \
+            invalid property)                                                 \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 3, CU_FILE_DRIVER_UNSUPPORTED_LIMIT,          \
+            property range error)                                             \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 4, CU_FILE_DRIVER_VERSION_MISMATCH,           \
+            nvidia - fs driver version mismatch)                              \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 5, CU_FILE_DRIVER_VERSION_READ_ERROR,         \
+            nvidia - fs driver version read error)                            \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 6, CU_FILE_DRIVER_CLOSING,                    \
+            driver shutdown in progress)                                      \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 7, CU_FILE_PLATFORM_NOT_SUPPORTED,            \
+            GPUDirect Storage not supported on current platform)              \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 8, CU_FILE_IO_NOT_SUPPORTED,                  \
+            GPUDirect Storage not supported on current file)                  \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 9, CU_FILE_DEVICE_NOT_SUPPORTED,              \
+            GPUDirect Storage not supported on current GPU)                   \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 10, CU_FILE_NVFS_DRIVER_ERROR,                \
+            nvidia - fs driver ioctl error)                                   \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 11, CU_FILE_CUDA_DRIVER_ERROR,                \
+            CUDA Driver API error)                                            \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 12, CU_FILE_CUDA_POINTER_INVALID,             \
+            invalid device pointer)                                           \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 13, CU_FILE_CUDA_MEMORY_TYPE_INVALID,         \
+            invalid pointer memory type)                                      \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 14, CU_FILE_CUDA_POINTER_RANGE_ERROR,         \
+            pointer range exceeds allocated address range)                    \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 15, CU_FILE_CUDA_CONTEXT_MISMATCH,            \
+            cuda context mismatch)                                            \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 16, CU_FILE_INVALID_MAPPING_SIZE,             \
+            access beyond maximum pinned size)                                \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 17, CU_FILE_INVALID_MAPPING_RANGE,            \
+            access beyond mapped size)                                        \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 18, CU_FILE_INVALID_FILE_TYPE,                \
+            unsupported file type)                                            \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 19, CU_FILE_INVALID_FILE_OPEN_FLAG,           \
+            unsupported file open flags)                                      \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 20, CU_FILE_DIO_NOT_SET,                      \
+            fd direct IO not set)                                             \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 22, CU_FILE_INVALID_VALUE,                    \
+            invalid arguments)                                                \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 23, CU_FILE_MEMORY_ALREADY_REGISTERED,        \
+            device pointer already registered)                                \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 24, CU_FILE_MEMORY_NOT_REGISTERED,            \
+            device pointer lookup failure)                                    \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 25, CU_FILE_PERMISSION_DENIED,                \
+            driver or file access error)                                      \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 26, CU_FILE_DRIVER_ALREADY_OPEN,              \
+            driver is already open)                                           \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 27, CU_FILE_HANDLE_NOT_REGISTERED,            \
+            file descriptor is not registered)                                \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 28, CU_FILE_HANDLE_ALREADY_REGISTERED,        \
+            file descriptor is already registered)                            \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 29, CU_FILE_DEVICE_NOT_FOUND,                 \
+            GPU device not found)                                             \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 30, CU_FILE_INTERNAL_ERROR, internal error)   \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 31, CU_FILE_GETNEWFD_FAILED,                  \
+            failed to obtain new file descriptor)                             \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 33, CU_FILE_NVFS_SETUP_ERROR,                 \
+            NVFS driver initialization error)                                 \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 34, CU_FILE_IO_DISABLED,                      \
+            GPUDirect Storage disabled by config on current file)             \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 35, CU_FILE_BATCH_SUBMIT_FAILED,              \
+            failed to submit batch operation)                                 \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 36, CU_FILE_GPU_MEMORY_PINNING_FAILED,        \
+            Failed to allocate pinned GPU Memory)                             \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 37, CU_FILE_BATCH_FULL,                       \
+            queue full for batch operation)                                   \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 38, CU_FILE_ASYNC_NOT_SUPPORTED,              \
+            cuFile stream operation not supported)                            \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 39,                                           \
+            CU_FILE_INTERNAL_BATCH_SETUP_ERROR,                               \
+            batch setup internal error - retry later)                         \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 40,                                           \
+            CU_FILE_INTERNAL_BATCH_SUBMIT_ERROR,                              \
+            batch submit internal error - retry later)                        \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 41,                                           \
+            CU_FILE_INTERNAL_BATCH_GETSTATUS_ERROR,                           \
+            batch get status internal error - retry later)                    \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 42,                                           \
+            CU_FILE_INTERNAL_BATCH_CANCEL_ERROR,                              \
+            batch cancel internal error - retry later)                        \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 43, CU_FILE_NOMEM_ERROR,                      \
+            cufile no memory error - retry later)                             \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 44, CU_FILE_IO_ERROR, cufile io error)        \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 45,                                           \
+            CU_FILE_INTERNAL_BUF_REGISTER_ERROR,                              \
+            cufile buf registration error)                                    \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 46, CU_FILE_HASH_OPR_ERROR,                   \
+            cufile hash operation error)                                      \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 47, CU_FILE_INVALID_CONTEXT_ERROR,            \
+            cufile invalid context error)                                     \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 48,                                           \
+            CU_FILE_NVFS_INTERNAL_DRIVER_ERROR,                               \
+            nvfs internal driver error)                                       \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 49, CU_FILE_BATCH_NOCOMPAT_ERROR,             \
+            compat mode off error)                                            \
+  CUFILE_OP(CUFILEOP_BASE_ERR + 50, CU_FILE_IO_MAX_ERROR,                     \
             GPUDirect Storage Max Error)
 
 /**
  * @brief cufileop status enum
- *
- * @note on success the error code is set to  @ref CU_FILE_SUCCESS.
- * @note The error code can be inspected using @ref IS_CUFILE_ERR and @ref
- * CUFILE_ERRSTR.
- * @note The error code if set to @ref CU_FILE_CUDA_DRIVER_ERROR, then cuda
- * error can be inspected using @ref IS_CUDA_ERR and @ref CU_FILE_CUDA_ERR.
- * @note Data path errors are captured via standard error codes
  */
 typedef enum CUfileOpError {
 /// @cond DOXYGEN_SKIP_MACRO
@@ -204,44 +231,51 @@ typedef struct CUfileError {
 
 /* driver properties */
 typedef enum CUfileDriverStatusFlags {
-  CU_FILE_LUSTRE_SUPPORTED = 0, /*!< Support for DDN LUSTRE */
-
-  CU_FILE_WEKAFS_SUPPORTED = 1, /*!< Support for WEKAFS */
-
-  CU_FILE_NFS_SUPPORTED = 2, /*!< Support for NFS */
-
-  CU_FILE_GPFS_SUPPORTED = 3, /*! < Support for GPFS */
-
-  CU_FILE_NVME_SUPPORTED = 4, /*!< Support for NVMe */
-
-  CU_FILE_NVMEOF_SUPPORTED = 5, /*!< Support for NVMeOF */
-
-  CU_FILE_SCSI_SUPPORTED = 6, /*!< Support for SCSI */
-
-  CU_FILE_SCALEFLUX_CSD_SUPPORTED = 7, /*!< Support for Scaleflux CSD*/
-
-  CU_FILE_NVMESH_SUPPORTED = 8, /*!< Support for NVMesh Block Dev*/
-  CU_FILE_BEEGFS_SUPPORTED = 9, /*!< Support for BeeGFS */
-
+  CU_FILE_LUSTRE_SUPPORTED = 0,     /*!< Support for DDN LUSTRE */
+  CU_FILE_WEKAFS_SUPPORTED = 1,     /*!< Support for WEKAFS */
+  CU_FILE_NFS_SUPPORTED = 2,        /*!< Support for NFS */
+  CU_FILE_GPFS_SUPPORTED = 3,       /*!< Support for GPFS */
+  CU_FILE_NVME_SUPPORTED = 4,       /*!< Support for NVMe */
+  CU_FILE_NVMEOF_SUPPORTED = 5,     /*!< Support for NVMeOF */
+  CU_FILE_SCSI_SUPPORTED = 6,       /*!< Support for SCSI */
+  CU_FILE_SCALEFLUX_CSD_SUPPORTED = 7, /*!< Support for Scaleflux CSD */
+  CU_FILE_NVMESH_SUPPORTED = 8,     /*!< Support for NVMesh Block Dev */
+  CU_FILE_BEEGFS_SUPPORTED = 9,     /*!< Support for BeeGFS */
+  // 10 is reserved for YRCloudFile
+  CU_FILE_NVME_P2P_SUPPORTED = 11,  /*!< Deprecated */
+  CU_FILE_SCATEFS_SUPPORTED = 12,   /*!< Support for ScateFS */
+  CU_FILE_VIRTIOFS_SUPPORTED = 13,  /*!< Support for VirtioFS */
+  CU_FILE_MAX_TARGET_TYPES,         /*!< Maximum FS supported */
 } CUfileDriverStatusFlags_t;
 
 typedef enum CUfileDriverControlFlags {
-  CU_FILE_USE_POLL_MODE = 0, /*!< use POLL mode. properties.use_poll_mode*/
-
-  CU_FILE_ALLOW_COMPAT_MODE =
-      1 /*!< allow COMPATIBILITY mode. properties.allow_compat_mode*/
-
+  CU_FILE_USE_POLL_MODE = 0,     /*!< use POLL mode */
+  CU_FILE_ALLOW_COMPAT_MODE = 1, /*!< allow COMPATIBILITY mode */
+  CU_FILE_POSIX_IO_MODE = 2,     /*!< Vanilla posix io mode */
+  CU_FILE_FALLBACK_IO_MODE = 4   /*!< Fallback io mode */
 } CUfileDriverControlFlags_t;
 
 typedef enum CUfileFeatureFlags {
-  CU_FILE_DYN_ROUTING_SUPPORTED = 0, /*!< Support for Dynamic routing to handle
-                                        devices across the PCIe bridges */
-
-  CU_FILE_BATCH_IO_SUPPORTED = 1, /*!<  Unsupported */
-
-  CU_FILE_STREAMS_SUPPORTED = 2 /*!<  Unsupported */
-
+  CU_FILE_DYN_ROUTING_SUPPORTED = 0,  /*!< Dynamic routing support */
+  CU_FILE_BATCH_IO_SUPPORTED = 1,     /*!< Batch IO support */
+  CU_FILE_STREAMS_SUPPORTED = 2,      /*!< Streams support */
+  CU_FILE_PARALLEL_IO_SUPPORTED = 3,  /*!< Parallel IO support */
+  CU_FILE_P2P_SUPPORTED = 4           /*!< PCI P2PDMA support */
 } CUfileFeatureFlags_t;
+
+typedef enum CUfileP2PFlags {
+  CUFILE_P2PDMA = 0,         /*!< Support for PCI P2PDMA */
+  CUFILE_NVFS = 1,           /*!< Support for nvidia-fs */
+  CUFILE_DMABUF = 2,         /*!< Support for DMA Buffer */
+  CUFILE_C2C = 3,            /*!< Support for Chip-to-Chip (Grace) */
+  CUFILE_NVIDIA_PEERMEM = 4  /*!< Only for IBM Spectrum Scale and WekaFS */
+} CUfileP2PFlags_t;
+
+/* P2P Flag constants */
+#define CU_FILE_P2P_FLAG_PCI_P2PDMA ((CUfileP2PFlags_t)(1 << CUFILE_P2PDMA))
+#define CU_FILE_P2P_FLAG_NVFS ((CUfileP2PFlags_t)(1 << CUFILE_NVFS))
+#define CU_FILE_P2P_FLAG_DMABUF ((CUfileP2PFlags_t)(1 << CUFILE_DMABUF))
+#define CU_FILE_P2P_FLAG_C2C ((CUfileP2PFlags_t)(1 << CUFILE_C2C))
 
 typedef struct CUfileDrvProps {
   struct {
@@ -321,299 +355,44 @@ typedef struct CUfileDescr_t {
 
 /**
  * @brief File handle type
- *
  */
 typedef void *CUfileHandle_t;
 
 #pragma GCC visibility push(default)
 
-/**
- * @brief cuFileHandleRegister is required, and performs extra checking that is
- * memoized to provide increased performance on later cuFile operations.
- *
- * @param fh @ref CUfileHandle_t opaque file handle for IO operations
- * @param descr @ref CUfileDescr_t  file descriptor (OS agnostic)
- *
- * @return      CU_FILE_SUCCESS on successful completion. fh will be updated for
- * use in @ref cuFileRead, @ref cuFileWrite, @ref cuFileHandleDeregister
- * @return      CU_FILE_DRIVER_NOT_INITIALIZED on failure to load driver
- * @return      CU_FILE_IO_NOT_SUPPORTED -  if filesystem is not supported
- * @return      CU_FILE_INVALID_VALUE if null or bad api arguments
- * @return      CU_FILE_INVALID_FILE_OPEN_FLAG if file is opened with
- * unsupported modes like no O_DIRECT
- * @return      CU_FILE_INVALID_FILE_TYPE if filepath is not valid or is not a
- * regular file
- * @return      CU_FILE_HANDLE_ALREADY_REGISTERED if file handle/descriptor is
- * already registered
- *
- * <b>Description</b>
- * cuFileHandleRegister registers the open file descriptor for use with cuFile
- * IO operations.
- *
- * This API will ensure that the file’s descriptor is checked for GPUDirect
- * Storage support and returns a valid file handle on CU_FILE_SUCCESS.
- *
- * @note the file needs to be opened in O_DIRECT mode to support GPUDirect
- * Storage.
- *
- * @see cuFileRead
- * @see cuFileWrite
- * @see cuFileHandleDeregister
- *
- */
 CUfileError_t cuFileHandleRegister(CUfileHandle_t *fh, CUfileDescr_t *descr);
-
-/**
- * @brief releases a registered filehandle from cuFile
- *
- * @param fh @ref CUfileHandle_t file handle
- *
- * @return void
- *
- * @see cuFileHandleRegister
- */
 void cuFileHandleDeregister(CUfileHandle_t fh);
-
-/**
- * @brief register an existing cudaMalloced memory with cuFile to pin for
- * GPUDirect Storage access.
- *
- * @param devPtr_base  device pointer to allocated
- * @param length  size of memory region from the above specified devPtr
- * @param flags   CU_FILE_RDMA_REGISTER
- *
- * @return  CU_FILE_SUCCESS on success
- * @return  CU_FILE_NVFS_DRIVER_ERROR
- * @return  CU_FILE_INVALID_VALUE
- * @return  CU_FILE_CUDA_ERROR for unsuported memory type
- * @return  CU_FILE_MEMORY_ALREADY_REGISTERED on error
- * @return  CU_FILE_GPU_MEMORY_PINNING_FAILED if not enough pinned memory is
- * available
- * @note This memory will be use to perform GPU direct DMA from the supported
- * storage.
- * @warning This API is intended for usecases where the memory is used as
- * streaming buffer that is reused across multiple cuFile IO operations before
- * calling @ref cuFileBufDeregister
- *
- * @see cuFileBufDeregister
- * @see cuFileRead
- * @see cuFileWrite
- */
-CUfileError_t cuFileBufRegister(const void *devPtr_base, size_t length,
+CUfileError_t cuFileBufRegister(const void *bufPtr_base, size_t length,
                                 int flags);
-
-/**
- * @brief  deregister an already registered device memory from cuFile
- *
- * @param devPtr_base  device pointer to deregister
- *
- * @return  CU_FILE_SUCCESS on success
- * @return  CU_FILE_INVALID_VALUE on invalid memory pointer or unregistered
- * memory pointer
- *
- * @see cuFileBufRegister
- * @see cuFileRead
- * @see cuFileWrite
- */
-
-CUfileError_t cuFileBufDeregister(const void *devPtr_base);
-
-/**
- * @brief read data from a registered file handle to a specified device memory
- *
- * @param fh @ref CUfileHandle_t opaque file handle
- * @param devPtr_base  base address of buffer in device memory
- * @param size    size bytes to read
- * @param file_offset  file-offset from begining of the file
- * @param devPtr_offset  offset relative to the devPtr_base pointer to read
- * into.
- *
- * @return  size of bytes successfully read
- * @return  -1 on error, in which case errno is set to indicate filesystem
- * errors.
- * @return  all other errors will return a negative integer value of @ref
- * CUfileOpError enum value.
- *
- * @note  If the devPtr is not registered with @ref cuFileBufRegister, the data
- * will be buffered through preallocated pinned buffers.
- * @note  This is useful for applications that need to perform IO to unaligned
- * file offsets and/or size. This is also recommended for cases where the BAR1
- * memory size is smaller than the size of the allocated memory.
- *
- * @see cuFileBufRegister
- * @see cuFileHandleRegister
- * @see cuFileWrite
- */
-
-ssize_t cuFileRead(CUfileHandle_t fh, void *devPtr_base, size_t size,
-                   off_t file_offset, off_t devPtr_offset);
-
-/**
- * @brief  write data from a specified device memory to a registered file handle
- *
- * @param fh @ref CUfileHandle_t opaque file handle
- * @param devPtr_base  base address of buffer in device memory
- * @param size    size bytes to write
- * @param file_offset  file-offset from begining of the file
- * @param devPtr_offset  offset relative to the devPtr_base pointer to read
- * into.
- *
- * @return  size of bytes successfully written
- * @return  -1 on error, in which case errno is set to indicate filesystem
- * errors.
- * @return  all other errors will return a negative integer value of @ref
- * CUfileOpError enum value.
- *
- * @note  If the devPtr is not registered with @ref cuFileBufRegister, the data
- * will be buffered through preallocated pinned buffers.
- * @note  This is useful for applications that need to perform IO to unaligned
- * file offsets and/or size. This is also recommended for cases where the BAR1
- * memory size is smaller than the size of the allocated memory.
- *
- * @see cuFileBufRegister
- * @see cuFileHandleRegister
- * @see cuFileRead
- */
-
-ssize_t cuFileWrite(CUfileHandle_t fh, const void *devPtr_base, size_t size,
-                    off_t file_offset, off_t devPtr_offset);
+CUfileError_t cuFileBufDeregister(const void *bufPtr_base);
+ssize_t cuFileRead(CUfileHandle_t fh, void *bufPtr_base, size_t size,
+                   off_t file_offset, off_t bufPtr_offset);
+ssize_t cuFileWrite(CUfileHandle_t fh, const void *bufPtr_base, size_t size,
+                    off_t file_offset, off_t bufPtr_offset);
 
 // CUFile Driver APIs
-
-/**
- * @brief
- * Initialize the cuFile library and open the nvidia-fs driver
- *
- * @return CU_FILE_SUCCESS on success
- * @return CU_FILE_DRIVER_NOT_INITIALIZED
- * @return CU_FILE_DRIVER_VERSION_MISMATCH on driver version mismatch error
- *
- * @see cuFileDriverClose
- */
 CUfileError_t cuFileDriverOpen(void);
 
 CUfileError_t cuFileDriverClose(void);
 #define cuFileDriverClose cuFileDriverClose_v2
-/**
- * @brief
- * reset the cuFile library and release the nvidia-fs driver
- *
- * @return CU_FILE_SUCCESS on success
- * @return CU_FILE_DRIVER_CLOSING if there are any active IO operations using
- * @ref cuFileRead or @ref cuFileWrite
- *
- * @see cuFileDriverOpen
- */
 CUfileError_t cuFileDriverClose(void);
 
-/**
- * @brief
- * returns use count of cufile drivers at that moment by the process.
- */
 long cuFileUseCount(void);
-
-/**
- * @brief
- * Gets the Driver session properties
- *
- * @return CU_FILE_SUCCESS on success
- *
- * @see cuFileDriverSetPollMode
- * @see cuFileDriverSetMaxDirectIOSize
- * @see cuFileDriverSetMaxCacheSize
- * @see cuFileDriverSetMaxPinnedMemSize
- */
 CUfileError_t cuFileDriverGetProperties(CUfileDrvProps_t *props);
-
-/**
- * @brief
- * Sets whether the Read/Write APIs use polling to do IO operations
- *
- * @param  poll boolean to indicate whether to use poll mode or not
- * @param  poll_threshold_size max IO size to use for POLLING mode in KB
- *
- * @return CU_FILE_SUCCESS on success
- * @return CU_FILE_DRIVER_NOT_INITIALIZED if the driver is not initialized
- * @return CU_FILE_DRIVER_VERSION_MISMATCH, CU_FILE_DRIVER_UNSUPPORTED_LIMIT on
- * error
- *
- * @warning This is an advanced command and should be tuned based on available
- * system memory
- *
- * @see cuFileDriverGetProperties
- */
 CUfileError_t cuFileDriverSetPollMode(bool poll, size_t poll_threshold_size);
-
-/**
- * @brief
- * Control parameter to set max IO size(KB) used by the library to talk to
- * nvidia-fs driver
- *
- * @param  max_direct_io_size maximum allowed direct io size in KB
- *
- * @return CU_FILE_SUCCESS on success
- * @return CU_FILE_DRIVER_NOT_INITIALIZED if the driver is not initialized
- * @return CU_FILE_DRIVER_VERSION_MISMATCH, CU_FILE_DRIVER_UNSUPPORTED_LIMIT on
- * error
- *
- * @warning This is an advanced command and should be tuned based on available
- * system memory
- *
- * @see cuFileDriverGetProperties
- *
- */
 CUfileError_t cuFileDriverSetMaxDirectIOSize(size_t max_direct_io_size);
-
-/**
- * @brief
- * Control parameter to set maximum GPU memory reserved per device by the
- * library for internal buffering
- *
- * @param  max_cache_size The maximum GPU buffer space per device used for
- * internal use in KB
- *
- * @return CU_FILE_SUCCESS on success
- * @return CU_FILE_DRIVER_NOT_INITIALIZED if the driver is not initialized
- * @return CU_FILE_DRIVER_VERSION_MISMATCH, CU_FILE_DRIVER_UNSUPPORTED_LIMIT on
- * error
- *
- * @warning This is an advanced command and should be tuned based on supported
- * GPU memory
- *
- * @see cuFileDriverGetProperties
- */
 CUfileError_t cuFileDriverSetMaxCacheSize(size_t max_cache_size);
-
-/**
- * @brief
- * Sets maximum buffer space that is pinned in KB for use by @ref
- * cuFileBufRegister
- *
- * @param max_pinned_size maximum buffer space that is pinned in KB
- *
- * @return CU_FILE_SUCCESS on success
- * @return CU_FILE_DRIVER_NOT_INITIALIZED if the driver is not initialized
- * @return CU_FILE_DRIVER_VERSION_MISMATCH, CU_FILE_DRIVER_UNSUPPORTED_LIMIT on
- * error
- *
- * @warning This is an advanced command and should be tuned based on supported
- * GPU memory
- *
- * @see cuFileDriverGetProperties
- *
- */
 CUfileError_t cuFileDriverSetMaxPinnedMemSize(size_t max_pinned_size);
 
-// Experimental Batch API's
+// Batch API's
 
 typedef enum CUfileOpcode { CUFILE_READ = 0, CUFILE_WRITE } CUfileOpcode_t;
 
 typedef enum CUFILEStatus_enum {
-  CUFILE_WAITING = 0x000001, /* required value prior to submission */
-  CUFILE_PENDING = 0x000002, /* once enqueued */
-  CUFILE_INVALID =
-      0x000004, /* request was ill-formed or could not be enqueued */
-  CUFILE_CANCELED = 0x000008,  /* request successfully canceled */
+  CUFILE_WAITING = 0x000001,  /* required value prior to submission */
+  CUFILE_PENDING = 0x000002,  /* once enqueued */
+  CUFILE_INVALID = 0x000004,  /* ill-formed or could not be enqueued */
+  CUFILE_CANCELED = 0x000008, /* request successfully canceled */
   CUFILE_COMPLETE = 0x0000010, /* request successfully completed */
   CUFILE_TIMEOUT = 0x0000020,  /* request timed out */
   CUFILE_FAILED = 0x0000040    /* unable to complete */
@@ -655,6 +434,41 @@ CUfileError_t cuFileBatchIOGetStatus(CUfileBatchHandle_t batch_idp,
                                      struct timespec *timeout);
 CUfileError_t cuFileBatchIOCancel(CUfileBatchHandle_t batch_idp);
 void cuFileBatchIODestroy(CUfileBatchHandle_t batch_idp);
+
+// Async API's with CUDA streams
+
+#define CU_FILE_STREAM_FIXED_BUF_OFFSET 1
+#define CU_FILE_STREAM_FIXED_FILE_OFFSET 2
+#define CU_FILE_STREAM_FIXED_FILE_SIZE 4
+#define CU_FILE_STREAM_PAGE_ALIGNED_INPUTS 8
+
+CUfileError_t cuFileReadAsync(CUfileHandle_t fh, void *bufPtr_base,
+                              size_t *size_p, off_t *file_offset_p,
+                              off_t *bufPtr_offset_p, ssize_t *bytes_read_p,
+                              CUstream stream);
+CUfileError_t cuFileWriteAsync(CUfileHandle_t fh, void *bufPtr_base,
+                               size_t *size_p, off_t *file_offset_p,
+                               off_t *bufPtr_offset_p, ssize_t *bytes_written_p,
+                               CUstream stream);
+CUfileError_t cuFileStreamRegister(CUstream stream, unsigned flags);
+CUfileError_t cuFileStreamDeregister(CUstream stream);
+
+// Scatter/gather IO
+
+typedef struct CUfileIOVec {
+  void *base;   // Pointer to data (device or host memory)
+  size_t len;   // Length of data
+} CUfileIOVec_t;
+
+ssize_t cuFileReadv(CUfileHandle_t fh, const CUfileIOVec_t *iov,
+                    size_t iovcnt, off_t file_offset, unsigned flags);
+ssize_t cuFileWritev(CUfileHandle_t fh, const CUfileIOVec_t *iov,
+                     size_t iovcnt, off_t file_offset, unsigned flags);
+
+// Version and topology
+
+CUfileError_t cuFileGetVersion(int *version);
+CUfileError_t cuFileExportPCIeTopology(const char *filename);
 
 #pragma GCC visibility pop
 

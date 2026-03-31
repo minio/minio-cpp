@@ -387,21 +387,15 @@ GetObjectResponse Client::GetObject(GetObjectRDMAArgs args) {
     return GetObjectResponse(resp);
   }
 
-  CUObjIOOps ops = {.get = objectGet, .put = objectPut};
+  CUObjIOOps ops = {};
   cuObjClient rdmaclient(ops, CUOBJ_PROTO_RDMA_DC_V1);
 
   const size_t size = *args.size;
 
-  bool connected = rdmaclient.isConnected();
-  std::cerr << "[RDMA_DEBUG] GetObject: cuObjClient.isConnected() = "
-            << (connected ? "true" : "false") << ", object=" << args.object
-            << ", size=" << size << std::endl;
-
   bool use_rdma = false;
-  if (connected) {
+  if (rdmaclient.isConnected()) {
     int res = rdmaclient.cuMemObjGetDescriptor(args.buf, size);
     if (res) {
-      // Buffer registration failed (not GPU/pinned memory), fall back to HTTP
       std::cerr << "[RDMA_DEBUG] GetObject: buffer registration failed for "
                 << args.object << ", falling back to HTTP" << std::endl;
     } else {
@@ -410,34 +404,34 @@ GetObjectResponse Client::GetObject(GetObjectRDMAArgs args) {
   }
 
   if (use_rdma) {
-    // get the buffer + get operation.
-    s3_rdma_client_ctx getCtx = {
-        .provider = provider_,
-        .bucket = args.bucket,
-        .object = args.object,
-        .uploadId = "",
-        .partNumber = 0,
-        .etag = "",
-        .url = base_url_,
-        .region = region,
-        .op = CUOBJ_GET,
-    };
-
-    ssize_t ret = rdmaclient.cuObjGet(&getCtx, args.buf, size);
-    if (ret < 0) {
+    char* token = nullptr;
+    cuObjErr_t err =
+        rdmaclient.cuMemObjGetRDMAToken(args.buf, size, 0, CUOBJ_GET, &token);
+    if (err != CU_OBJ_SUCCESS || token == nullptr) {
       rdmaclient.cuMemObjPutDescriptor(args.buf);
-      // RDMA transfer failed, fall back to HTTP
-      std::cerr << "[RDMA_DEBUG] GetObject: RDMA transfer failed for "
+      std::cerr << "[RDMA_DEBUG] GetObject: token acquisition failed for "
                 << args.object << ", falling back to HTTP" << std::endl;
     } else {
-      int res = rdmaclient.cuMemObjPutDescriptor(args.buf);
-      if (res) {
-        std::cerr << "[RDMA_DEBUG] GetObject: buffer deregistration failed for "
-                  << args.object << std::endl;
+      s3_rdma_client_ctx getCtx = {
+          .provider = provider_,
+          .bucket = args.bucket,
+          .object = args.object,
+          .url = base_url_,
+          .region = region,
+          .op = CUOBJ_GET,
+      };
+
+      ssize_t ret = rdmaGet(&getCtx, token, size);
+      rdmaclient.cuMemObjPutRDMAToken(token);
+      rdmaclient.cuMemObjPutDescriptor(args.buf);
+
+      if (ret > 0) {
+        GetObjectResponse resp;
+        resp.etag = getCtx.etag;
+        return resp;
       }
-      GetObjectResponse resp;
-      resp.etag = getCtx.etag;
-      return resp;
+      std::cerr << "[RDMA_DEBUG] GetObject: RDMA transfer failed for "
+                << args.object << ", falling back to HTTP" << std::endl;
     }
   }
 
@@ -467,21 +461,15 @@ PutObjectResponse Client::PutObject(PutObjectRDMAArgs args) {
     return PutObjectResponse(resp);
   }
 
-  CUObjIOOps ops = {.get = objectGet, .put = objectPut};
+  CUObjIOOps ops = {};
   cuObjClient rdmaclient(ops, CUOBJ_PROTO_RDMA_DC_V1);
 
   const size_t size = *args.size;
 
-  bool connected = rdmaclient.isConnected();
-  std::cerr << "[RDMA_DEBUG] PutObject: cuObjClient.isConnected() = "
-            << (connected ? "true" : "false") << ", object=" << args.object
-            << ", size=" << size << std::endl;
-
   bool use_rdma = false;
-  if (connected) {
+  if (rdmaclient.isConnected()) {
     int res = rdmaclient.cuMemObjGetDescriptor(args.buf, size);
     if (res) {
-      // Buffer registration failed (not GPU/pinned memory), fall back to HTTP
       std::cerr << "[RDMA_DEBUG] PutObject: buffer registration failed for "
                 << args.object << ", falling back to HTTP" << std::endl;
     } else {
@@ -490,34 +478,34 @@ PutObjectResponse Client::PutObject(PutObjectRDMAArgs args) {
   }
 
   if (use_rdma) {
-    // put the buffer + put operation.
-    s3_rdma_client_ctx putCtx = {
-        .provider = provider_,
-        .bucket = args.bucket,
-        .object = args.object,
-        .uploadId = "",
-        .partNumber = 0,
-        .etag = "",
-        .url = base_url_,
-        .region = region,
-        .op = CUOBJ_PUT,
-    };
-
-    ssize_t ret = rdmaclient.cuObjPut(&putCtx, args.buf, size);
-    if (ret < 0) {
+    char* token = nullptr;
+    cuObjErr_t err =
+        rdmaclient.cuMemObjGetRDMAToken(args.buf, size, 0, CUOBJ_PUT, &token);
+    if (err != CU_OBJ_SUCCESS || token == nullptr) {
       rdmaclient.cuMemObjPutDescriptor(args.buf);
-      // RDMA transfer failed, fall back to HTTP
-      std::cerr << "[RDMA_DEBUG] PutObject: RDMA transfer failed for "
+      std::cerr << "[RDMA_DEBUG] PutObject: token acquisition failed for "
                 << args.object << ", falling back to HTTP" << std::endl;
     } else {
-      int res = rdmaclient.cuMemObjPutDescriptor(args.buf);
-      if (res) {
-        std::cerr << "[RDMA_DEBUG] PutObject: buffer deregistration failed for "
-                  << args.object << std::endl;
+      s3_rdma_client_ctx putCtx = {
+          .provider = provider_,
+          .bucket = args.bucket,
+          .object = args.object,
+          .url = base_url_,
+          .region = region,
+          .op = CUOBJ_PUT,
+      };
+
+      ssize_t ret = rdmaPut(&putCtx, token, size);
+      rdmaclient.cuMemObjPutRDMAToken(token);
+      rdmaclient.cuMemObjPutDescriptor(args.buf);
+
+      if (ret > 0) {
+        PutObjectResponse resp;
+        resp.etag = putCtx.etag;
+        return resp;
       }
-      PutObjectResponse resp;
-      resp.etag = putCtx.etag;
-      return resp;
+      std::cerr << "[RDMA_DEBUG] PutObject: RDMA transfer failed for "
+                << args.object << ", falling back to HTTP" << std::endl;
     }
   }
 
@@ -929,7 +917,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
         "unable to allocate system memory with alignment");
   }
 
-  CUObjIOOps ops = {.get = objectGet, .put = objectPut};
+  CUObjIOOps ops = {};
   std::unique_ptr<cuObjClient> rdmaclient(
       new cuObjClient(ops, CUOBJ_PROTO_RDMA_DC_V1));
 

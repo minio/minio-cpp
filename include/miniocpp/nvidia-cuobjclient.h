@@ -17,7 +17,10 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <iostream>
+#include <memory>
 #include <mutex>
+#include <string>
 
 #include "nvidia-cufile.h"
 #include "providers.h"
@@ -215,9 +218,34 @@ class cuObjClient {
    */
   bool isConnected(void);
   /**
+   * @brief Acquire an RDMA token for the registered memory
+   * @param ptr start address of registered user memory
+   * @param size size of the transfer
+   * @param offset offset within the buffer
+   * @param op operation type (CUOBJ_GET or CUOBJ_PUT)
+   * @param token output pointer to the token string (caller must release with
+   * cuMemObjPutRDMAToken)
+   * @return CU_OBJ_SUCCESS on success, CU_OBJ_FAIL on failure
+   */
+  cuObjErr_t cuMemObjGetRDMAToken(void *ptr, size_t size, size_t offset,
+                                  cuObjOpType_t op, char **token);
+
+  /**
+   * @brief Release an RDMA token acquired by cuMemObjGetRDMAToken
+   * @param token the token string to release
+   * @return CU_OBJ_SUCCESS on success, CU_OBJ_FAIL on failure
+   */
+  cuObjErr_t cuMemObjPutRDMAToken(char *token);
+
+  /**
    * @brief setup telemetry output stream
    */
   static void setupTelemetry(bool use_OTEL, std::ostream *os);
+
+  /**
+   * @brief shutdown telemetry
+   */
+  static void shutdownTelemetry();
 
   /**
    * @brief setup telemetry stream logging level
@@ -245,17 +273,60 @@ class cuObjClient {
   static bool _useOTEL;
 };
 
+/**
+ * @brief Abstract base class for cuObject telemetry
+ */
+class cuObjTelem {
+ public:
+  virtual ~cuObjTelem() = default;
+};
+
+/**
+ * @brief Telemetry span for tracing cuObject operations
+ */
+class cuObjSpan {
+ public:
+  cuObjSpan(std::string name, std::ostream &os);
+  ~cuObjSpan();
+
+ private:
+  std::string _name;
+  std::ostream &_os;
+};
+
+/**
+ * @brief ostream-based telemetry implementation for cuObject
+ */
+class cuObjTelem_ostream : public cuObjTelem {
+ public:
+  cuObjTelem_ostream(std::ostream &os);
+  ~cuObjTelem_ostream() override;
+
+  cuObjSpan getSpan(std::string name);
+  void incPutCounter(int count);
+  void incGetCounter(int count);
+  void logError(const char *fmt, ...);
+  void logDebug(const char *fmt, ...);
+  void logInfo(const char *fmt, ...);
+
+ private:
+  std::ostream &_os;
+};
+
+std::shared_ptr<cuObjTelem> getSpan(std::shared_ptr<cuObjTelem> &telem,
+                                    std::string name);
+
 typedef struct s3_rdma_client_ctx {
   minio::creds::Provider *const provider = nullptr;
   std::string bucket;
   std::string object;
   std::string uploadId;
-  size_t partNumber;
+  size_t partNumber = 0;
   std::string etag;
   minio::s3::BaseUrl url;
   std::string region;
-  cuObjOpType_t op;
-  std::string checksum;  // CRC64NVME checksum for multipart uploads
+  cuObjOpType_t op = CUOBJ_INVALID;
+  std::string checksum;
 } s3_rdma_client_ctx_t;
 
 #endif
