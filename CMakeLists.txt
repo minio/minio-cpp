@@ -51,7 +51,7 @@ else()
   # GCC/Clang/AppleClang/...
   list(APPEND MINIO_CPP_CFLAGS -Wall -Wextra -Wconversion)
   list(APPEND MINIO_CPP_INCLUDES /usr/local/cuda/include)
-  list(APPEND MINIO_CPP_LIBS "-Bdynamic -L /usr/local/cuda/lib64 -lcufile -lpthread -lnuma -ldl -libverbs -lrdmacm -lrt -lcuobjclient")
+  list(APPEND MINIO_CPP_LIBS "-Bdynamic -L${CMAKE_SOURCE_DIR}/vendor/cuobj/lib -L/usr/local/cuda/lib64 -lcufile -lpthread -lnuma -ldl -libverbs -lrdmacm -lrt -lcuobjclient")
   if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 8.0 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0 AND NOT MINGW)
     list(APPEND MINIO_CPP_LIBS stdc++fs)
   endif()
