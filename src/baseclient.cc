@@ -1385,7 +1385,7 @@ PutObjectResponse BaseClient::PutObject(PutObjectApiArgs args) {
           .op = CUOBJ_PUT,
       };
 
-      ssize_t ret = rdmaPut(&putCtx, token, args.size);
+      ssize_t ret = rdmaPut(&putCtx, token, args.buf, args.size);
       args.rdmaclient->cuMemObjPutRDMAToken(token);
 
       if (ret < 0) {
@@ -1975,7 +1975,7 @@ UploadPartResponse BaseClient::UploadPart(UploadPartArgs args) {
           .checksum = args.checksum_crc64nvme,
       };
 
-      ssize_t ret = rdmaPut(&putCtx, token, args.part_size);
+      ssize_t ret = rdmaPut(&putCtx, token, args.buf, args.part_size);
       args.rdmaclient->cuMemObjPutRDMAToken(token);
 
       if (ret < 0) {

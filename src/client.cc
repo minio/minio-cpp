@@ -421,7 +421,7 @@ GetObjectResponse Client::GetObject(GetObjectRDMAArgs args) {
           .op = CUOBJ_GET,
       };
 
-      ssize_t ret = rdmaGet(&getCtx, token, size);
+      ssize_t ret = rdmaGet(&getCtx, token, args.buf, size);
       rdmaclient.cuMemObjPutRDMAToken(token);
       rdmaclient.cuMemObjPutDescriptor(args.buf);
 
@@ -495,7 +495,7 @@ PutObjectResponse Client::PutObject(PutObjectRDMAArgs args) {
           .op = CUOBJ_PUT,
       };
 
-      ssize_t ret = rdmaPut(&putCtx, token, size);
+      ssize_t ret = rdmaPut(&putCtx, token, args.buf, size);
       rdmaclient.cuMemObjPutRDMAToken(token);
       rdmaclient.cuMemObjPutDescriptor(args.buf);
 

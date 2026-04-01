@@ -47,7 +47,12 @@ inline constexpr int kRDMAReplyNotImplemented = 501;
 inline constexpr ssize_t kRDMANotSupported = -2;
 
 inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
-                              size_t size) {
+                              const void* buf, size_t size) {
+  // Build full RDMA token: descriptor:buf_addr_hex:size_hex;
+  char rdma_token[256];
+  snprintf(rdma_token, sizeof(rdma_token), "%s:%016lx:%016lx;", token,
+           (uint64_t)buf, (uint64_t)size);
+
   minio::utils::UtcTime date = minio::utils::UtcTime::Now();
   minio::creds::Credentials creds = sctx->provider->Fetch();
   minio::utils::Multimap query_params;
@@ -80,7 +85,7 @@ inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
   sign_headers.Add("Host", host);
   sign_headers.Add("x-amz-date", date.ToAmzDate());
   sign_headers.Add("x-amz-content-sha256", kUnsignedPayload);
-  sign_headers.Add(kAmzRDMAToken, token);
+  sign_headers.Add(kAmzRDMAToken, rdma_token);
   sign_headers.Add("Content-Type", "application/octet-stream");
   sign_headers.Add("Content-Length", "0");
 
@@ -155,7 +160,12 @@ inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
 }
 
 inline static ssize_t rdmaGet(s3_rdma_client_ctx_t* sctx, const char* token,
-                              size_t size) {
+                              const void* buf, size_t size) {
+  // Build full RDMA token: descriptor:buf_addr_hex:size_hex;
+  char rdma_token[256];
+  snprintf(rdma_token, sizeof(rdma_token), "%s:%016lx:%016lx;", token,
+           (uint64_t)buf, (uint64_t)size);
+
   minio::utils::UtcTime date = minio::utils::UtcTime::Now();
   minio::creds::Credentials creds = sctx->provider->Fetch();
   minio::utils::Multimap query_params;
@@ -175,7 +185,7 @@ inline static ssize_t rdmaGet(s3_rdma_client_ctx_t* sctx, const char* token,
   sign_headers.Add("Host", host);
   sign_headers.Add("x-amz-date", date.ToAmzDate());
   sign_headers.Add("x-amz-content-sha256", kUnsignedPayload);
-  sign_headers.Add(kAmzRDMAToken, token);
+  sign_headers.Add(kAmzRDMAToken, rdma_token);
 
   if (!creds.session_token.empty()) {
     sign_headers.Add("X-Amz-Security-Token", creds.session_token);
