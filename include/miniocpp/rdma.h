@@ -48,7 +48,6 @@ inline constexpr ssize_t kRDMANotSupported = -2;
 
 inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
                               const void* buf, size_t size) {
-  // Build full RDMA token: descriptor:buf_addr_hex:size_hex;
   char rdma_token[256];
   snprintf(rdma_token, sizeof(rdma_token), "%s:%016lx:%016lx", token,
            (uint64_t)buf, (uint64_t)size);
@@ -61,12 +60,7 @@ inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
 
   if (!sctx->uploadId.empty()) {
     query_params.Add("uploadId", sctx->uploadId);
-    if (sctx->partNumber == 0) {
-      std::cerr << "partNumber cannot be zero" << std::endl;
-      return -1;
-    }
-    if (sctx->partNumber > 10000) {
-      std::cerr << "partNumber cannot be > 10000" << std::endl;
+    if (sctx->partNumber == 0 || sctx->partNumber > 10000) {
       return -1;
     }
     query_params.Add("partNumber", std::to_string(sctx->partNumber));
@@ -75,7 +69,6 @@ inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
   if (minio::error::Error err =
           sctx->url.BuildUrl(url, minio::http::Method::kPut, region,
                              query_params, sctx->bucket, sctx->object)) {
-    std::cerr << "failed to build url. error=" << err << std::endl;
     return -1;
   }
 
@@ -118,10 +111,11 @@ inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
   url.path = "";
   url.query_string = "";
   httplib::Client cli(url.String());
+  cli.set_connection_timeout(5);
+  cli.set_read_timeout(10);
 
   auto res = cli.Put(full_path, headers, "", "");
   if (res.error() != httplib::Error::Success) {
-    std::cerr << "Upload failed with error " << res.error() << std::endl;
     return -1;
   }
 
@@ -133,22 +127,18 @@ inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
 
   std::string rdma_reply = res->get_header_value(kAmzRDMAReply);
   if (rdma_reply.empty() || rdma_reply == "501") {
-    std::cerr << "RDMA declined by server, fallback needed" << std::endl;
     return kRDMANotSupported;
   }
 
   try {
     int reply_code = std::stoi(rdma_reply);
     if (reply_code != kRDMAReplySuccess && reply_code != kRDMAReplyNoContent) {
-      std::cerr << "Unexpected RDMA reply: " << reply_code << std::endl;
       return -1;
     }
-  } catch (const std::exception& e) {
-    std::cerr << "Invalid RDMA reply format: " << rdma_reply << std::endl;
+  } catch (const std::exception&) {
     return -1;
   }
 
-  // Extract checksum from response if present
   std::string resp_checksum =
       res->get_header_value("x-amz-checksum-crc64nvme");
   if (!resp_checksum.empty()) {
@@ -161,7 +151,6 @@ inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
 
 inline static ssize_t rdmaGet(s3_rdma_client_ctx_t* sctx, const char* token,
                               const void* buf, size_t size) {
-  // Build full RDMA token: descriptor:buf_addr_hex:size_hex;
   char rdma_token[256];
   snprintf(rdma_token, sizeof(rdma_token), "%s:%016lx:%016lx", token,
            (uint64_t)buf, (uint64_t)size);
@@ -175,7 +164,6 @@ inline static ssize_t rdmaGet(s3_rdma_client_ctx_t* sctx, const char* token,
   if (minio::error::Error err =
           sctx->url.BuildUrl(url, minio::http::Method::kGet, region,
                              query_params, sctx->bucket, sctx->object)) {
-    std::cerr << "failed to build url. error=" << err << std::endl;
     return -1;
   }
 
@@ -208,16 +196,16 @@ inline static ssize_t rdmaGet(s3_rdma_client_ctx_t* sctx, const char* token,
   url.path = "";
   url.query_string = "";
   httplib::Client cli(url.String());
+  cli.set_connection_timeout(5);
+  cli.set_read_timeout(10);
 
   auto res = cli.Get(path, headers);
   if (res.error() != httplib::Error::Success) {
-    std::cerr << "Download failed with error " << res.error() << std::endl;
     return -1;
   }
 
   std::string rdma_reply = res->get_header_value(kAmzRDMAReply);
   if (rdma_reply.empty() || rdma_reply == "501") {
-    std::cerr << "RDMA declined by server" << std::endl;
     return kRDMANotSupported;
   }
 
@@ -225,20 +213,9 @@ inline static ssize_t rdmaGet(s3_rdma_client_ctx_t* sctx, const char* token,
     int reply_code = std::stoi(rdma_reply);
     if (reply_code != kRDMAReplySuccess &&
         reply_code != kRDMAReplyPartialContent) {
-      std::cerr << "Unexpected RDMA reply: " << reply_code << std::endl;
       return -1;
     }
-
-    std::string bytes_str = res->get_header_value(kAmzRDMABytesTransferred);
-    if (!bytes_str.empty()) {
-      ssize_t bytes_transferred = std::stoll(bytes_str);
-      if (bytes_transferred != static_cast<ssize_t>(size)) {
-        std::cerr << "RDMA bytes mismatch: expected " << size << ", got "
-                  << bytes_transferred << std::endl;
-      }
-    }
-  } catch (const std::exception& e) {
-    std::cerr << "Invalid RDMA reply format: " << rdma_reply << std::endl;
+  } catch (const std::exception&) {
     return -1;
   }
 

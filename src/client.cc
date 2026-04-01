@@ -396,8 +396,7 @@ GetObjectResponse Client::GetObject(GetObjectRDMAArgs args) {
   if (rdmaclient.isConnected()) {
     int res = rdmaclient.cuMemObjGetDescriptor(args.buf, size);
     if (res) {
-      std::cerr << "[RDMA_DEBUG] GetObject: buffer registration failed for "
-                << args.object << ", falling back to HTTP" << std::endl;
+
     } else {
       use_rdma = true;
     }
@@ -409,8 +408,7 @@ GetObjectResponse Client::GetObject(GetObjectRDMAArgs args) {
         rdmaclient.cuMemObjGetRDMAToken(args.buf, size, 0, CUOBJ_GET, &token);
     if (err != CU_OBJ_SUCCESS || token == nullptr) {
       rdmaclient.cuMemObjPutDescriptor(args.buf);
-      std::cerr << "[RDMA_DEBUG] GetObject: token acquisition failed for "
-                << args.object << ", falling back to HTTP" << std::endl;
+
     } else {
       s3_rdma_client_ctx getCtx = {
           .provider = provider_,
@@ -430,8 +428,7 @@ GetObjectResponse Client::GetObject(GetObjectRDMAArgs args) {
         resp.etag = getCtx.etag;
         return resp;
       }
-      std::cerr << "[RDMA_DEBUG] GetObject: RDMA transfer failed for "
-                << args.object << ", falling back to HTTP" << std::endl;
+
     }
   }
 
@@ -470,8 +467,7 @@ PutObjectResponse Client::PutObject(PutObjectRDMAArgs args) {
   if (rdmaclient.isConnected()) {
     int res = rdmaclient.cuMemObjGetDescriptor(args.buf, size);
     if (res) {
-      std::cerr << "[RDMA_DEBUG] PutObject: buffer registration failed for "
-                << args.object << ", falling back to HTTP" << std::endl;
+
     } else {
       use_rdma = true;
     }
@@ -483,8 +479,7 @@ PutObjectResponse Client::PutObject(PutObjectRDMAArgs args) {
         rdmaclient.cuMemObjGetRDMAToken(args.buf, size, 0, CUOBJ_PUT, &token);
     if (err != CU_OBJ_SUCCESS || token == nullptr) {
       rdmaclient.cuMemObjPutDescriptor(args.buf);
-      std::cerr << "[RDMA_DEBUG] PutObject: token acquisition failed for "
-                << args.object << ", falling back to HTTP" << std::endl;
+
     } else {
       s3_rdma_client_ctx putCtx = {
           .provider = provider_,
@@ -504,8 +499,7 @@ PutObjectResponse Client::PutObject(PutObjectRDMAArgs args) {
         resp.etag = putCtx.etag;
         return resp;
       }
-      std::cerr << "[RDMA_DEBUG] PutObject: RDMA transfer failed for "
-                << args.object << ", falling back to HTTP" << std::endl;
+
     }
   }
 
