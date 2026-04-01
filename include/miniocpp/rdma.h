@@ -50,7 +50,7 @@ inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
                               const void* buf, size_t size) {
   // Build full RDMA token: descriptor:buf_addr_hex:size_hex;
   char rdma_token[256];
-  snprintf(rdma_token, sizeof(rdma_token), "%s:%016lx:%016lx;", token,
+  snprintf(rdma_token, sizeof(rdma_token), "%s:%016lx:%016lx", token,
            (uint64_t)buf, (uint64_t)size);
 
   minio::utils::UtcTime date = minio::utils::UtcTime::Now();
@@ -163,7 +163,7 @@ inline static ssize_t rdmaGet(s3_rdma_client_ctx_t* sctx, const char* token,
                               const void* buf, size_t size) {
   // Build full RDMA token: descriptor:buf_addr_hex:size_hex;
   char rdma_token[256];
-  snprintf(rdma_token, sizeof(rdma_token), "%s:%016lx:%016lx;", token,
+  snprintf(rdma_token, sizeof(rdma_token), "%s:%016lx:%016lx", token,
            (uint64_t)buf, (uint64_t)size);
 
   minio::utils::UtcTime date = minio::utils::UtcTime::Now();
