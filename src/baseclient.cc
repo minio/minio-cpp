@@ -1372,32 +1372,25 @@ PutObjectResponse BaseClient::PutObject(PutObjectApiArgs args) {
   }
 
   if (args.rdmaclient != nullptr && args.rdmaclient->isConnected()) {
-    char* token = nullptr;
-    cuObjErr_t terr = args.rdmaclient->cuMemObjGetRDMAToken(
-        args.buf, args.size, 0, CUOBJ_PUT, &token);
-    if (terr == CU_OBJ_SUCCESS && token != nullptr) {
-      s3_rdma_client_ctx putCtx = {
-          .provider = provider_,
-          .bucket = args.bucket,
-          .object = args.object,
-          .url = base_url_,
-          .region = region,
-          .op = CUOBJ_PUT,
-      };
+    s3_rdma_client_ctx putCtx = {
+        .provider = provider_,
+        .bucket = args.bucket,
+        .object = args.object,
+        .url = base_url_,
+        .region = region,
+        .op = CUOBJ_PUT,
+    };
 
-      ssize_t ret = rdmaPut(&putCtx, token, args.buf, args.size);
-      args.rdmaclient->cuMemObjPutRDMAToken(token);
-
-      if (ret < 0) {
-        return error::make<PutObjectResponse>("failed to upload the object " +
-                                              args.object);
-      }
-
+    ssize_t ret = rdmaPutWithRetry(args.rdmaclient, &putCtx, args.buf,
+                                    args.size);
+    if (ret > 0) {
       PutObjectResponse resp;
       resp.etag = putCtx.etag;
       resp.checksum_crc64nvme = putCtx.checksum;
       return resp;
     }
+    // ret < 0 (retries exhausted) or kRDMANotSupported (server declined):
+    // fall through to HTTP path.
   }
 
   Request req(http::Method::kPut, region, base_url_, args.extra_headers,
@@ -1959,36 +1952,28 @@ UploadPartResponse BaseClient::UploadPart(UploadPartArgs args) {
       return UploadPartResponse(resp);
     }
 
-    char* token = nullptr;
-    cuObjErr_t terr = args.rdmaclient->cuMemObjGetRDMAToken(
-        args.buf, args.part_size, 0, CUOBJ_PUT, &token);
-    if (terr == CU_OBJ_SUCCESS && token != nullptr) {
-      s3_rdma_client_ctx putCtx = {
-          .provider = provider_,
-          .bucket = args.bucket,
-          .object = args.object,
-          .uploadId = args.upload_id,
-          .partNumber = args.part_number,
-          .url = base_url_,
-          .region = region,
-          .op = CUOBJ_PUT,
-          .checksum = args.checksum_crc64nvme,
-      };
+    s3_rdma_client_ctx putCtx = {
+        .provider = provider_,
+        .bucket = args.bucket,
+        .object = args.object,
+        .uploadId = args.upload_id,
+        .partNumber = args.part_number,
+        .url = base_url_,
+        .region = region,
+        .op = CUOBJ_PUT,
+        .checksum = args.checksum_crc64nvme,
+    };
 
-      ssize_t ret = rdmaPut(&putCtx, token, args.buf, args.part_size);
-      args.rdmaclient->cuMemObjPutRDMAToken(token);
-
-      if (ret < 0) {
-        return UploadPartResponse(
-            error::Error("failed to upload to object with uploadId " +
-                         args.object + " uploadId=" + args.upload_id));
-      }
-
+    ssize_t ret = rdmaPutWithRetry(args.rdmaclient, &putCtx, args.buf,
+                                    args.part_size);
+    if (ret > 0) {
       UploadPartResponse resp;
       resp.etag = putCtx.etag;
       resp.checksum_crc64nvme = putCtx.checksum;
       return resp;
     }
+    // ret < 0 (retries exhausted) or kRDMANotSupported (server declined):
+    // fall through to HTTP upload part path.
   }
 
   utils::Multimap query_params;

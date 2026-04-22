@@ -403,33 +403,25 @@ GetObjectResponse Client::GetObject(GetObjectRDMAArgs args) {
   }
 
   if (use_rdma) {
-    char* token = nullptr;
-    cuObjErr_t err =
-        rdmaclient.cuMemObjGetRDMAToken(args.buf, size, 0, CUOBJ_GET, &token);
-    if (err != CU_OBJ_SUCCESS || token == nullptr) {
-      rdmaclient.cuMemObjPutDescriptor(args.buf);
+    s3_rdma_client_ctx getCtx = {
+        .provider = provider_,
+        .bucket = args.bucket,
+        .object = args.object,
+        .url = base_url_,
+        .region = region,
+        .op = CUOBJ_GET,
+    };
 
-    } else {
-      s3_rdma_client_ctx getCtx = {
-          .provider = provider_,
-          .bucket = args.bucket,
-          .object = args.object,
-          .url = base_url_,
-          .region = region,
-          .op = CUOBJ_GET,
-      };
+    ssize_t ret = rdmaGetWithRetry(&rdmaclient, &getCtx, args.buf, size);
+    rdmaclient.cuMemObjPutDescriptor(args.buf);
 
-      ssize_t ret = rdmaGet(&getCtx, token, args.buf, size);
-      rdmaclient.cuMemObjPutRDMAToken(token);
-      rdmaclient.cuMemObjPutDescriptor(args.buf);
-
-      if (ret > 0) {
-        GetObjectResponse resp;
-        resp.etag = getCtx.etag;
-        return resp;
-      }
-
+    if (ret > 0) {
+      GetObjectResponse resp;
+      resp.etag = getCtx.etag;
+      return resp;
     }
+    // ret < 0 (retries exhausted) or kRDMANotSupported (server declined):
+    // fall through to HTTP path.
   }
 
   GetObjectArgs targs;
@@ -474,33 +466,25 @@ PutObjectResponse Client::PutObject(PutObjectRDMAArgs args) {
   }
 
   if (use_rdma) {
-    char* token = nullptr;
-    cuObjErr_t err =
-        rdmaclient.cuMemObjGetRDMAToken(args.buf, size, 0, CUOBJ_PUT, &token);
-    if (err != CU_OBJ_SUCCESS || token == nullptr) {
-      rdmaclient.cuMemObjPutDescriptor(args.buf);
+    s3_rdma_client_ctx putCtx = {
+        .provider = provider_,
+        .bucket = args.bucket,
+        .object = args.object,
+        .url = base_url_,
+        .region = region,
+        .op = CUOBJ_PUT,
+    };
 
-    } else {
-      s3_rdma_client_ctx putCtx = {
-          .provider = provider_,
-          .bucket = args.bucket,
-          .object = args.object,
-          .url = base_url_,
-          .region = region,
-          .op = CUOBJ_PUT,
-      };
+    ssize_t ret = rdmaPutWithRetry(&rdmaclient, &putCtx, args.buf, size);
+    rdmaclient.cuMemObjPutDescriptor(args.buf);
 
-      ssize_t ret = rdmaPut(&putCtx, token, args.buf, size);
-      rdmaclient.cuMemObjPutRDMAToken(token);
-      rdmaclient.cuMemObjPutDescriptor(args.buf);
-
-      if (ret > 0) {
-        PutObjectResponse resp;
-        resp.etag = putCtx.etag;
-        return resp;
-      }
-
+    if (ret > 0) {
+      PutObjectResponse resp;
+      resp.etag = putCtx.etag;
+      return resp;
     }
+    // ret < 0 (retries exhausted) or kRDMANotSupported (server declined):
+    // fall through to HTTP path.
   }
 
   // HTTP fallback path

@@ -46,6 +46,12 @@ inline constexpr int kRDMAReplyNotImplemented = 501;
 // Return codes for rdmaPut/rdmaGet
 inline constexpr ssize_t kRDMANotSupported = -2;
 
+// Maximum attempts for NIC-failover aware retry. Two attempts is sufficient:
+// the first failure is what surfaces the bad NIC to libcuobjclient's
+// async-event + health-check threads; the second mint will route to the
+// backup NIC when rdma_multipath_enabled=true and a healthy backup exists.
+inline constexpr int kRDMAMaxAttempts = 2;
+
 inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
                               const void* buf, size_t size) {
   char rdma_token[256];
@@ -220,6 +226,62 @@ inline static ssize_t rdmaGet(s3_rdma_client_ctx_t* sctx, const char* token,
   }
 
   return static_cast<ssize_t>(size);
+}
+
+// rdmaPutWithRetry mints a fresh RDMA token, issues rdmaPut, releases the
+// token, and retries once on transient RDMA failure. On the second attempt
+// libcuobjclient's multipath state will route the mint to the backup NIC
+// if the primary has been flagged unhealthy; this turns what would have
+// been a fail-and-fall-back-to-HTTP into a successful RDMA op across the
+// NIC transition.
+//
+// Caller must have already registered the buffer via cuMemObjGetDescriptor.
+//
+// Returns:
+//   >0                 bytes transferred (success)
+//   kRDMANotSupported  server sent x-amz-rdma-reply: 501 (fall back to HTTP)
+//   -1                 exhausted retries (fall back to HTTP)
+inline static ssize_t rdmaPutWithRetry(cuObjClient* rdmaclient,
+                                       s3_rdma_client_ctx_t* sctx, void* buf,
+                                       size_t size) {
+  ssize_t ret = -1;
+  for (int attempt = 0; attempt < kRDMAMaxAttempts; ++attempt) {
+    char* token = nullptr;
+    cuObjErr_t terr =
+        rdmaclient->cuMemObjGetRDMAToken(buf, size, 0, CUOBJ_PUT, &token);
+    if (terr != CU_OBJ_SUCCESS || token == nullptr) {
+      return -1;
+    }
+    ret = rdmaPut(sctx, token, buf, size);
+    rdmaclient->cuMemObjPutRDMAToken(token);
+    if (ret > 0 || ret == kRDMANotSupported) {
+      return ret;
+    }
+  }
+  return ret;
+}
+
+// rdmaGetWithRetry is the GET counterpart to rdmaPutWithRetry. Same
+// contract: caller registers the buffer, this helper handles token
+// lifecycle and one retry for NIC failover.
+inline static ssize_t rdmaGetWithRetry(cuObjClient* rdmaclient,
+                                       s3_rdma_client_ctx_t* sctx, void* buf,
+                                       size_t size) {
+  ssize_t ret = -1;
+  for (int attempt = 0; attempt < kRDMAMaxAttempts; ++attempt) {
+    char* token = nullptr;
+    cuObjErr_t terr =
+        rdmaclient->cuMemObjGetRDMAToken(buf, size, 0, CUOBJ_GET, &token);
+    if (terr != CU_OBJ_SUCCESS || token == nullptr) {
+      return -1;
+    }
+    ret = rdmaGet(sctx, token, buf, size);
+    rdmaclient->cuMemObjPutRDMAToken(token);
+    if (ret > 0 || ret == kRDMANotSupported) {
+      return ret;
+    }
+  }
+  return ret;
 }
 
 #endif  // _MINIO_CPP_RDMA_H_INCLUDED

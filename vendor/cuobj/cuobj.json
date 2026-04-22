@@ -35,8 +35,12 @@
                 //"rdma_access_mask": "0x1f",
 
                 // RDMA Multipath Configuration
-                // Enable multipath for RDMA failover across multiple NICs
-                "rdma_multipath_enabled": false,
+                // Enable multipath for RDMA failover across multiple NICs.
+                // Safe to leave always on: if rdma_dev_addr_list has only
+                // one entry (or backups fail to register), libcufile logs
+                // "prerequisites not met" and falls back to single-path
+                // automatically ("RDMA {read,write} using default path").
+                "rdma_multipath_enabled": true,
                 // Maximum number of backup RDMA devices (0-8)
                 "rdma_max_backup_devices": 2,
                 // Number of IO retries on retryable errors before giving up (0-10)
