@@ -18,6 +18,22 @@
 #ifndef MINIO_CPP_RDMA_H_INCLUDED
 #define MINIO_CPP_RDMA_H_INCLUDED
 
+// CUDA dependency model
+// ---------------------
+// minio-cpp does NOT depend on the CUDA Toolkit (cudart / nvcc / cuda_runtime).
+// The SDK links only against libcufile + libcuobjclient (vendored), and its
+// headers pull in cuda.h solely for type declarations (CUdeviceptr, etc.)
+// that appear in cuFile / cuObj API signatures — no CUDA driver or runtime
+// symbols are called from within minio-cpp itself. The vendored copy of
+// cuda.h under vendor/cuobj/include/ satisfies this type-only include, so
+// the SDK compiles and runs on hosts without the CUDA Toolkit.
+//
+// CUDA is strictly an APPLICATION concern: if your application allocates
+// GPU buffers (cudaMalloc / cuMemAlloc) and hands them to PutObjectRDMAArgs
+// or GetObjectRDMAArgs, *your* application links against CUDA. Applications
+// that pass pinned host memory (posix_memalign / aligned_alloc) don't need
+// CUDA at all — cuFile detects host pointers via cuFileGetMemoryType and
+// skips the GPU codepath.
 #include "credentials.h"
 #include "error.h"
 #include "nvidia-cufile.h"

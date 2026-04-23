@@ -15,7 +15,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include <cuda_runtime.h>
+#include <dlfcn.h>
 #include <miniocpp/client.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -27,50 +27,136 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <cassert>
+#include <cstdint>
 #include <fstream>
 #include <iostream>
+
+// NOTE (for example/CI use only):
+// The dlopen(libcuda.so) shim below is a convenience so this example can be
+// built and run on machines that do NOT have the full CUDA Toolkit installed
+// — only the NVIDIA GPU driver, which always ships libcuda.so. It avoids the
+// build-time dependency on cuda_runtime.h / libcudart.
+//
+// Why this is an application-side shim, not an SDK feature: minio-cpp itself
+// has no CUDA runtime dependency (see the "CUDA dependency model" note at
+// the top of include/miniocpp/rdma.h). Allocating/managing GPU memory is
+// purely an application responsibility.
+//
+// Production applications that want GPU Direct Storage should NOT copy this
+// pattern. Link against the real CUDA APIs (cudart or the CUDA driver library)
+// via the CUDA Toolkit, use `#include <cuda_runtime.h>` / `#include <cuda.h>`
+// directly, and let the linker resolve cu*/cuda* symbols at build time. That
+// gives you proper error checking, symbol-version guarantees, and a supported
+// toolchain path.
+//
+// CUdeviceptr / CUdevice / CUcontext / CUresult come from <cuda.h>,
+// transitively via <miniocpp/client.h>.
+namespace {
+
+struct Cuda {
+  void *lib = nullptr;
+  CUresult (*cuInit)(unsigned);
+  CUresult (*cuDeviceGet)(CUdevice *, int);
+  CUresult (*cuCtxCreate)(CUcontext *, unsigned, CUdevice);
+  CUresult (*cuCtxDestroy)(CUcontext);
+  CUresult (*cuMemAlloc)(CUdeviceptr *, size_t);
+  CUresult (*cuMemFree)(CUdeviceptr);
+  CUresult (*cuMemsetD8)(CUdeviceptr, unsigned char, size_t);
+  CUresult (*cuMemcpyDtoH)(void *, CUdeviceptr, size_t);
+  CUresult (*cuCtxSynchronize)();
+
+  bool load() {
+    lib = dlopen("libcuda.so.1", RTLD_LAZY | RTLD_GLOBAL);
+    if (lib == nullptr) lib = dlopen("libcuda.so", RTLD_LAZY | RTLD_GLOBAL);
+    if (lib == nullptr) {
+      std::cerr << "dlopen libcuda.so failed: " << dlerror() << std::endl;
+      return false;
+    }
+#define SYM(name, versioned)                                   \
+  do {                                                         \
+    void *s = dlsym(lib, versioned);                           \
+    if (s == nullptr) s = dlsym(lib, #name);                   \
+    if (s == nullptr) {                                        \
+      std::cerr << "dlsym " << versioned << " failed: "        \
+                << dlerror() << std::endl;                     \
+      return false;                                            \
+    }                                                          \
+    name = reinterpret_cast<decltype(name)>(s);                \
+  } while (0)
+    SYM(cuInit, "cuInit");
+    SYM(cuDeviceGet, "cuDeviceGet");
+    SYM(cuCtxCreate, "cuCtxCreate_v2");
+    SYM(cuCtxDestroy, "cuCtxDestroy_v2");
+    SYM(cuMemAlloc, "cuMemAlloc_v2");
+    SYM(cuMemFree, "cuMemFree_v2");
+    SYM(cuMemsetD8, "cuMemsetD8_v2");
+    SYM(cuMemcpyDtoH, "cuMemcpyDtoH_v2");
+    SYM(cuCtxSynchronize, "cuCtxSynchronize");
+#undef SYM
+    return true;
+  }
+};
+
+}  // namespace
 
 int main(int argc, char *argv[]) {
   std::string host;
   std::string access_key;
   std::string secret_key;
 
-  char *bufptr;
+  char *bufptr = nullptr;
+  CUdeviceptr dptr = 0;
   size_t bufsize = 10 * 1024 * 1024UL;
   bool gpu_enabled = false;
 
   if (argc <= 1) {
-    printf("usage: %s <server_address> <access_key> <secret_key>\n", argv[0]);
+    printf("usage: %s <server_address> <access_key> <secret_key> [size] [gpu]\n",
+           argv[0]);
     exit(1);
   }
 
-  if (argc > 1) {
-    host = std::string(argv[1]);
-    access_key = std::string(argv[2]);
-    secret_key = std::string(argv[3]);
-    if (argc >= 5) {
-      bufsize = std::atoi(argv[4]);
-    }
-    if (argc >= 6) {
-      gpu_enabled = std::string(argv[5]) == "gpu";
-    }
-  }
+  host = std::string(argv[1]);
+  access_key = std::string(argv[2]);
+  secret_key = std::string(argv[3]);
+  if (argc >= 5) bufsize = std::atoi(argv[4]);
+  if (argc >= 6) gpu_enabled = std::string(argv[5]) == "gpu";
 
-  // Create S3 base URL.
   minio::s3::BaseUrl base_url(host, false, "us-east-1");
-
-  // Create credential provider.
   minio::creds::StaticProvider provider(access_key, secret_key);
-
-  // Create S3 client.
   minio::s3::Client client(base_url, &provider);
 
   std::cout << bufsize << " " << std::endl;
-  if (gpu_enabled) {
-    cudaMalloc(&bufptr, bufsize);
-    cudaMemset(bufptr, 'A', bufsize);
-    cudaStreamSynchronize(0);
 
+  Cuda cuda;
+  CUcontext cu_ctx = nullptr;
+  if (gpu_enabled) {
+    if (!cuda.load()) {
+      std::cerr << "CUDA driver (libcuda.so) unavailable — install NVIDIA "
+                   "driver or omit 'gpu'"
+                << std::endl;
+      exit(1);
+    }
+    if (cuda.cuInit(0) != 0) {
+      std::cerr << "cuInit failed" << std::endl;
+      exit(1);
+    }
+    CUdevice dev = 0;
+    if (cuda.cuDeviceGet(&dev, 0) != 0) {
+      std::cerr << "cuDeviceGet failed" << std::endl;
+      exit(1);
+    }
+    if (cuda.cuCtxCreate(&cu_ctx, 0, dev) != 0) {
+      std::cerr << "cuCtxCreate failed" << std::endl;
+      exit(1);
+    }
+    if (cuda.cuMemAlloc(&dptr, bufsize) != 0) {
+      std::cerr << "cuMemAlloc failed" << std::endl;
+      exit(1);
+    }
+    cuda.cuMemsetD8(dptr, 'A', bufsize);
+    cuda.cuCtxSynchronize();
+    bufptr = reinterpret_cast<char *>(dptr);
     std::cout << "GPU enabled" << std::endl;
   } else {
     int res = posix_memalign((void **)&bufptr, getpagesize(), bufsize);
@@ -88,9 +174,7 @@ int main(int argc, char *argv[]) {
   pargs.bucket = "my-bucket";
   pargs.object = "my-object";
 
-  // Call to put object.
   minio::s3::PutObjectResponse presp = client.PutObject(pargs);
-  // Handle response.
   if (presp) {
     std::cout << std::endl
               << "data uploaded successfully " << presp.etag << std::endl;
@@ -99,21 +183,17 @@ int main(int argc, char *argv[]) {
               << std::endl;
   }
 
-  // Create get object arguments.
   minio::s3::GetObjectRDMAArgs args;
   if (gpu_enabled) {
-    cudaMemset(bufptr, 'U', bufsize);
-    cudaStreamSynchronize(0);
+    cuda.cuMemsetD8(dptr, 'U', bufsize);
+    cuda.cuCtxSynchronize();
   }
   args.buf = bufptr;
   args.size = bufsize;
   args.bucket = "my-bucket";
   args.object = "my-object";
 
-  // Call get object.
   minio::s3::GetObjectResponse resp = client.GetObject(args);
-
-  // Handle response.
   if (resp) {
     std::cout << std::endl
               << "data of my-object is received successfully" << std::endl;
@@ -121,23 +201,17 @@ int main(int argc, char *argv[]) {
     std::cout << "unable to get object; " << resp.Error().String() << std::endl;
   }
 
-  char *hostptr;
-  hostptr = (char *)malloc(bufsize);
+  char *hostptr = (char *)malloc(bufsize);
   if (gpu_enabled) {
-    cudaMemcpy(hostptr, bufptr, bufsize, cudaMemcpyDeviceToHost);
+    cuda.cuMemcpyDtoH(hostptr, dptr, bufsize);
   } else {
     memcpy(hostptr, bufptr, bufsize);
   }
 
-  // Open the file in binary mode for writing
   std::ofstream file("output.txt", std::ios::binary);
   if (file.is_open()) {
-    // Write the buffer to the file
     file.write(hostptr, bufsize);
-
-    // Close the file
     file.close();
-
     std::cout << "Buffer written to file successfully." << std::endl;
   } else {
     std::cerr << "Error opening file." << std::endl;
@@ -145,7 +219,8 @@ int main(int argc, char *argv[]) {
 
   free(hostptr);
   if (gpu_enabled) {
-    cudaFree(bufptr);
+    cuda.cuMemFree(dptr);
+    cuda.cuCtxDestroy(cu_ctx);
   } else {
     free(bufptr);
   }

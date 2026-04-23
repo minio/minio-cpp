@@ -50,8 +50,8 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_COMPILER_FRONTEN
 else()
   # GCC/Clang/AppleClang/...
   list(APPEND MINIO_CPP_CFLAGS -Wall -Wextra -Wconversion)
-  list(APPEND MINIO_CPP_INCLUDES /usr/local/cuda/include)
-  list(APPEND MINIO_CPP_LIBS "-Bdynamic -L${CMAKE_SOURCE_DIR}/vendor/cuobj/lib -L/usr/local/cuda/lib64 -lcufile -lpthread -lnuma -ldl -libverbs -lrdmacm -lrt -lcuobjclient")
+  list(APPEND MINIO_CPP_INCLUDES ${CMAKE_SOURCE_DIR}/vendor/cuobj/include)
+  list(APPEND MINIO_CPP_LIBS "-Bdynamic -L${CMAKE_SOURCE_DIR}/vendor/cuobj/lib -lcufile -lpthread -lnuma -ldl -libverbs -lrdmacm -lrt -lcuobjclient")
   if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 8.0 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0 AND NOT MINGW)
     list(APPEND MINIO_CPP_LIBS stdc++fs)
   endif()
@@ -140,7 +140,7 @@ target_compile_features(miniocpp PUBLIC cxx_std_${MINIO_CPP_STD})
 target_include_directories(miniocpp PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-  ${MINIO_CPP_INCLUDES}
+  $<BUILD_INTERFACE:${MINIO_CPP_INCLUDES}>
 )
 target_link_libraries(miniocpp PUBLIC ${MINIO_CPP_LIBS})
 set_target_properties(miniocpp PROPERTIES VERSION "${MINIO_CPP_VERSION_STRING}")
@@ -215,10 +215,6 @@ if (MINIO_CPP_TEST)
     target_include_directories(${target} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
     target_link_libraries(${target} PRIVATE miniocpp::miniocpp ${MINIO_CPP_LIBS})
   endforeach()
-
-  # CUDA examples need cudart
-  target_link_libraries(GetPutRDMA PRIVATE cudart)
-  target_link_libraries(GPUHostDisk PRIVATE cudart)
 
   add_executable(tests tests/tests.cc)
   target_compile_features(tests PUBLIC cxx_std_${MINIO_CPP_STD})
