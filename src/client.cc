@@ -699,7 +699,7 @@ DownloadObjectResponse Client::DownloadObject(DownloadObjectArgs args) {
 
   std::string temp_filename =
       args.filename + "." + curlpp::escape(etag) + ".part.minio";
-  std::ofstream fout(temp_filename, std::ios::trunc | std::ios::out);
+  std::ofstream fout(temp_filename, std::ios::trunc | std::ios::out | std::ios::binary);
   if (!fout.is_open()) {
     return error::make<DownloadObjectResponse>("unable to open file " +
                                                temp_filename);
