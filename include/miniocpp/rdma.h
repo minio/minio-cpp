@@ -34,6 +34,10 @@
 // that pass pinned host memory (posix_memalign / aligned_alloc) don't need
 // CUDA at all — cuFile detects host pointers via cuFileGetMemoryType and
 // skips the GPU codepath.
+#include <cstdio>
+#include <cstring>
+#include <string>
+
 #include "credentials.h"
 #include "error.h"
 #include "nvidia-cufile.h"
@@ -61,6 +65,32 @@ inline constexpr int kRDMAReplyNotImplemented = 501;
 
 // Return codes for rdmaPut/rdmaGet
 inline constexpr ssize_t kRDMANotSupported = -2;
+
+// Extract the client NIC IP from the 81-char RDMA token. libcuobjclient
+// 1.2.0+ encodes the source NIC's GID in the last 32 hex chars of the
+// descriptor as an IPv4-mapped IPv6 suffix ("...ffffAABBCCDD"). Binding
+// the outbound HTTP socket to that address (via CURLOPT_INTERFACE /
+// httplib::set_interface) keeps the TCP session and the RDMA peer on
+// the same NIC, so the server's RDMA_READ back to the client hits the
+// same HCA that delivered the HTTP request. Returns empty string if the
+// token doesn't follow the expected layout (older client, non-multipath).
+inline static std::string parseClientNICFromToken(const char* token) {
+  if (token == nullptr) return {};
+  size_t n = strlen(token);
+  if (n < 32) return {};
+  const char* tail = token + n - 32;
+  for (int i = 0; i < 20; ++i) {
+    if (tail[i] != '0') return {};
+  }
+  if (tail[20] != 'f' || tail[21] != 'f' || tail[22] != 'f' || tail[23] != 'f') {
+    return {};
+  }
+  unsigned int a, b, c, d;
+  if (std::sscanf(tail + 24, "%2x%2x%2x%2x", &a, &b, &c, &d) != 4) return {};
+  char buf[16];
+  std::snprintf(buf, sizeof(buf), "%u.%u.%u.%u", a, b, c, d);
+  return std::string(buf);
+}
 
 // Maximum attempts for NIC-failover aware retry. Two attempts is sufficient:
 // the first failure is what surfaces the bad NIC to libcuobjclient's
@@ -135,6 +165,14 @@ inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
   httplib::Client cli(url.String());
   cli.set_connection_timeout(5);
   cli.set_read_timeout(10);
+  // Pin the TCP source address to the same NIC whose GID is embedded in
+  // the RDMA token. Without this, multipath can pick a backup NIC for
+  // the token while the kernel sends HTTP out the primary NIC, and the
+  // server's RDMA_READ has no healthy path back to the token's peer.
+  std::string client_nic = parseClientNICFromToken(token);
+  if (!client_nic.empty()) {
+    cli.set_interface(client_nic);
+  }
 
   auto res = cli.Put(full_path, headers, "", "");
   if (res.error() != httplib::Error::Success) {
@@ -220,6 +258,11 @@ inline static ssize_t rdmaGet(s3_rdma_client_ctx_t* sctx, const char* token,
   httplib::Client cli(url.String());
   cli.set_connection_timeout(5);
   cli.set_read_timeout(10);
+  // Pin TCP source to the token's NIC — see rdmaPut above for rationale.
+  std::string client_nic = parseClientNICFromToken(token);
+  if (!client_nic.empty()) {
+    cli.set_interface(client_nic);
+  }
 
   auto res = cli.Get(path, headers);
   if (res.error() != httplib::Error::Success) {

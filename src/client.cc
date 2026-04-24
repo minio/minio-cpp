@@ -150,6 +150,19 @@ void RemoveObjectsResult::Populate() {
   }
 }
 
+// Meyers singleton — thread-safe per C++11 [stmt.dcl]/4 ("If control
+// enters the declaration concurrently while the variable is being
+// initialized, the concurrent execution shall wait for completion of the
+// initialization."). This replaces the previous per-call cuObjClient
+// construction, which was racy under concurrency and caused the
+// glibc-level "malloc(): invalid size (unsorted)" abort when multiple
+// warp workers started up simultaneously.
+cuObjClient& Client::SharedRDMAClient() {
+  static CUObjIOOps ops{};
+  static cuObjClient client{ops, CUOBJ_PROTO_RDMA_DC_V1};
+  return client;
+}
+
 Client::Client(BaseUrl& base_url, creds::Provider* const provider)
     : BaseClient(base_url, provider) {}
 
@@ -387,20 +400,16 @@ GetObjectResponse Client::GetObject(GetObjectRDMAArgs args) {
     return GetObjectResponse(resp);
   }
 
-  CUObjIOOps ops = {};
-  cuObjClient rdmaclient(ops, CUOBJ_PROTO_RDMA_DC_V1);
-
   const size_t size = *args.size;
 
-  bool use_rdma = false;
-  if (rdmaclient.isConnected()) {
-    int res = rdmaclient.cuMemObjGetDescriptor(args.buf, size);
-    if (res) {
-
-    } else {
-      use_rdma = true;
-    }
-  }
+  // Use the process-wide SharedRDMAClient() (per-process cuObjClient avoids
+  // the concurrent-ctor heap corruption we hit when each call built its
+  // own). Buffer registration is still per-call — keeping PutDescriptor
+  // in the PutRetry path is required by libcuobjclient to release
+  // per-transfer multipath slot state; caching the registration made
+  // throughput collapse.
+  cuObjClient& rdma_client = SharedRDMAClient();
+  bool use_rdma = (rdma_client.cuMemObjGetDescriptor(args.buf, size) == 0);
 
   if (use_rdma) {
     s3_rdma_client_ctx getCtx = {
@@ -412,8 +421,8 @@ GetObjectResponse Client::GetObject(GetObjectRDMAArgs args) {
         .op = CUOBJ_GET,
     };
 
-    ssize_t ret = rdmaGetWithRetry(&rdmaclient, &getCtx, args.buf, size);
-    rdmaclient.cuMemObjPutDescriptor(args.buf);
+    ssize_t ret = rdmaGetWithRetry(&rdma_client, &getCtx, args.buf, size);
+    rdma_client.cuMemObjPutDescriptor(args.buf);
 
     if (ret > 0) {
       GetObjectResponse resp;
@@ -450,20 +459,11 @@ PutObjectResponse Client::PutObject(PutObjectRDMAArgs args) {
     return PutObjectResponse(resp);
   }
 
-  CUObjIOOps ops = {};
-  cuObjClient rdmaclient(ops, CUOBJ_PROTO_RDMA_DC_V1);
-
   const size_t size = *args.size;
 
-  bool use_rdma = false;
-  if (rdmaclient.isConnected()) {
-    int res = rdmaclient.cuMemObjGetDescriptor(args.buf, size);
-    if (res) {
-
-    } else {
-      use_rdma = true;
-    }
-  }
+  // See GetObject(GetObjectRDMAArgs) for rationale.
+  cuObjClient& rdma_client = SharedRDMAClient();
+  bool use_rdma = (rdma_client.cuMemObjGetDescriptor(args.buf, size) == 0);
 
   if (use_rdma) {
     s3_rdma_client_ctx putCtx = {
@@ -475,8 +475,8 @@ PutObjectResponse Client::PutObject(PutObjectRDMAArgs args) {
         .op = CUOBJ_PUT,
     };
 
-    ssize_t ret = rdmaPutWithRetry(&rdmaclient, &putCtx, args.buf, size);
-    rdmaclient.cuMemObjPutDescriptor(args.buf);
+    ssize_t ret = rdmaPutWithRetry(&rdma_client, &putCtx, args.buf, size);
+    rdma_client.cuMemObjPutDescriptor(args.buf);
 
     if (ret > 0) {
       PutObjectResponse resp;
@@ -487,12 +487,17 @@ PutObjectResponse Client::PutObject(PutObjectRDMAArgs args) {
     // fall through to HTTP path.
   }
 
-  // HTTP fallback path
+  // HTTP fallback path. We must propagate bucket/object/region onto the
+  // PutObjectArgs — without them utils::CheckBucketName() rejects the call
+  // with "bucket name cannot be empty" before a single byte is sent.
   std::stringstream ss(std::ios_base::in | std::ios_base::out);
   ss.rdbuf()->pubsetbuf(args.buf, size);
 
   minio::s3::PutObjectArgs aargs(ss, static_cast<long>(size),
                                  16 * 1024 * 1024UL);
+  aargs.bucket = args.bucket;
+  aargs.object = args.object;
+  aargs.region = region;
 
   return PutObject(aargs);
 }
@@ -895,12 +900,13 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
         "unable to allocate system memory with alignment");
   }
 
-  CUObjIOOps ops = {};
-  std::unique_ptr<cuObjClient> rdmaclient(
-      new cuObjClient(ops, CUOBJ_PROTO_RDMA_DC_V1));
-
-  if (rdmaclient->isConnected()) {
-    res = rdmaclient->cuMemObjGetDescriptor(buf, args.part_size);
+  // Reuse the process-wide SharedRDMAClient() rather than constructing
+  // per-call; see client.h for the race rationale. `buf` here is the
+  // multipart part buffer, registered once for the whole multipart
+  // upload and deregistered at the end.
+  cuObjClient& rdma_client = SharedRDMAClient();
+  if (rdma_client.isConnected()) {
+    res = rdma_client.cuMemObjGetDescriptor(buf, args.part_size);
     if (res) {
       free(buf);
       return error::make<PutObjectResponse>("unable to register RDMA buffer");
@@ -908,7 +914,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
   }
 
   std::string upload_id;
-  args.rdmaclient = rdmaclient.get();
+  args.rdmaclient = &rdma_client;
   PutObjectResponse resp = PutObject(args, upload_id, buf);
 
   if (!resp && !upload_id.empty()) {
@@ -920,8 +926,8 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
     AbortMultipartUpload(amu_args);
   }
 
-  if (rdmaclient->isConnected()) {
-    res = rdmaclient->cuMemObjPutDescriptor(buf);
+  if (rdma_client.isConnected()) {
+    res = rdma_client.cuMemObjPutDescriptor(buf);
     if (res) {
       free(buf);
       return error::make<PutObjectResponse>("unable to deregister RDMA buffer");
