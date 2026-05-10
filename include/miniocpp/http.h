@@ -19,7 +19,6 @@
 #define MINIO_CPP_HTTP_H_INCLUDED
 
 #include <curlpp/Easy.hpp>
-#include <curlpp/Multi.hpp>
 #include <exception>
 #include <functional>
 #include <iostream>
@@ -142,8 +141,7 @@ struct Response {
   Response() = default;
   ~Response() = default;
 
-  size_t ResponseCallback(curlpp::Multi* const requests,
-                          curlpp::Easy* const request, const char* const buffer,
+  size_t ResponseCallback(curlpp::Easy* const request, const char* const buffer,
                           size_t size, size_t length);
 
   explicit operator bool() const {
