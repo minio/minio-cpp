@@ -699,6 +699,36 @@ class Tests {
       throw;
     }
   }
+
+  void TestBaseUrl() {
+    std::cout << "TestBaseUrl()" << std::endl;
+    std::vector<std::tuple<std::string, std::string, bool, int>> tests = {
+	{"http://localhost:9000", "localhost", false, 9000},
+	{"http://localhost", "localhost", false, 0},
+	{"http://localhost:80", "localhost", false, 0},
+	{"https://localhost:9443", "localhost", true, 9443},
+	{"https://localhost", "localhost", true, 0},
+	{"https://5.localhost.foo", "5.localhost.foo", true, 0},
+	{"https://5.localhost.foo:9000", "5.localhost.foo", true, 9000},
+    };
+    for (auto& [url, host, https, port] : tests) {
+      minio::s3::BaseUrl base_url(url);
+      if (base_url.host != host) {
+	throw std::runtime_error("BaseUrl(" + url +").host: expected: " + host +
+				 ", got: " + base_url.host);
+      }
+      if (base_url.https != https) {
+	throw std::runtime_error("BaseUrl("+ url +").https: expected: " +
+				 std::to_string(https) +
+				 ", got: " + std::to_string(base_url.https));
+      }
+      if (base_url.port != port) {
+	throw std::runtime_error("BaseUrl("+ url +").port: expected: " +
+				 std::to_string(port) +
+				 ", got: " + std::to_string(base_url.port));
+      }
+    }
+  }
 };  // class Tests
 
 int main(int /*argc*/, char* /*argv*/[]) {
@@ -756,6 +786,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
   tests.RemoveObjects();
   tests.SelectObjectContent();
   tests.ListenBucketNotification();
+  tests.TestBaseUrl();
 
   return EXIT_SUCCESS;
 }
