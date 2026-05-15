@@ -433,12 +433,18 @@ GetObjectResponse Client::GetObject(GetObjectRDMAArgs args) {
     // fall through to HTTP path.
   }
 
+  // HTTP fallback path. Propagate the region resolved above onto targs so the
+  // fallback request is signed against the bucket's actual region instead of
+  // re-paying a GetRegion() roundtrip (and so a non-default region is honored
+  // when GET falls back). bucket/object were already being copied; matches
+  // the PutObject(PutObjectRDMAArgs) fallback below.
   GetObjectArgs targs;
   std::stringstream ss(std::ios_base::in | std::ios_base::out);
   ss.rdbuf()->pubsetbuf(args.buf, size);
 
   targs.bucket = args.bucket;
   targs.object = args.object;
+  targs.region = region;
   targs.datafunc = [&ss = ss](minio::http::DataFunctionArgs args) -> bool {
     ss << args.datachunk;
     return true;

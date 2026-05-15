@@ -225,6 +225,14 @@ error::Error DownloadObjectArgs::Validate() const {
 }
 
 error::Error GetObjectRDMAArgs::Validate() const {
+  // Validate bucket+object via the ObjectArgs chain so an empty bucket
+  // is rejected here with "bucket name cannot be empty" instead of slipping
+  // through to the HTTP fallback in Client::GetObject(GetObjectRDMAArgs).
+  // We deliberately skip GetObjectArgs::Validate() because it requires
+  // datafunc, which the RDMA path does not use (writes go straight to buf).
+  if (error::Error err = ObjectArgs::Validate()) {
+    return err;
+  }
   if (!this->buf) {
     return error::Error("buffer must be set");
   }
@@ -236,6 +244,11 @@ error::Error GetObjectRDMAArgs::Validate() const {
 }
 
 error::Error PutObjectRDMAArgs::Validate() const {
+  // See GetObjectRDMAArgs::Validate() for rationale on calling ObjectArgs
+  // directly instead of a more specific parent.
+  if (error::Error err = ObjectArgs::Validate()) {
+    return err;
+  }
   if (!this->buf) {
     return error::Error("buffer must be set");
   }
