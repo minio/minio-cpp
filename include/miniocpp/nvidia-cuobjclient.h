@@ -317,16 +317,21 @@ std::shared_ptr<cuObjTelem> getSpan(std::shared_ptr<cuObjTelem> &telem,
                                     std::string name);
 
 typedef struct s3_rdma_client_ctx {
+  // All members carry explicit in-class defaults so designated-initializer
+  // construction (e.g. `s3_rdma_client_ctx{.bucket=..., .op=...}`) does not
+  // trip -Wmissing-field-initializers for the std::string fields we leave
+  // unspecified at single-shot Put/Get call sites (uploadId/partNumber for
+  // non-multipart paths, etag/checksum for fields populated by the callee).
   minio::creds::Provider *const provider = nullptr;
-  std::string bucket;
-  std::string object;
-  std::string uploadId;
+  std::string bucket = {};
+  std::string object = {};
+  std::string uploadId = {};
   size_t partNumber = 0;
-  std::string etag;
-  minio::s3::BaseUrl url;
-  std::string region;
+  std::string etag = {};
+  minio::s3::BaseUrl url = {};
+  std::string region = {};
   cuObjOpType_t op = CUOBJ_INVALID;
-  std::string checksum;
+  std::string checksum = {};
 } s3_rdma_client_ctx_t;
 
 #endif
