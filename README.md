@@ -163,6 +163,28 @@ int main(int argc, char* argv[]) {
 }
 ```
 
+## RDMA / GPU Direct Storage (optional)
+
+This SDK has optional support for RDMA-direct S3 PUT/GET against MinIO
+servers, including GPUDirect Storage (cuFile) for transfers directly to
+and from CUDA device buffers. Build with:
+
+```
+cmake -DMINIO_CPP_ENABLE_RDMA=ON ...
+```
+
+This requires NVIDIA cuFile, cuObj client/server, libibverbs, and
+librdmacm. Pre-built NVIDIA binaries are vendored under `vendor/cuobj/`
+for convenience; see `vendor/cuobj/NOTICE` for the applicable NVIDIA
+license terms. The default build (`MINIO_CPP_ENABLE_RDMA=OFF`) omits
+the entire RDMA stack and has no dependency on any of those libraries.
+
 ## License
 
 This SDK is distributed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0), see [LICENSE](https://github.com/minio/minio-cpp/blob/master/LICENSE) for more information.
+
+The artifacts under `vendor/cuobj/` and the NVIDIA-derived headers
+(`include/miniocpp/cuda.h`, `nvidia-cufile.h`, `nvidia-cuobjclient.h`)
+are NOT covered by this Apache 2.0 grant — they originate from NVIDIA
+Corporation and are subject to NVIDIA's software license agreements.
+See [`vendor/cuobj/NOTICE`](vendor/cuobj/NOTICE) for details.
