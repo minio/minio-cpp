@@ -1,69 +1,62 @@
-NVIDIA cuFile and cuObj Redistribution Notice
-=============================================
+NVIDIA CUDA Toolkit Components Redistribution Notice
+====================================================
 
-The artifacts under this directory (vendor/cuobj/) are NOT covered by the
-minio-cpp Apache License 2.0. They originate from NVIDIA Corporation and
-are redistributed under NVIDIA's software license agreements.
+The artifacts under this directory (vendor/cuobj/) and the NVIDIA-derived
+headers under include/miniocpp/ (cuda.h, nvidia-cufile.h,
+nvidia-cuobjclient.h) are NOT covered by the minio-cpp Apache License
+2.0. They originate from NVIDIA Corporation and are redistributed under
+the NVIDIA CUDA Toolkit End User License Agreement.
+
+A verbatim copy of that agreement is included in this directory as
+EULA.txt. By building or distributing minio-cpp with
+-DMINIO_CPP_ENABLE_RDMA=ON you accept that EULA for the components
+listed below.
 
 
 What is vendored
 ----------------
 
-  vendor/cuobj/include/cuda.h
-      The CUDA driver API header (cuda.h). Required for type declarations
-      (CUdeviceptr, CUstream, etc.) that appear in cuFile / cuObj API
-      signatures. minio-cpp itself does not call any CUDA driver or
-      runtime symbol.
-
-  vendor/cuobj/lib/libcufile.so.1.18.0  (and SONAME aliases)
+  vendor/cuobj/lib/libcufile.so.1.18.0       (and SONAME aliases)
   vendor/cuobj/lib/libcufile_rdma.so.1.18.0  (and SONAME aliases)
       NVIDIA cuFile (GPUDirect Storage) shared libraries, version 1.18.0.
       Provides the cuFile* API used by libcuobjclient for RDMA transfers.
 
   vendor/cuobj/lib/libcuobjclient.so.1.2.0  (and SONAME aliases)
   vendor/cuobj/lib/libcuobjserver.so.1.2.0  (and SONAME aliases)
-      NVIDIA cuObj client / server libraries, "resiliency_v3" (1.2.0).
+      NVIDIA cuObjClient / cuObjServer libraries, "resiliency_v3" (1.2.0).
       Provides the cuObjClient C++ class used by minio-cpp to mint and
       release RDMA tokens for the S3 RDMA protocol.
 
-The corresponding public-facing API headers
-include/miniocpp/nvidia-cufile.h, include/miniocpp/nvidia-cuobjclient.h
-are reproductions of NVIDIA's API surface and are also subject to the
-upstream NVIDIA agreements below.
+  vendor/cuobj/include/cuda.h
+  include/miniocpp/cuda.h
+      The CUDA driver API header, required for type declarations
+      (CUdeviceptr, CUstream, etc.) that appear in cuFile / cuObj API
+      signatures. minio-cpp itself does not call any CUDA driver or
+      runtime symbol.
+
+  include/miniocpp/nvidia-cufile.h
+  include/miniocpp/nvidia-cuobjclient.h
+      Public-facing API headers for the cuFile and cuObj libraries.
 
 
-Applicable NVIDIA agreements
-----------------------------
-
-* NVIDIA Software License Agreement (cuda.h, CUDA driver headers):
-    https://docs.nvidia.com/cuda/eula/index.html
-
-* NVIDIA cuFile (GPUDirect Storage) SDK License:
-    https://docs.nvidia.com/gpudirect-storage/api-reference-guide/
-
-* NVIDIA cuObjClient redistribution terms apply to the libcuobjclient /
-  libcuobjserver shared objects. Refer to the cuObj SDK distribution
-  channel from which these binaries were obtained.
-
-Each header retains its original NVIDIA copyright notice; see the top of
-include/miniocpp/cuda.h for the verbatim statement that ships with
-cuda.h.
+Per the CUDA Toolkit EULA Attachment A (see EULA.txt §2.6), the cuFile
+component, including cufile.h, libcufile.so, and libcufile_rdma.so, is
+explicitly redistributable. The remaining components are distributed
+under the same EULA's general terms.
 
 
 Scope of this notice
 --------------------
 
-This NOTICE applies ONLY to files under vendor/cuobj/ and to the
-NVIDIA-derived headers include/miniocpp/cuda.h, nvidia-cufile.h, and
-nvidia-cuobjclient.h. The rest of minio-cpp is licensed under the
-Apache License 2.0 — see the top-level LICENSE file.
-
-The minio-cpp project does not grant any license to the NVIDIA artifacts
-above. Use of those artifacts is subject directly to the upstream NVIDIA
-agreements; if you redistribute minio-cpp builds that include them, you
-are responsible for complying with those terms.
+This NOTICE and the accompanying EULA.txt apply ONLY to files under
+vendor/cuobj/ and to the NVIDIA-derived headers include/miniocpp/cuda.h,
+nvidia-cufile.h, and nvidia-cuobjclient.h. The rest of minio-cpp is
+licensed under the Apache License 2.0 — see the top-level LICENSE file.
 
 Building minio-cpp with -DMINIO_CPP_ENABLE_RDMA=OFF (the default) omits
 the entire vendor/cuobj/ tree and the NVIDIA-derived headers from the
 build, so consumers who do not need GPUDirect Storage / RDMA can ignore
 this notice entirely.
+
+For questions about the EULA terms, contact NVIDIA at
+nvidia-compute-license-questions@nvidia.com (per EULA.txt §2.5).
