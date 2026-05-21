@@ -224,6 +224,7 @@ error::Error DownloadObjectArgs::Validate() const {
   return error::SUCCESS;
 }
 
+#ifdef MINIO_CPP_RDMA
 error::Error GetObjectRDMAArgs::Validate() const {
   // Validate bucket+object via the ObjectArgs chain so an empty bucket
   // is rejected here with "bucket name cannot be empty" instead of slipping
@@ -258,6 +259,7 @@ error::Error PutObjectRDMAArgs::Validate() const {
 
   return error::SUCCESS;
 }
+#endif
 
 error::Error GetObjectArgs::Validate() const {
   if (error::Error err = ObjectConditionalReadArgs::Validate()) {

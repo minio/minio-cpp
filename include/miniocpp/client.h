@@ -111,6 +111,7 @@ class Client : public BaseClient {
   PutObjectResponse PutObject(PutObjectArgs args, std::string& upload_id,
                               char* buf);
 
+#ifdef MINIO_CPP_RDMA
   // Process-wide RDMA client, one instance for the whole process, lazily
   // initialised on first use via std::call_once. Reasons this has to be
   // process-wide rather than per-Client instance:
@@ -123,6 +124,7 @@ class Client : public BaseClient {
   //       under concurrency and silently skip RDMA in favour of HTTP.
   // See SharedRDMAClient() in client.cc for the definition.
   static cuObjClient& SharedRDMAClient();
+#endif
 
  public:
   explicit Client(BaseUrl& base_url, creds::Provider* const provider = nullptr);
@@ -134,8 +136,10 @@ class Client : public BaseClient {
   ListObjectsResult ListObjects(ListObjectsArgs args);
   PutObjectResponse PutObject(PutObjectArgs args);
   GetObjectResponse GetObject(GetObjectArgs args);
+#ifdef MINIO_CPP_RDMA
   GetObjectResponse GetObject(GetObjectRDMAArgs args);
   PutObjectResponse PutObject(PutObjectRDMAArgs args);
+#endif
   UploadObjectResponse UploadObject(UploadObjectArgs args);
   RemoveObjectsResult RemoveObjects(RemoveObjectsArgs args);
 };  // class Client

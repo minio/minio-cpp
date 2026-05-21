@@ -39,6 +39,12 @@ include("${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
 
 option(MINIO_CPP_TEST "Build tests" OFF)
 option(MINIO_CPP_MAKE_DOC "Build documentation" OFF)
+# RDMA / GPU Direct Storage support. OFF by default so consumers without
+# NVIDIA cuFile + cuObj + ibverbs + rdmacm do not need those libraries on
+# the host. When ON, links against the vendored NVIDIA blobs in
+# vendor/cuobj/ and defines MINIO_CPP_RDMA so headers expose the
+# GetObjectRDMAArgs / PutObjectRDMAArgs API surface.
+option(MINIO_CPP_ENABLE_RDMA "Enable RDMA and GPU Direct Storage support" OFF)
 
 set(MINIO_CPP_CFLAGS)
 set(MINIO_CPP_INCLUDES)
@@ -50,11 +56,17 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_COMPILER_FRONTEN
 else()
   # GCC/Clang/AppleClang/...
   list(APPEND MINIO_CPP_CFLAGS -Wall -Wextra -Wconversion)
-  list(APPEND MINIO_CPP_INCLUDES ${CMAKE_SOURCE_DIR}/vendor/cuobj/include)
-  list(APPEND MINIO_CPP_LIBS "-Bdynamic -L${CMAKE_SOURCE_DIR}/vendor/cuobj/lib -lcufile -lpthread -lnuma -ldl -libverbs -lrdmacm -lrt -lcuobjclient")
   if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 8.0 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0 AND NOT MINGW)
     list(APPEND MINIO_CPP_LIBS stdc++fs)
   endif()
+endif()
+
+if (MINIO_CPP_ENABLE_RDMA)
+  if (WIN32 OR APPLE)
+    message(FATAL_ERROR "MINIO_CPP_ENABLE_RDMA is only supported on Linux")
+  endif()
+  list(APPEND MINIO_CPP_INCLUDES ${CMAKE_SOURCE_DIR}/vendor/cuobj/include)
+  list(APPEND MINIO_CPP_LIBS "-Bdynamic -L${CMAKE_SOURCE_DIR}/vendor/cuobj/lib -lcufile -lpthread -lnuma -ldl -libverbs -lrdmacm -lrt -lcuobjclient")
 endif()
 
 # Dependencies
@@ -109,10 +121,7 @@ set(MINIO_CPP_HEADERS
   include/miniocpp/credentials.h
   include/miniocpp/error.h
   include/miniocpp/http.h
-  include/miniocpp/nvidia-cufile.h
-  include/miniocpp/nvidia-cuobjclient.h
   include/miniocpp/providers.h
-  include/miniocpp/rdma.h
   include/miniocpp/request.h
   include/miniocpp/response.h
   include/miniocpp/select.h
@@ -121,6 +130,14 @@ set(MINIO_CPP_HEADERS
   include/miniocpp/types.h
   include/miniocpp/utils.h
 )
+
+if (MINIO_CPP_ENABLE_RDMA)
+  list(APPEND MINIO_CPP_HEADERS
+    include/miniocpp/nvidia-cufile.h
+    include/miniocpp/nvidia-cuobjclient.h
+    include/miniocpp/rdma.h
+  )
+endif()
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
 
@@ -142,6 +159,9 @@ target_include_directories(miniocpp PUBLIC
   $<BUILD_INTERFACE:${MINIO_CPP_INCLUDES}>
 )
 target_link_libraries(miniocpp PUBLIC ${MINIO_CPP_LIBS})
+if (MINIO_CPP_ENABLE_RDMA)
+  target_compile_definitions(miniocpp PUBLIC MINIO_CPP_RDMA)
+endif()
 set_target_properties(miniocpp PROPERTIES VERSION "${MINIO_CPP_VERSION_STRING}")
 set_target_properties(miniocpp PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
@@ -164,8 +184,6 @@ if (MINIO_CPP_TEST)
     GetObject
     ListObjects
     PutObject
-    GetPutRDMA
-    GPUHostDisk
     CopyObject
     ComposeObject
     RemoveObjects
@@ -207,6 +225,10 @@ if (MINIO_CPP_TEST)
     PutObjectProgress
     GetObjectProgress
   )
+
+  if (MINIO_CPP_ENABLE_RDMA)
+    list(APPEND EXAMPLE_APPS GetPutRDMA GPUHostDisk)
+  endif()
 
   foreach(target ${EXAMPLE_APPS})
     add_executable(${target} examples/${target}.cc)

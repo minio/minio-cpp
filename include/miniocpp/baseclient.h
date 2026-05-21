@@ -31,9 +31,10 @@
 #include "response.h"
 #include "utils.h"
 
-// RDMA specific includes
+#ifdef MINIO_CPP_RDMA
 #include "nvidia-cuobjclient.h"
 #include "rdma.h"
+#endif
 
 #if defined(_WIN32) && defined(GetObject)
 #pragma push_macro("GetObject")

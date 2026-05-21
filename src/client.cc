@@ -39,9 +39,10 @@
 #include "miniocpp/types.h"
 #include "miniocpp/utils.h"
 
-// RDMA specific includes
+#ifdef MINIO_CPP_RDMA
 #include "miniocpp/nvidia-cuobjclient.h"
 #include "miniocpp/rdma.h"
+#endif
 
 namespace minio::s3 {
 
@@ -150,6 +151,7 @@ void RemoveObjectsResult::Populate() {
   }
 }
 
+#ifdef MINIO_CPP_RDMA
 // Meyers singleton — thread-safe per C++11 [stmt.dcl]/4 ("If control
 // enters the declaration concurrently while the variable is being
 // initialized, the concurrent execution shall wait for completion of the
@@ -162,6 +164,7 @@ cuObjClient& Client::SharedRDMAClient() {
   static cuObjClient client{ops, CUOBJ_PROTO_RDMA_DC_V1};
   return client;
 }
+#endif
 
 Client::Client(BaseUrl& base_url, creds::Provider* const provider)
     : BaseClient(base_url, provider) {}
@@ -388,6 +391,7 @@ GetObjectResponse Client::GetObject(GetObjectArgs args) {
   return BaseClient::GetObject(args);
 }
 
+#ifdef MINIO_CPP_RDMA
 GetObjectResponse Client::GetObject(GetObjectRDMAArgs args) {
   if (error::Error err = args.Validate()) {
     return GetObjectResponse(err);
@@ -507,6 +511,7 @@ PutObjectResponse Client::PutObject(PutObjectRDMAArgs args) {
 
   return PutObject(aargs);
 }
+#endif  // MINIO_CPP_RDMA
 
 PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
                                     char* buf) {
@@ -906,6 +911,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
         "unable to allocate system memory with alignment");
   }
 
+#ifdef MINIO_CPP_RDMA
   // Reuse the process-wide SharedRDMAClient() rather than constructing
   // per-call; see client.h for the race rationale. `buf` here is the
   // multipart part buffer, registered once for the whole multipart
@@ -918,9 +924,10 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
       return error::make<PutObjectResponse>("unable to register RDMA buffer");
     }
   }
+  args.rdmaclient = &rdma_client;
+#endif
 
   std::string upload_id;
-  args.rdmaclient = &rdma_client;
   PutObjectResponse resp = PutObject(args, upload_id, buf);
 
   if (!resp && !upload_id.empty()) {
@@ -932,6 +939,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
     AbortMultipartUpload(amu_args);
   }
 
+#ifdef MINIO_CPP_RDMA
   if (rdma_client.isConnected()) {
     res = rdma_client.cuMemObjPutDescriptor(buf);
     if (res) {
@@ -939,6 +947,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
       return error::make<PutObjectResponse>("unable to deregister RDMA buffer");
     }
   }
+#endif
 
   free(buf);
   return resp;

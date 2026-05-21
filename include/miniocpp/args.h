@@ -27,7 +27,9 @@
 
 #include "error.h"
 #include "http.h"
+#ifdef MINIO_CPP_RDMA
 #include "nvidia-cuobjclient.h"
+#endif
 #include "sse.h"
 #include "types.h"
 #include "utils.h"
@@ -162,7 +164,9 @@ struct PutObjectApiArgs : public PutObjectBaseArgs {
   utils::Multimap query_params;
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
+#ifdef MINIO_CPP_RDMA
   cuObjClient* rdmaclient = nullptr;
+#endif
   std::string checksum_crc64nvme;  // CRC64NVME checksum for multipart uploads
 
   PutObjectApiArgs() = default;
@@ -177,7 +181,9 @@ struct UploadPartArgs : public ObjectWriteArgs {
   std::string_view data;
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
+#ifdef MINIO_CPP_RDMA
   cuObjClient* rdmaclient = nullptr;
+#endif
   std::string checksum_crc64nvme;  // CRC64NVME checksum for multipart uploads
 
   UploadPartArgs() = default;
@@ -225,6 +231,7 @@ struct GetObjectArgs : public ObjectConditionalReadArgs {
   error::Error Validate() const;
 };  // struct GetObjectArgs
 
+#ifdef MINIO_CPP_RDMA
 struct GetObjectRDMAArgs : public GetObjectArgs {
   char* buf = nullptr;
   std::optional<size_t> size;
@@ -234,6 +241,7 @@ struct GetObjectRDMAArgs : public GetObjectArgs {
 
   error::Error Validate() const;
 };  // struct GetObjectRDMAArgs
+#endif
 
 struct ListObjectsArgs : public BucketArgs {
   std::string delimiter;
@@ -336,7 +344,9 @@ struct PutObjectArgs : public PutObjectBaseArgs {
   std::istream& stream;
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
+#ifdef MINIO_CPP_RDMA
   cuObjClient* rdmaclient = nullptr;
+#endif
   std::string checksum_crc64nvme;  // CRC64NVME checksum for multipart uploads
 
   PutObjectArgs(std::istream& stream, long object_size, long part_size);
@@ -345,6 +355,7 @@ struct PutObjectArgs : public PutObjectBaseArgs {
   error::Error Validate();
 };  // struct PutObjectArgs
 
+#ifdef MINIO_CPP_RDMA
 struct PutObjectRDMAArgs : public PutObjectBaseArgs {
   char* buf = nullptr;
   std::optional<size_t> size;
@@ -354,6 +365,7 @@ struct PutObjectRDMAArgs : public PutObjectBaseArgs {
 
   error::Error Validate() const;
 };  // struct PutObjectRDMAArgs
+#endif
 
 using CopySource = ObjectConditionalReadArgs;
 
