@@ -113,7 +113,6 @@ set(MINIO_CPP_HEADERS
   include/miniocpp/nvidia-cuobjclient.h
   include/miniocpp/providers.h
   include/miniocpp/rdma.h
-  include/miniocpp/rdma-httplib.h
   include/miniocpp/request.h
   include/miniocpp/response.h
   include/miniocpp/select.h

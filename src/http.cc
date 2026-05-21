@@ -364,6 +364,16 @@ Response Request::execute() {
     }
   }
 
+  if (!nic_interface.empty()) {
+    request.setOpt(new curlpp::Options::Interface(nic_interface));
+  }
+  if (connect_timeout_secs > 0) {
+    request.setOpt(new curlpp::Options::ConnectTimeout(connect_timeout_secs));
+  }
+  if (timeout_secs > 0) {
+    request.setOpt(new curlpp::Options::Timeout(timeout_secs));
+  }
+
   utils::CharBuffer charbuf((char*)body.data(), body.size());
   std::istream body_stream(&charbuf);
 

@@ -40,9 +40,10 @@
 
 #include "credentials.h"
 #include "error.h"
+#include "http.h"
 #include "nvidia-cufile.h"
 #include "nvidia-cuobjclient.h"
-#include "rdma-httplib.h"
+#include "request.h"
 #include "signer.h"
 #include "utils.h"
 
@@ -66,14 +67,20 @@ inline constexpr int kRDMAReplyNotImplemented = 501;
 // Return codes for rdmaPut/rdmaGet
 inline constexpr ssize_t kRDMANotSupported = -2;
 
+// RDMA control-plane timeouts (seconds). The HTTP exchange carries only
+// the token and a few headers — keep them aggressive so a dead NIC surfaces
+// fast and the retry path can pick up the failover NIC.
+inline constexpr long kRDMAConnectTimeoutSecs = 5;
+inline constexpr long kRDMATimeoutSecs = 10;
+
 // Extract the client NIC IP from the 81-char RDMA token. libcuobjclient
 // 1.2.0+ encodes the source NIC's GID in the last 32 hex chars of the
 // descriptor as an IPv4-mapped IPv6 suffix ("...ffffAABBCCDD"). Binding
-// the outbound HTTP socket to that address (via CURLOPT_INTERFACE /
-// httplib::set_interface) keeps the TCP session and the RDMA peer on
-// the same NIC, so the server's RDMA_READ back to the client hits the
-// same HCA that delivered the HTTP request. Returns empty string if the
-// token doesn't follow the expected layout (older client, non-multipath).
+// the outbound HTTP socket to that address (via CURLOPT_INTERFACE) keeps
+// the TCP session and the RDMA peer on the same NIC, so the server's
+// RDMA_READ back to the client hits the same HCA that delivered the HTTP
+// request. Returns empty string if the token doesn't follow the expected
+// layout (older client, non-multipath).
 inline static std::string parseClientNICFromToken(const char* token) {
   if (token == nullptr) return {};
   size_t n = strlen(token);
@@ -97,6 +104,22 @@ inline static std::string parseClientNICFromToken(const char* token) {
 // async-event + health-check threads; the second mint will route to the
 // backup NIC when rdma_multipath_enabled=true and a healthy backup exists.
 inline constexpr int kRDMAMaxAttempts = 2;
+
+// parseRDMAReply maps the server's x-amz-rdma-reply header to a transfer
+// outcome. Returns:
+//   >0  reply code (200/204/206) — caller should treat as success
+//    0  reply absent or unparseable — caller should treat as -1 failure
+//   -2  reply explicitly says 501 (server declined RDMA, fall back to HTTP)
+inline static int parseRDMAReply(const std::string& rdma_reply) {
+  if (rdma_reply.empty() || rdma_reply == "501") {
+    return static_cast<int>(kRDMANotSupported);
+  }
+  try {
+    return std::stoi(rdma_reply);
+  } catch (const std::exception&) {
+    return 0;
+  }
+}
 
 inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
                               const void* buf, size_t size) {
@@ -146,61 +169,43 @@ inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
                           sign_headers, query_params, creds.access_key,
                           creds.secret_key, kUnsignedPayload, date);
 
-  httplib::Headers headers;
-  std::list<std::string> keys = sign_headers.Keys();
-  for (const auto& key : keys) {
-    std::list<std::string> values = sign_headers.Get(key);
-    for (const auto& value : values) {
-      headers.emplace(key, value);
-    }
-  }
+  url.query_string = query_params.ToQueryString();
 
-  std::string path = url.path;
-  std::string query_string = query_params.ToQueryString();
-  std::string full_path =
-      query_string.empty() ? path : path + "?" + query_string;
+  minio::http::Request req(minio::http::Method::kPut, url);
+  req.headers = sign_headers;
+  req.connect_timeout_secs = kRDMAConnectTimeoutSecs;
+  req.timeout_secs = kRDMATimeoutSecs;
 
-  url.path = "";
-  url.query_string = "";
-  httplib::Client cli(url.String());
-  cli.set_connection_timeout(5);
-  cli.set_read_timeout(10);
   // Pin the TCP source address to the same NIC whose GID is embedded in
   // the RDMA token. Without this, multipath can pick a backup NIC for
   // the token while the kernel sends HTTP out the primary NIC, and the
   // server's RDMA_READ has no healthy path back to the token's peer.
   std::string client_nic = parseClientNICFromToken(token);
   if (!client_nic.empty()) {
-    cli.set_interface(client_nic);
+    req.nic_interface = client_nic;
   }
 
-  auto res = cli.Put(full_path, headers, "", "");
-  if (res.error() != httplib::Error::Success) {
+  minio::http::Response res = req.Execute();
+  if (!res.error.empty()) {
     return -1;
   }
 
-  std::string etag = res->get_header_value("ETag");
-  if (res->status == 200 && !etag.empty()) {
+  std::string etag = res.headers.GetFront("etag");
+  if (res.status_code == 200 && !etag.empty()) {
     sctx->etag = minio::utils::Trim(etag, '"');
     return static_cast<ssize_t>(size);
   }
 
-  std::string rdma_reply = res->get_header_value(kAmzRDMAReply);
-  if (rdma_reply.empty() || rdma_reply == "501") {
+  int reply_code = parseRDMAReply(res.headers.GetFront(kAmzRDMAReply));
+  if (reply_code == static_cast<int>(kRDMANotSupported)) {
     return kRDMANotSupported;
   }
-
-  try {
-    int reply_code = std::stoi(rdma_reply);
-    if (reply_code != kRDMAReplySuccess && reply_code != kRDMAReplyNoContent) {
-      return -1;
-    }
-  } catch (const std::exception&) {
+  if (reply_code != kRDMAReplySuccess && reply_code != kRDMAReplyNoContent) {
     return -1;
   }
 
   std::string resp_checksum =
-      res->get_header_value("x-amz-checksum-crc64nvme");
+      res.headers.GetFront("x-amz-checksum-crc64nvme");
   if (!resp_checksum.empty()) {
     sctx->checksum = resp_checksum;
   }
@@ -243,47 +248,47 @@ inline static ssize_t rdmaGet(s3_rdma_client_ctx_t* sctx, const char* token,
                           sign_headers, query_params, creds.access_key,
                           creds.secret_key, kUnsignedPayload, date);
 
-  httplib::Headers headers;
-  std::list<std::string> hdr_keys = sign_headers.Keys();
-  for (const auto& key : hdr_keys) {
-    std::list<std::string> values = sign_headers.Get(key);
-    for (const auto& value : values) {
-      headers.emplace(key, value);
-    }
-  }
+  minio::http::Request req(minio::http::Method::kGet, url);
+  req.headers = sign_headers;
+  req.connect_timeout_secs = kRDMAConnectTimeoutSecs;
+  req.timeout_secs = kRDMATimeoutSecs;
 
-  std::string path = url.path;
-  url.path = "";
-  url.query_string = "";
-  httplib::Client cli(url.String());
-  cli.set_connection_timeout(5);
-  cli.set_read_timeout(10);
   // Pin TCP source to the token's NIC — see rdmaPut above for rationale.
   std::string client_nic = parseClientNICFromToken(token);
   if (!client_nic.empty()) {
-    cli.set_interface(client_nic);
+    req.nic_interface = client_nic;
   }
 
-  auto res = cli.Get(path, headers);
-  if (res.error() != httplib::Error::Success) {
+  minio::http::Response res = req.Execute();
+  if (!res.error.empty()) {
     return -1;
   }
 
-  std::string rdma_reply = res->get_header_value(kAmzRDMAReply);
-  if (rdma_reply.empty() || rdma_reply == "501") {
+  int reply_code = parseRDMAReply(res.headers.GetFront(kAmzRDMAReply));
+  if (reply_code == static_cast<int>(kRDMANotSupported)) {
     return kRDMANotSupported;
   }
-
-  try {
-    int reply_code = std::stoi(rdma_reply);
-    if (reply_code != kRDMAReplySuccess &&
-        reply_code != kRDMAReplyPartialContent) {
-      return -1;
-    }
-  } catch (const std::exception&) {
+  if (reply_code != kRDMAReplySuccess &&
+      reply_code != kRDMAReplyPartialContent) {
     return -1;
   }
 
+  // Trust the server's reported transferred byte count. The protocol uses
+  // Content-Length: 0 on the HTTP body (the data went over RDMA), and the
+  // actual transferred size is communicated via x-amz-rdma-bytes-transferred.
+  // For ranged/partial GETs this can be less than the caller-requested size.
+  std::string bytes_hdr = res.headers.GetFront(kAmzRDMABytesTransferred);
+  if (!bytes_hdr.empty()) {
+    try {
+      long long n = std::stoll(bytes_hdr);
+      if (n < 0) return -1;
+      return static_cast<ssize_t>(n);
+    } catch (const std::exception&) {
+      return -1;
+    }
+  }
+
+  // Header absent (older server). Assume full transfer for backward compat.
   return static_cast<ssize_t>(size);
 }
 

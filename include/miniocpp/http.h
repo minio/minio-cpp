@@ -120,6 +120,19 @@ struct Request {
   std::string key_file;
   std::string cert_file;
 
+  // Pin the outbound socket to a specific interface or local IP via
+  // CURLOPT_INTERFACE. Used by the RDMA control plane to keep HTTP on the
+  // same NIC whose GID is embedded in the RDMA token, so the server's
+  // RDMA_READ has a healthy path back to that NIC. Empty == let kernel route.
+  std::string nic_interface;
+
+  // Per-request connect/total timeout overrides in seconds. 0 == use libcurl
+  // defaults. Used by the RDMA control plane to fail fast on a dead NIC so
+  // the caller can retry (and pick up the failover NIC on the next attempt)
+  // instead of blocking on TCP's default ~75s SYN timeout.
+  long connect_timeout_secs = 0;
+  long timeout_secs = 0;
+
   Request(Method method, Url url);
   ~Request() = default;
 
