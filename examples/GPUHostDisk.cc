@@ -49,12 +49,12 @@ struct Cuda {
     lib = dlopen("libcuda.so.1", RTLD_LAZY | RTLD_GLOBAL);
     if (lib == nullptr) lib = dlopen("libcuda.so", RTLD_LAZY | RTLD_GLOBAL);
     if (lib == nullptr) return false;
-#define SYM(name, versioned)                                   \
-  do {                                                         \
-    void *s = dlsym(lib, versioned);                           \
-    if (s == nullptr) s = dlsym(lib, #name);                   \
-    if (s == nullptr) return false;                            \
-    name = reinterpret_cast<decltype(name)>(s);                \
+#define SYM(name, versioned)                    \
+  do {                                          \
+    void *s = dlsym(lib, versioned);            \
+    if (s == nullptr) s = dlsym(lib, #name);    \
+    if (s == nullptr) return false;             \
+    name = reinterpret_cast<decltype(name)>(s); \
   } while (0)
     SYM(cuInit, "cuInit");
     SYM(cuDeviceGet, "cuDeviceGet");

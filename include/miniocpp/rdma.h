@@ -89,7 +89,8 @@ inline static std::string parseClientNICFromToken(const char* token) {
   for (int i = 0; i < 20; ++i) {
     if (tail[i] != '0') return {};
   }
-  if (tail[20] != 'f' || tail[21] != 'f' || tail[22] != 'f' || tail[23] != 'f') {
+  if (tail[20] != 'f' || tail[21] != 'f' || tail[22] != 'f' ||
+      tail[23] != 'f') {
     return {};
   }
   unsigned int a, b, c, d;
@@ -204,8 +205,7 @@ inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
     return -1;
   }
 
-  std::string resp_checksum =
-      res.headers.GetFront("x-amz-checksum-crc64nvme");
+  std::string resp_checksum = res.headers.GetFront("x-amz-checksum-crc64nvme");
   if (!resp_checksum.empty()) {
     sctx->checksum = resp_checksum;
   }

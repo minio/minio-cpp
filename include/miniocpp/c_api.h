@@ -55,12 +55,9 @@ typedef ssize_t (*miniocpp_write_cb)(void* userdata, const char* buf,
 
 // Construct a client. region/session_token may be NULL/"".
 // Returned pointer is owned by the caller; release with miniocpp_client_free.
-MINIOCPP_API miniocpp_client* miniocpp_client_new(const char* endpoint,
-                                                  const char* region,
-                                                  const char* access_key,
-                                                  const char* secret_key,
-                                                  const char* session_token,
-                                                  int use_https);
+MINIOCPP_API miniocpp_client* miniocpp_client_new(
+    const char* endpoint, const char* region, const char* access_key,
+    const char* secret_key, const char* session_token, int use_https);
 
 MINIOCPP_API void miniocpp_client_free(miniocpp_client* client);
 
@@ -70,20 +67,17 @@ MINIOCPP_API void miniocpp_client_free(miniocpp_client* client);
 // Writes the CRC64NVME checksum (base64, ~32 chars) into checksum_out if
 // non-NULL. Returns bytes transferred on success, or one of MINIOCPP_ERR_*.
 MINIOCPP_API ssize_t miniocpp_put_object(miniocpp_client* client,
-                                         const char* bucket,
-                                         const char* object,
+                                         const char* bucket, const char* object,
                                          void* buf, size_t size,
                                          miniocpp_read_cb read_cb,
-                                         void* userdata,
-                                         char etag_out[64],
+                                         void* userdata, char etag_out[64],
                                          char checksum_out[64]);
 
 // GET. When `buf` is non-NULL, attempts RDMA into the caller's buffer with
 // HTTP-into-buf fallback; `write_cb` is ignored. When `buf` is NULL, streams
 // the body through `write_cb`. Returns bytes transferred or MINIOCPP_ERR_*.
 MINIOCPP_API ssize_t miniocpp_get_object(miniocpp_client* client,
-                                         const char* bucket,
-                                         const char* object,
+                                         const char* bucket, const char* object,
                                          void* buf, size_t size,
                                          miniocpp_write_cb write_cb,
                                          void* userdata);

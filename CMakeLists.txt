@@ -35,7 +35,9 @@ project(miniocpp
 include(GNUInstallDirs)
 include(CheckIncludeFiles)
 include(CMakePackageConfigHelpers)
-include("${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+if(NOT DEFINED CMAKE_TOOLCHAIN_FILE AND DEFINED ENV{VCPKG_ROOT})
+  include("$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+endif()
 
 option(MINIO_CPP_TEST "Build tests" OFF)
 option(MINIO_CPP_MAKE_DOC "Build documentation" OFF)

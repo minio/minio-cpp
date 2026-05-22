@@ -13,6 +13,8 @@
 
 #include "miniocpp/c_api.h"
 
+#include <unistd.h>
+
 #include <cstdlib>
 #include <cstring>
 #include <istream>
@@ -20,7 +22,6 @@
 #include <ostream>
 #include <streambuf>
 #include <string>
-#include <unistd.h>
 
 #include "miniocpp/args.h"
 #include "miniocpp/client.h"
@@ -70,8 +71,7 @@ extern "C" {
 miniocpp_client* miniocpp_client_new(const char* endpoint, const char* region,
                                      const char* access_key,
                                      const char* secret_key,
-                                     const char* session_token,
-                                     int use_https) {
+                                     const char* session_token, int use_https) {
   if (endpoint == nullptr || access_key == nullptr || secret_key == nullptr) {
     SetLastError("endpoint, access_key, and secret_key are required");
     return nullptr;
@@ -81,10 +81,9 @@ miniocpp_client* miniocpp_client_new(const char* endpoint, const char* region,
     holder->base_url = minio::s3::BaseUrl(endpoint, use_https != 0,
                                           region != nullptr ? region : "");
     holder->provider = std::make_unique<minio::creds::StaticProvider>(
-        access_key, secret_key,
-        session_token != nullptr ? session_token : "");
-    holder->client = std::make_unique<minio::s3::Client>(holder->base_url,
-                                                         holder->provider.get());
+        access_key, secret_key, session_token != nullptr ? session_token : "");
+    holder->client = std::make_unique<minio::s3::Client>(
+        holder->base_url, holder->provider.get());
     return reinterpret_cast<miniocpp_client*>(holder.release());
   } catch (const std::exception& e) {
     SetLastError(std::string("client construction failed: ") + e.what());
@@ -170,8 +169,8 @@ ssize_t miniocpp_get_object(miniocpp_client* c, const char* bucket,
     args.buf = static_cast<char*>(buf);
     args.size = size;
   } else {
-    args.datafunc = [write_cb, userdata, &bytes_seen](
-                        minio::http::DataFunctionArgs a) -> bool {
+    args.datafunc = [write_cb, userdata,
+                     &bytes_seen](minio::http::DataFunctionArgs a) -> bool {
       ssize_t n = write_cb(userdata, a.datachunk.data(), a.datachunk.size());
       if (n < 0 || static_cast<size_t>(n) != a.datachunk.size()) return false;
       bytes_seen += n;

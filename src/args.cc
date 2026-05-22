@@ -231,8 +231,7 @@ error::Error GetObjectArgs::Validate() const {
   const bool has_datafunc = (datafunc != nullptr);
   const bool has_buf = (buf != nullptr);
   if (has_datafunc == has_buf) {
-    return error::Error(
-        "exactly one of datafunc or buf must be set");
+    return error::Error("exactly one of datafunc or buf must be set");
   }
   if (has_buf && !size.has_value()) {
     return error::Error("size must be set when buf is set");

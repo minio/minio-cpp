@@ -54,45 +54,47 @@
 // transitively via <miniocpp/client.h>.
 namespace {
 
+// Use libcudart (CUDA Runtime API) rather than libcuda (driver API).
+// cudaMalloc implicitly warms the runtime, retrieves the primary context,
+// and performs the cudart-side P2P / GPUDirect RDMA initialization that
+// the pure driver API path (cuCtxCreate + cuMemAlloc) skips.
 struct Cuda {
   void *lib = nullptr;
-  CUresult (*cuInit)(unsigned);
-  CUresult (*cuDeviceGet)(CUdevice *, int);
-  CUresult (*cuCtxCreate)(CUcontext *, unsigned, CUdevice);
-  CUresult (*cuCtxDestroy)(CUcontext);
-  CUresult (*cuMemAlloc)(CUdeviceptr *, size_t);
-  CUresult (*cuMemFree)(CUdeviceptr);
-  CUresult (*cuMemsetD8)(CUdeviceptr, unsigned char, size_t);
-  CUresult (*cuMemcpyDtoH)(void *, CUdeviceptr, size_t);
-  CUresult (*cuCtxSynchronize)();
+  // signature: returns int cudaError_t (0 == cudaSuccess)
+  int (*cudaSetDevice)(int);
+  int (*cudaMalloc)(void **, size_t);
+  int (*cudaFree)(void *);
+  int (*cudaMemset)(void *, int, size_t);
+  int (*cudaMemcpy)(void *, const void *, size_t,
+                    int);  // kind=cudaMemcpyDeviceToHost=2
+  int (*cudaDeviceSynchronize)();
+  int (*cudaDeviceFlushGPUDirectRDMAWrites)(int target, int scope);
 
   bool load() {
-    lib = dlopen("libcuda.so.1", RTLD_LAZY | RTLD_GLOBAL);
-    if (lib == nullptr) lib = dlopen("libcuda.so", RTLD_LAZY | RTLD_GLOBAL);
+    lib = dlopen("libcudart.so.13", RTLD_LAZY | RTLD_GLOBAL);
+    if (lib == nullptr)
+      lib = dlopen("libcudart.so.12", RTLD_LAZY | RTLD_GLOBAL);
+    if (lib == nullptr) lib = dlopen("libcudart.so", RTLD_LAZY | RTLD_GLOBAL);
     if (lib == nullptr) {
-      std::cerr << "dlopen libcuda.so failed: " << dlerror() << std::endl;
+      std::cerr << "dlopen libcudart.so failed: " << dlerror() << std::endl;
       return false;
     }
-#define SYM(name, versioned)                                   \
-  do {                                                         \
-    void *s = dlsym(lib, versioned);                           \
-    if (s == nullptr) s = dlsym(lib, #name);                   \
-    if (s == nullptr) {                                        \
-      std::cerr << "dlsym " << versioned << " failed: "        \
-                << dlerror() << std::endl;                     \
-      return false;                                            \
-    }                                                          \
-    name = reinterpret_cast<decltype(name)>(s);                \
+#define SYM(name, optional)                                              \
+  do {                                                                   \
+    void *s = dlsym(lib, #name);                                         \
+    if (s == nullptr && !(optional)) {                                   \
+      std::cerr << "dlsym " #name " failed: " << dlerror() << std::endl; \
+      return false;                                                      \
+    }                                                                    \
+    name = reinterpret_cast<decltype(name)>(s);                          \
   } while (0)
-    SYM(cuInit, "cuInit");
-    SYM(cuDeviceGet, "cuDeviceGet");
-    SYM(cuCtxCreate, "cuCtxCreate_v2");
-    SYM(cuCtxDestroy, "cuCtxDestroy_v2");
-    SYM(cuMemAlloc, "cuMemAlloc_v2");
-    SYM(cuMemFree, "cuMemFree_v2");
-    SYM(cuMemsetD8, "cuMemsetD8_v2");
-    SYM(cuMemcpyDtoH, "cuMemcpyDtoH_v2");
-    SYM(cuCtxSynchronize, "cuCtxSynchronize");
+    SYM(cudaSetDevice, false);
+    SYM(cudaMalloc, false);
+    SYM(cudaFree, false);
+    SYM(cudaMemset, false);
+    SYM(cudaMemcpy, false);
+    SYM(cudaDeviceSynchronize, false);
+    SYM(cudaDeviceFlushGPUDirectRDMAWrites, true);  // available since CUDA 11.3
 #undef SYM
     return true;
   }
@@ -111,8 +113,9 @@ int main(int argc, char *argv[]) {
   bool gpu_enabled = false;
 
   if (argc <= 1) {
-    printf("usage: %s <server_address> <access_key> <secret_key> [size] [gpu]\n",
-           argv[0]);
+    printf(
+        "usage: %s <server_address> <access_key> <secret_key> [size] [gpu]\n",
+        argv[0]);
     exit(1);
   }
 
@@ -129,33 +132,28 @@ int main(int argc, char *argv[]) {
   std::cout << bufsize << " " << std::endl;
 
   Cuda cuda;
-  CUcontext cu_ctx = nullptr;
   if (gpu_enabled) {
     if (!cuda.load()) {
-      std::cerr << "CUDA driver (libcuda.so) unavailable — install NVIDIA "
-                   "driver or omit 'gpu'"
+      std::cerr << "CUDA runtime (libcudart.so) unavailable — install CUDA "
+                   "Toolkit or omit 'gpu'"
                 << std::endl;
       exit(1);
     }
-    if (cuda.cuInit(0) != 0) {
-      std::cerr << "cuInit failed" << std::endl;
+    if (cuda.cudaSetDevice(0) != 0) {
+      std::cerr << "cudaSetDevice failed" << std::endl;
       exit(1);
     }
-    CUdevice dev = 0;
-    if (cuda.cuDeviceGet(&dev, 0) != 0) {
-      std::cerr << "cuDeviceGet failed" << std::endl;
+    void *dptr_void = nullptr;
+    if (cuda.cudaMalloc(&dptr_void, bufsize) != 0) {
+      std::cerr << "cudaMalloc failed" << std::endl;
       exit(1);
     }
-    if (cuda.cuCtxCreate(&cu_ctx, 0, dev) != 0) {
-      std::cerr << "cuCtxCreate failed" << std::endl;
+    dptr = reinterpret_cast<CUdeviceptr>(dptr_void);
+    if (cuda.cudaMemset(dptr_void, 'A', bufsize) != 0) {
+      std::cerr << "cudaMemset failed" << std::endl;
       exit(1);
     }
-    if (cuda.cuMemAlloc(&dptr, bufsize) != 0) {
-      std::cerr << "cuMemAlloc failed" << std::endl;
-      exit(1);
-    }
-    cuda.cuMemsetD8(dptr, 'A', bufsize);
-    cuda.cuCtxSynchronize();
+    cuda.cudaDeviceSynchronize();
     bufptr = reinterpret_cast<char *>(dptr);
     std::cout << "GPU enabled" << std::endl;
   } else {
@@ -185,8 +183,8 @@ int main(int argc, char *argv[]) {
 
   minio::s3::GetObjectArgs args;
   if (gpu_enabled) {
-    cuda.cuMemsetD8(dptr, 'U', bufsize);
-    cuda.cuCtxSynchronize();
+    cuda.cudaMemset(reinterpret_cast<void *>(dptr), 'U', bufsize);
+    cuda.cudaDeviceSynchronize();
   }
   args.buf = bufptr;
   args.size = bufsize;
@@ -203,7 +201,8 @@ int main(int argc, char *argv[]) {
 
   char *hostptr = (char *)malloc(bufsize);
   if (gpu_enabled) {
-    cuda.cuMemcpyDtoH(hostptr, dptr, bufsize);
+    cuda.cudaMemcpy(hostptr, reinterpret_cast<void *>(dptr), bufsize,
+                    2);  // cudaMemcpyDeviceToHost=2
   } else {
     memcpy(hostptr, bufptr, bufsize);
   }
@@ -219,8 +218,7 @@ int main(int argc, char *argv[]) {
 
   free(hostptr);
   if (gpu_enabled) {
-    cuda.cuMemFree(dptr);
-    cuda.cuCtxDestroy(cu_ctx);
+    cuda.cudaFree(reinterpret_cast<void *>(dptr));
   } else {
     free(bufptr);
   }
