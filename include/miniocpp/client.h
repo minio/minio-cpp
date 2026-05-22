@@ -136,10 +136,6 @@ class Client : public BaseClient {
   ListObjectsResult ListObjects(ListObjectsArgs args);
   PutObjectResponse PutObject(PutObjectArgs args);
   GetObjectResponse GetObject(GetObjectArgs args);
-#ifdef MINIO_CPP_RDMA
-  GetObjectResponse GetObject(GetObjectRDMAArgs args);
-  PutObjectResponse PutObject(PutObjectRDMAArgs args);
-#endif
   UploadObjectResponse UploadObject(UploadObjectArgs args);
   RemoveObjectsResult RemoveObjects(RemoveObjectsArgs args);
 };  // class Client

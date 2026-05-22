@@ -220,8 +220,13 @@ struct DownloadObjectArgs : public ObjectReadArgs {
 };  // struct DownloadObjectArgs
 
 struct GetObjectArgs : public ObjectConditionalReadArgs {
+  // Exactly one of (datafunc, buf) must be set; Validate() enforces.
+  // When buf is set, the call attempts RDMA and falls back to streaming
+  // the HTTP body into the same buffer on RDMA decline.
   http::DataFunction datafunc;
   void* userdata = nullptr;
+  char* buf = nullptr;
+  std::optional<size_t> size;
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
 
@@ -230,18 +235,6 @@ struct GetObjectArgs : public ObjectConditionalReadArgs {
 
   error::Error Validate() const;
 };  // struct GetObjectArgs
-
-#ifdef MINIO_CPP_RDMA
-struct GetObjectRDMAArgs : public GetObjectArgs {
-  char* buf = nullptr;
-  std::optional<size_t> size;
-
-  GetObjectRDMAArgs() = default;
-  ~GetObjectRDMAArgs() = default;
-
-  error::Error Validate() const;
-};  // struct GetObjectRDMAArgs
-#endif
 
 struct ListObjectsArgs : public BucketArgs {
   std::string delimiter;
@@ -341,7 +334,12 @@ struct ListObjectVersionsArgs : public ListObjectsCommonArgs {
 };  // struct ListObjectVersionsArgs
 
 struct PutObjectArgs : public PutObjectBaseArgs {
-  std::istream& stream;
+  // Exactly one of (stream, buf) must be set; Validate() enforces.
+  // When buf is set, the call attempts RDMA and falls back to a
+  // streaming HTTP upload from the same buffer on RDMA decline.
+  std::istream* stream = nullptr;
+  char* buf = nullptr;
+  std::optional<size_t> size;
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
 #ifdef MINIO_CPP_RDMA
@@ -349,23 +347,12 @@ struct PutObjectArgs : public PutObjectBaseArgs {
 #endif
   std::string checksum_crc64nvme;  // CRC64NVME checksum for multipart uploads
 
+  PutObjectArgs() = default;
   PutObjectArgs(std::istream& stream, long object_size, long part_size);
   ~PutObjectArgs() = default;
 
   error::Error Validate();
 };  // struct PutObjectArgs
-
-#ifdef MINIO_CPP_RDMA
-struct PutObjectRDMAArgs : public PutObjectBaseArgs {
-  char* buf = nullptr;
-  std::optional<size_t> size;
-
-  PutObjectRDMAArgs() = default;
-  ~PutObjectRDMAArgs() = default;
-
-  error::Error Validate() const;
-};  // struct PutObjectRDMAArgs
-#endif
 
 using CopySource = ObjectConditionalReadArgs;
 

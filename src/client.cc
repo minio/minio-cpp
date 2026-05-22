@@ -388,130 +388,66 @@ ComposeObjectResponse Client::ComposeObject(ComposeObjectArgs args,
 }
 
 GetObjectResponse Client::GetObject(GetObjectArgs args) {
-  return BaseClient::GetObject(args);
-}
-
-#ifdef MINIO_CPP_RDMA
-GetObjectResponse Client::GetObject(GetObjectRDMAArgs args) {
   if (error::Error err = args.Validate()) {
     return GetObjectResponse(err);
   }
 
-  std::string region;
-  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
-    region = resp.region;
-  } else {
-    return GetObjectResponse(resp);
-  }
+#ifdef MINIO_CPP_RDMA
+  if (args.buf != nullptr) {
+    std::string region;
+    if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+      region = resp.region;
+    } else {
+      return GetObjectResponse(resp);
+    }
 
-  const size_t size = *args.size;
+    const size_t size = *args.size;
 
-  // Use the process-wide SharedRDMAClient() (per-process cuObjClient avoids
-  // the concurrent-ctor heap corruption we hit when each call built its
-  // own). Buffer registration is still per-call — keeping PutDescriptor
-  // in the PutRetry path is required by libcuobjclient to release
-  // per-transfer multipath slot state; caching the registration made
-  // throughput collapse.
-  cuObjClient& rdma_client = SharedRDMAClient();
-  bool use_rdma = (rdma_client.cuMemObjGetDescriptor(args.buf, size) == 0);
+    // Process-wide cuObjClient — see client.h for the race rationale.
+    cuObjClient& rdma_client = SharedRDMAClient();
+    bool use_rdma = (rdma_client.cuMemObjGetDescriptor(args.buf, size) == 0);
 
-  if (use_rdma) {
-    s3_rdma_client_ctx getCtx = {
-        .provider = provider_,
-        .bucket = args.bucket,
-        .object = args.object,
-        .url = base_url_,
-        .region = region,
-        .op = CUOBJ_GET,
+    if (use_rdma) {
+      s3_rdma_client_ctx getCtx = {
+          .provider = provider_,
+          .bucket = args.bucket,
+          .object = args.object,
+          .url = base_url_,
+          .region = region,
+          .op = CUOBJ_GET,
+      };
+
+      ssize_t ret = rdmaGetWithRetry(&rdma_client, &getCtx, args.buf, size);
+      rdma_client.cuMemObjPutDescriptor(args.buf);
+
+      if (ret > 0) {
+        GetObjectResponse resp;
+        resp.etag = getCtx.etag;
+        return resp;
+      }
+      // ret < 0 (retries exhausted) or kRDMANotSupported (server declined):
+      // fall through to HTTP-into-buffer path below.
+    }
+
+    // HTTP fallback: stream the body into the caller's buffer.
+    GetObjectArgs targs;
+    std::stringstream ss(std::ios_base::in | std::ios_base::out);
+    ss.rdbuf()->pubsetbuf(args.buf, size);
+
+    targs.bucket = args.bucket;
+    targs.object = args.object;
+    targs.region = region;
+    targs.datafunc = [&ss = ss](minio::http::DataFunctionArgs args) -> bool {
+      ss << args.datachunk;
+      return true;
     };
 
-    ssize_t ret = rdmaGetWithRetry(&rdma_client, &getCtx, args.buf, size);
-    rdma_client.cuMemObjPutDescriptor(args.buf);
-
-    if (ret > 0) {
-      GetObjectResponse resp;
-      resp.etag = getCtx.etag;
-      return resp;
-    }
-    // ret < 0 (retries exhausted) or kRDMANotSupported (server declined):
-    // fall through to HTTP path.
+    return BaseClient::GetObject(targs);
   }
+#endif
 
-  // HTTP fallback path. Propagate the region resolved above onto targs so the
-  // fallback request is signed against the bucket's actual region instead of
-  // re-paying a GetRegion() roundtrip (and so a non-default region is honored
-  // when GET falls back). bucket/object were already being copied; matches
-  // the PutObject(PutObjectRDMAArgs) fallback below.
-  GetObjectArgs targs;
-  std::stringstream ss(std::ios_base::in | std::ios_base::out);
-  ss.rdbuf()->pubsetbuf(args.buf, size);
-
-  targs.bucket = args.bucket;
-  targs.object = args.object;
-  targs.region = region;
-  targs.datafunc = [&ss = ss](minio::http::DataFunctionArgs args) -> bool {
-    ss << args.datachunk;
-    return true;
-  };
-
-  return BaseClient::GetObject(targs);
+  return BaseClient::GetObject(args);
 }
-
-PutObjectResponse Client::PutObject(PutObjectRDMAArgs args) {
-  if (error::Error err = args.Validate()) {
-    return PutObjectResponse(err);
-  }
-
-  std::string region;
-  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
-    region = resp.region;
-  } else {
-    return PutObjectResponse(resp);
-  }
-
-  const size_t size = *args.size;
-
-  // See GetObject(GetObjectRDMAArgs) for rationale.
-  cuObjClient& rdma_client = SharedRDMAClient();
-  bool use_rdma = (rdma_client.cuMemObjGetDescriptor(args.buf, size) == 0);
-
-  if (use_rdma) {
-    s3_rdma_client_ctx putCtx = {
-        .provider = provider_,
-        .bucket = args.bucket,
-        .object = args.object,
-        .url = base_url_,
-        .region = region,
-        .op = CUOBJ_PUT,
-    };
-
-    ssize_t ret = rdmaPutWithRetry(&rdma_client, &putCtx, args.buf, size);
-    rdma_client.cuMemObjPutDescriptor(args.buf);
-
-    if (ret > 0) {
-      PutObjectResponse resp;
-      resp.etag = putCtx.etag;
-      return resp;
-    }
-    // ret < 0 (retries exhausted) or kRDMANotSupported (server declined):
-    // fall through to HTTP path.
-  }
-
-  // HTTP fallback path. We must propagate bucket/object/region onto the
-  // PutObjectArgs — without them utils::CheckBucketName() rejects the call
-  // with "bucket name cannot be empty" before a single byte is sent.
-  std::stringstream ss(std::ios_base::in | std::ios_base::out);
-  ss.rdbuf()->pubsetbuf(args.buf, size);
-
-  minio::s3::PutObjectArgs aargs(ss, static_cast<long>(size),
-                                 16 * 1024 * 1024UL);
-  aargs.bucket = args.bucket;
-  aargs.object = args.object;
-  aargs.region = region;
-
-  return PutObject(aargs);
-}
-#endif  // MINIO_CPP_RDMA
 
 PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
                                     char* buf) {
@@ -546,7 +482,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
       }
 
       if (error::Error err =
-              utils::ReadPart(args.stream, buf, part_size, bytes_read)) {
+              utils::ReadPart(*args.stream, buf, part_size, bytes_read)) {
         return PutObjectResponse(err);
       }
 
@@ -569,7 +505,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
       }
 
       size_t n = 0;
-      if (error::Error err = utils::ReadPart(args.stream, b, size, n)) {
+      if (error::Error err = utils::ReadPart(*args.stream, b, size, n)) {
         return PutObjectResponse(err);
       }
 
@@ -901,6 +837,56 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
     return error::make<PutObjectResponse>(
         "SSE operation must be performed over a secure connection");
   }
+
+#ifdef MINIO_CPP_RDMA
+  // Direct-buffer mode (was PutObject(PutObjectRDMAArgs)): caller supplied
+  // a pre-allocated, page-aligned buffer. Try RDMA, fall back to a single
+  // HTTP upload from the same buffer if RDMA declines.
+  if (args.buf != nullptr) {
+    std::string region;
+    if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+      region = resp.region;
+    } else {
+      return PutObjectResponse(resp);
+    }
+
+    const size_t size = *args.size;
+
+    cuObjClient& rdma_client = SharedRDMAClient();
+    bool use_rdma = (rdma_client.cuMemObjGetDescriptor(args.buf, size) == 0);
+
+    if (use_rdma) {
+      s3_rdma_client_ctx putCtx = {
+          .provider = provider_,
+          .bucket = args.bucket,
+          .object = args.object,
+          .url = base_url_,
+          .region = region,
+          .op = CUOBJ_PUT,
+      };
+
+      ssize_t ret = rdmaPutWithRetry(&rdma_client, &putCtx, args.buf, size);
+      rdma_client.cuMemObjPutDescriptor(args.buf);
+
+      if (ret > 0) {
+        PutObjectResponse resp;
+        resp.etag = putCtx.etag;
+        return resp;
+      }
+      // ret < 0 / kRDMANotSupported: fall through to HTTP-from-buffer.
+    }
+
+    // HTTP fallback from the same buffer (single-shot, not multipart).
+    std::stringstream ss(std::ios_base::in | std::ios_base::out);
+    ss.rdbuf()->pubsetbuf(args.buf, size);
+
+    PutObjectArgs http_args(ss, static_cast<long>(size), 16 * 1024 * 1024L);
+    http_args.bucket = args.bucket;
+    http_args.object = args.object;
+    http_args.region = region;
+    return PutObject(http_args);
+  }
+#endif
 
   char* buf;
   int res = posix_memalign(

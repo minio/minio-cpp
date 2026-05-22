@@ -168,7 +168,7 @@ int main(int argc, char *argv[]) {
     memset(bufptr, 'A', bufsize);
   }
 
-  minio::s3::PutObjectRDMAArgs pargs;
+  minio::s3::PutObjectArgs pargs;
   pargs.buf = bufptr;
   pargs.size = bufsize;
   pargs.bucket = "my-bucket";
@@ -183,7 +183,7 @@ int main(int argc, char *argv[]) {
               << std::endl;
   }
 
-  minio::s3::GetObjectRDMAArgs args;
+  minio::s3::GetObjectArgs args;
   if (gpu_enabled) {
     cuda.cuMemsetD8(dptr, 'U', bufsize);
     cuda.cuCtxSynchronize();

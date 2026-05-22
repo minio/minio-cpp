@@ -133,10 +133,12 @@ set(MINIO_CPP_HEADERS
 
 if (MINIO_CPP_ENABLE_RDMA)
   list(APPEND MINIO_CPP_HEADERS
+    include/miniocpp/c_api.h
     include/miniocpp/nvidia-cufile.h
     include/miniocpp/nvidia-cuobjclient.h
     include/miniocpp/rdma.h
   )
+  list(APPEND MINIO_CPP_SOURCES src/c_api.cc)
 endif()
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
