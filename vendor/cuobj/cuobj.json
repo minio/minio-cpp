@@ -23,7 +23,8 @@
 		"rdma_peer_type": "dmabuf",
                             
                 // client-side rdma addr list for user-space file-systems(e.g ["10.0.1.0", "10.0.2.0"])
-                "rdma_dev_addr_list": ["192.168.1.1"],
+                // Replace <client-nic-ip> with your local NIC IPv4 before use.
+                "rdma_dev_addr_list": ["<client-nic-ip>"],
                 //32-bit dc key value in hex
                 //"rdma_dc_key": "0xffeeddcc",
                 //To enable/disable different rdma OPs use the below bit map
