@@ -21,11 +21,15 @@
 #include <functional>
 #include <list>
 #include <map>
+#include <optional>
 #include <string>
 #include <type_traits>
 
 #include "error.h"
 #include "http.h"
+#ifdef MINIO_CPP_RDMA
+#include "nvidia-cuobjclient.h"
+#endif
 #include "sse.h"
 #include "types.h"
 #include "utils.h"
@@ -155,9 +159,15 @@ struct PutObjectBaseArgs : public ObjectWriteArgs {
 
 struct PutObjectApiArgs : public PutObjectBaseArgs {
   std::string_view data;
+  char* buf;
+  size_t size;
   utils::Multimap query_params;
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
+#ifdef MINIO_CPP_RDMA
+  cuObjClient* rdmaclient = nullptr;
+#endif
+  std::string checksum_crc64nvme;  // CRC64NVME checksum for multipart uploads
 
   PutObjectApiArgs() = default;
   ~PutObjectApiArgs() = default;
@@ -166,9 +176,15 @@ struct PutObjectApiArgs : public PutObjectBaseArgs {
 struct UploadPartArgs : public ObjectWriteArgs {
   std::string upload_id;
   unsigned int part_number;
+  char* buf;
+  size_t part_size;
   std::string_view data;
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
+#ifdef MINIO_CPP_RDMA
+  cuObjClient* rdmaclient = nullptr;
+#endif
+  std::string checksum_crc64nvme;  // CRC64NVME checksum for multipart uploads
 
   UploadPartArgs() = default;
   ~UploadPartArgs() = default;
@@ -204,8 +220,13 @@ struct DownloadObjectArgs : public ObjectReadArgs {
 };  // struct DownloadObjectArgs
 
 struct GetObjectArgs : public ObjectConditionalReadArgs {
+  // Exactly one of (datafunc, buf) must be set; Validate() enforces.
+  // When buf is set, the call attempts RDMA and falls back to streaming
+  // the HTTP body into the same buffer on RDMA decline.
   http::DataFunction datafunc;
   void* userdata = nullptr;
+  char* buf = nullptr;
+  std::optional<size_t> size;
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
 
@@ -313,10 +334,20 @@ struct ListObjectVersionsArgs : public ListObjectsCommonArgs {
 };  // struct ListObjectVersionsArgs
 
 struct PutObjectArgs : public PutObjectBaseArgs {
-  std::istream& stream;
+  // Exactly one of (stream, buf) must be set; Validate() enforces.
+  // When buf is set, the call attempts RDMA and falls back to a
+  // streaming HTTP upload from the same buffer on RDMA decline.
+  std::istream* stream = nullptr;
+  char* buf = nullptr;
+  std::optional<size_t> size;
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
+#ifdef MINIO_CPP_RDMA
+  cuObjClient* rdmaclient = nullptr;
+#endif
+  std::string checksum_crc64nvme;  // CRC64NVME checksum for multipart uploads
 
+  PutObjectArgs() = default;
   PutObjectArgs(std::istream& stream, long object_size, long part_size);
   ~PutObjectArgs() = default;
 

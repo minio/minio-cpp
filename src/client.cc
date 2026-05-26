@@ -17,6 +17,12 @@
 
 #include "miniocpp/client.h"
 
+#ifdef _MSC_VER
+#include <malloc.h>
+#else
+#include <unistd.h>
+#endif
+
 #include <curlpp/cURLpp.hpp>
 #include <filesystem>
 #include <fstream>
@@ -37,7 +43,31 @@
 #include "miniocpp/types.h"
 #include "miniocpp/utils.h"
 
+#ifdef MINIO_CPP_RDMA
+#include "miniocpp/nvidia-cuobjclient.h"
+#include "miniocpp/rdma.h"
+#endif
+
 namespace minio::s3 {
+
+namespace {
+
+#ifdef _MSC_VER
+inline size_t GetPageSize() { return 4096; }
+inline int AlignedAlloc(void** out, size_t alignment, size_t size) {
+  *out = _aligned_malloc(size, alignment);
+  return *out ? 0 : -1;
+}
+inline void AlignedFree(void* p) { _aligned_free(p); }
+#else
+inline size_t GetPageSize() { return static_cast<size_t>(getpagesize()); }
+inline int AlignedAlloc(void** out, size_t alignment, size_t size) {
+  return posix_memalign(out, alignment, size);
+}
+inline void AlignedFree(void* p) { free(p); }
+#endif
+
+}  // namespace
 
 ListObjectsResult::ListObjectsResult(error::Error err) : failed_(true) {
   this->resp_.contents.push_back(Item(std::move(err)));
@@ -143,6 +173,21 @@ void RemoveObjectsResult::Populate() {
     }
   }
 }
+
+#ifdef MINIO_CPP_RDMA
+// Meyers singleton — thread-safe per C++11 [stmt.dcl]/4 ("If control
+// enters the declaration concurrently while the variable is being
+// initialized, the concurrent execution shall wait for completion of the
+// initialization."). This replaces the previous per-call cuObjClient
+// construction, which was racy under concurrency and caused the
+// glibc-level "malloc(): invalid size (unsorted)" abort when multiple
+// warp workers started up simultaneously.
+cuObjClient& Client::SharedRDMAClient() {
+  static CUObjIOOps ops{};
+  static cuObjClient client{ops, CUOBJ_PROTO_RDMA_DC_V1};
+  return client;
+}
+#endif
 
 Client::Client(BaseUrl& base_url, creds::Provider* const provider)
     : BaseClient(base_url, provider) {}
@@ -365,6 +410,68 @@ ComposeObjectResponse Client::ComposeObject(ComposeObjectArgs args,
   return ComposeObjectResponse(CompleteMultipartUpload(cmu_args));
 }
 
+GetObjectResponse Client::GetObject(GetObjectArgs args) {
+  if (error::Error err = args.Validate()) {
+    return GetObjectResponse(err);
+  }
+
+#ifdef MINIO_CPP_RDMA
+  if (args.buf != nullptr) {
+    std::string region;
+    if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+      region = resp.region;
+    } else {
+      return GetObjectResponse(resp);
+    }
+
+    const size_t size = *args.size;
+
+    // Process-wide cuObjClient — see client.h for the race rationale.
+    cuObjClient& rdma_client = SharedRDMAClient();
+    bool use_rdma = (rdma_client.cuMemObjGetDescriptor(args.buf, size) == 0);
+
+    if (use_rdma) {
+      s3_rdma_client_ctx getCtx = {
+          .provider = provider_,
+          .bucket = args.bucket,
+          .object = args.object,
+          .url = base_url_,
+          .region = region,
+          .op = CUOBJ_GET,
+      };
+
+      ssize_t ret = rdmaGetWithRetry(&rdma_client, &getCtx, args.buf, size);
+      rdma_client.cuMemObjPutDescriptor(args.buf);
+
+      if (ret > 0) {
+        GetObjectResponse resp;
+        resp.etag = getCtx.etag;
+        return resp;
+      }
+      // ret < 0 (retries exhausted) or kRDMANotSupported (server declined):
+      // fall through to HTTP-into-buffer path below.
+    }
+
+    // HTTP fallback: stream the body into the caller's buffer.
+    GetObjectArgs targs;
+    std::stringstream ss(std::ios_base::in | std::ios_base::out);
+    ss.rdbuf()->pubsetbuf(args.buf, size);
+
+    targs.bucket = args.bucket;
+    targs.object = args.object;
+    targs.region = region;
+    targs.datafunc = [&ss = ss](minio::http::DataFunctionArgs args) -> bool {
+      ss << args.datachunk;
+      return true;
+    };
+
+    return BaseClient::GetObject(targs);
+  }
+#endif
+
+  return BaseClient::GetObject(args);
+}
+
 PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
                                     char* buf) {
   utils::Multimap headers = args.Headers();
@@ -384,7 +491,6 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
   bool stop = false;
   std::list<Part> parts;
   long part_count = args.part_count;
-
   double uploaded_bytes = 0;  // for progress
   double upload_speed = -1;   // for progress
 
@@ -399,7 +505,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
       }
 
       if (error::Error err =
-              utils::ReadPart(args.stream, buf, part_size, bytes_read)) {
+              utils::ReadPart(*args.stream, buf, part_size, bytes_read)) {
         return PutObjectResponse(err);
       }
 
@@ -422,7 +528,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
       }
 
       size_t n = 0;
-      if (error::Error err = utils::ReadPart(args.stream, b, size, n)) {
+      if (error::Error err = utils::ReadPart(*args.stream, b, size, n)) {
         return PutObjectResponse(err);
       }
 
@@ -450,6 +556,8 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
       api_args.region = args.region;
       api_args.object = args.object;
       api_args.data = data;
+      api_args.buf = buf;
+      api_args.size = part_size;
       api_args.progressfunc = args.progressfunc;
       api_args.progress_userdata = args.progress_userdata;
       api_args.headers = headers;
@@ -479,6 +587,8 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
     up_args.upload_id = upload_id;
     up_args.part_number = part_number;
     up_args.data = data;
+    up_args.buf = buf;
+    up_args.part_size = part_size;
     if (args.progressfunc != nullptr) {
       up_args.progressfunc =
           [&object_size = object_size, &uploaded_bytes = uploaded_bytes,
@@ -699,8 +809,7 @@ DownloadObjectResponse Client::DownloadObject(DownloadObjectArgs args) {
 
   std::string temp_filename =
       args.filename + "." + curlpp::escape(etag) + ".part.minio";
-  std::ofstream fout(temp_filename,
-                     std::ios::trunc | std::ios::out | std::ios::binary);
+  std::ofstream fout(temp_filename, std::ios::trunc | std::ios::out);
   if (!fout.is_open()) {
     return error::make<DownloadObjectResponse>("unable to open file " +
                                                temp_filename);
@@ -752,11 +861,83 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
         "SSE operation must be performed over a secure connection");
   }
 
+#ifdef MINIO_CPP_RDMA
+  // Direct-buffer mode (was PutObject(PutObjectRDMAArgs)): caller supplied
+  // a pre-allocated, page-aligned buffer. Try RDMA, fall back to a single
+  // HTTP upload from the same buffer if RDMA declines.
+  if (args.buf != nullptr) {
+    std::string region;
+    if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+      region = resp.region;
+    } else {
+      return PutObjectResponse(resp);
+    }
+
+    const size_t size = *args.size;
+
+    cuObjClient& rdma_client = SharedRDMAClient();
+    bool use_rdma = (rdma_client.cuMemObjGetDescriptor(args.buf, size) == 0);
+
+    if (use_rdma) {
+      s3_rdma_client_ctx putCtx = {
+          .provider = provider_,
+          .bucket = args.bucket,
+          .object = args.object,
+          .url = base_url_,
+          .region = region,
+          .op = CUOBJ_PUT,
+      };
+
+      ssize_t ret = rdmaPutWithRetry(&rdma_client, &putCtx, args.buf, size);
+      rdma_client.cuMemObjPutDescriptor(args.buf);
+
+      if (ret > 0) {
+        PutObjectResponse resp;
+        resp.etag = putCtx.etag;
+        return resp;
+      }
+      // ret < 0 / kRDMANotSupported: fall through to HTTP-from-buffer.
+    }
+
+    // HTTP fallback from the same buffer (single-shot, not multipart).
+    std::stringstream ss(std::ios_base::in | std::ios_base::out);
+    ss.rdbuf()->pubsetbuf(args.buf, size);
+
+    PutObjectArgs http_args(ss, static_cast<long>(size), 16 * 1024 * 1024L);
+    http_args.bucket = args.bucket;
+    http_args.object = args.object;
+    http_args.region = region;
+    return PutObject(http_args);
+  }
+#endif
+
+  char* buf;
+  int res =
+      AlignedAlloc((void**)&buf, GetPageSize(),
+                   (args.part_count > 0) ? args.part_size : args.part_size + 1);
+  if (res) {
+    return error::make<PutObjectResponse>(
+        "unable to allocate system memory with alignment");
+  }
+
+#ifdef MINIO_CPP_RDMA
+  // Reuse the process-wide SharedRDMAClient() rather than constructing
+  // per-call; see client.h for the race rationale. `buf` here is the
+  // multipart part buffer, registered once for the whole multipart
+  // upload and deregistered at the end.
+  cuObjClient& rdma_client = SharedRDMAClient();
+  if (rdma_client.isConnected()) {
+    res = rdma_client.cuMemObjGetDescriptor(buf, args.part_size);
+    if (res) {
+      AlignedFree(buf);
+      return error::make<PutObjectResponse>("unable to register RDMA buffer");
+    }
+  }
+  args.rdmaclient = &rdma_client;
+#endif
+
   std::string upload_id;
-  auto buf = std::make_unique<char[]>(
-      (args.part_count > 0) ? args.part_size : args.part_size + 1);
-  PutObjectResponse resp = PutObject(args, upload_id, buf.get());
-  buf.reset();
+  PutObjectResponse resp = PutObject(args, upload_id, buf);
 
   if (!resp && !upload_id.empty()) {
     AbortMultipartUploadArgs amu_args;
@@ -767,6 +948,17 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
     AbortMultipartUpload(amu_args);
   }
 
+#ifdef MINIO_CPP_RDMA
+  if (rdma_client.isConnected()) {
+    res = rdma_client.cuMemObjPutDescriptor(buf);
+    if (res) {
+      AlignedFree(buf);
+      return error::make<PutObjectResponse>("unable to deregister RDMA buffer");
+    }
+  }
+#endif
+
+  AlignedFree(buf);
   return resp;
 }
 
@@ -778,7 +970,7 @@ UploadObjectResponse Client::UploadObject(UploadObjectArgs args) {
   std::ifstream file;
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   try {
-    file.open(args.filename, std::ios::binary);
+    file.open(args.filename);
   } catch (std::system_error& err) {
     return error::make<UploadObjectResponse>(
         "unable to open file " + args.filename + "; " + err.code().message());

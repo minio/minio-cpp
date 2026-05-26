@@ -31,6 +31,11 @@
 #include "response.h"
 #include "utils.h"
 
+#ifdef MINIO_CPP_RDMA
+#include "nvidia-cuobjclient.h"
+#include "rdma.h"
+#endif
+
 #if defined(_WIN32) && defined(GetObject)
 #pragma push_macro("GetObject")
 #undef GetObject
@@ -61,6 +66,13 @@ class BaseClient {
                       creds::Provider* const provider = nullptr);
 
   virtual ~BaseClient() = default;
+
+  // Read-only access to the configured BaseUrl. Used by FFI shims that need
+  // the region/endpoint at call time without re-plumbing it through every
+  // call site (e.g. PutObjectRDMA / GetObjectRDMA in minio-go's C glue, where
+  // it propagates onto PutObjectRDMAArgs so the HTTP fallback inherits a
+  // known region instead of paying a GetRegion() roundtrip).
+  const BaseUrl& GetBaseUrl() const { return base_url_; }
 
   void Debug(bool flag) { debug_ = flag; }
 

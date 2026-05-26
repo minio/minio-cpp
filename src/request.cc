@@ -164,6 +164,10 @@ BaseUrl::BaseUrl(std::string host, bool https, std::string region)
 
   this->host = url.host;
   this->port = url.port;
+  // Use parsed URL's https setting if URL was provided with scheme
+  if (host.find("://") != std::string::npos) {
+    this->https = url.https;
+  }
 
   if (!this->region.empty() && !awsRegexMatch(this->region, REGION_REGEX)) {
     this->err_ = error::Error("invalid region " + this->region);

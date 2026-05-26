@@ -24,6 +24,15 @@ jobs:
         - {
             name: "Ubuntu_Latest_GCC",
             os: ubuntu-latest,
+            arch: "amd64",
+            build_type: "Release",
+            cc: "gcc",
+            cxx: "g++"
+          }
+        - {
+            name: "Ubuntu_Latest_GCC_arm64",
+            os: ubuntu-24.04-arm,
+            arch: "arm64",
             build_type: "Release",
             cc: "gcc",
             cxx: "g++"
@@ -66,11 +75,9 @@ jobs:
     - name: Install dependencies if Ubuntu
       if: startsWith(matrix.config.name, 'Ubuntu_Latest_GCC')
       run: |
-        wget --quiet -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-        echo 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-18 main' | sudo tee -a /etc/apt/sources.list
         sudo apt-get -qy update
         sudo apt-get -qy install cmake
-        wget --quiet https://dl.min.io/server/minio/release/linux-amd64/minio
+        wget --quiet https://dl.min.io/aistor/minio/release/linux-${{ matrix.config.arch }}/minio
         chmod +x minio
         cmake --version
         ./minio --version
@@ -107,6 +114,7 @@ jobs:
         cp ./minio-cpp/tests/public.crt ./minio-cpp/tests/private.key ~/.minio/certs/
         sudo cp ./minio-cpp/tests/public.crt /usr/local/share/ca-certificates/
         sudo update-ca-certificates
+        export MINIO_LICENSE=$(cat ./minio-cpp/.github/aistor-free-license.jwt)
         MINIO_CI_CD=true ./minio server /tmp/test-xl/{1...4}/ &
         sleep 10
 

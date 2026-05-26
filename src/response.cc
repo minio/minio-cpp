@@ -124,6 +124,7 @@ CompleteMultipartUploadResponse CompleteMultipartUploadResponse::ParseXML(
     return error::make<CompleteMultipartUploadResponse>("unable to parse XML");
   }
   auto root = xdoc.select_node("/CompleteMultipartUploadResult");
+
   pugi::xpath_node text;
 
   text = root.node().select_node("Bucket/text()");

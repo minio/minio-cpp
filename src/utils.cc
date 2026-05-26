@@ -225,7 +225,7 @@ std::string EncodePath(const std::string& path) {
 
 std::string XMLEncode(const std::string& value) {
   pugi::xml_document doc;
-  doc.append_child(pugi::node_pcdata).set_value(value);
+  doc.append_child(pugi::node_pcdata).set_value(value.c_str());
   std::ostringstream out;
   doc.print(out);
   return out.str();
@@ -648,7 +648,7 @@ error::Error CalcPartInfo(long object_size, size_t& part_size,
   }
 
   if (part_size <= 0) {
-    // Calculate part size by multiple of kMinPartSize.
+    // Calculate part size by multiple of kOptPartSize.
     double psize = std::ceil((double)object_size / kMaxMultipartCount);
     part_size = (size_t)std::ceil(psize / kMinPartSize) * kMinPartSize;
   }

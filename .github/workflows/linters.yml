@@ -33,8 +33,8 @@ jobs:
 
     - name: Install dependencies
       run: |
-        sudo apt -qy install clang-format-18
-        clang-format-18 --version
+        sudo apt -qy install clang-format-20
+        clang-format-20 --version
 
     - name: Version Check
       shell: bash
@@ -44,4 +44,4 @@ jobs:
     - name: Coding Style Check
       shell: bash
       working-directory: minio-cpp
-      run: CLANG_FORMAT=clang-format-18 ./check-style.sh
+      run: CLANG_FORMAT=clang-format-20 ./check-style.sh

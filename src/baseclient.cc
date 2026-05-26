@@ -43,6 +43,11 @@
 #include "miniocpp/types.h"
 #include "miniocpp/utils.h"
 
+#ifdef MINIO_CPP_RDMA
+#include "miniocpp/nvidia-cuobjclient.h"
+#include "miniocpp/rdma.h"
+#endif
+
 // We want exactly `minio::s3::BaseClient::GetObject()` symbol and nothing else.
 #if defined(GetObject)
 #undef GetObject
@@ -1367,6 +1372,30 @@ PutObjectResponse BaseClient::PutObject(PutObjectApiArgs args) {
     return PutObjectResponse(resp);
   }
 
+#ifdef MINIO_CPP_RDMA
+  if (args.rdmaclient != nullptr && args.rdmaclient->isConnected()) {
+    s3_rdma_client_ctx putCtx = {
+        .provider = provider_,
+        .bucket = args.bucket,
+        .object = args.object,
+        .url = base_url_,
+        .region = region,
+        .op = CUOBJ_PUT,
+    };
+
+    ssize_t ret =
+        rdmaPutWithRetry(args.rdmaclient, &putCtx, args.buf, args.size);
+    if (ret > 0) {
+      PutObjectResponse resp;
+      resp.etag = putCtx.etag;
+      resp.checksum_crc64nvme = putCtx.checksum;
+      return resp;
+    }
+    // ret < 0 (retries exhausted) or kRDMANotSupported (server declined):
+    // fall through to HTTP path.
+  }
+#endif
+
   Request req(http::Method::kPut, region, base_url_, args.extra_headers,
               args.extra_query_params);
   req.bucket_name = args.bucket;
@@ -1381,6 +1410,7 @@ PutObjectResponse BaseClient::PutObject(PutObjectApiArgs args) {
   if (!response) {
     return PutObjectResponse(response);
   }
+
   PutObjectResponse resp;
   resp.etag = utils::Trim(response.headers.GetFront("etag"), '"');
   resp.version_id = response.headers.GetFront("x-amz-version-id");
@@ -1916,6 +1946,40 @@ UploadPartResponse BaseClient::UploadPart(UploadPartArgs args) {
   if (error::Error err = args.Validate()) {
     return UploadPartResponse(err);
   }
+
+#ifdef MINIO_CPP_RDMA
+  if (args.rdmaclient != nullptr && args.rdmaclient->isConnected()) {
+    std::string region;
+    if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
+      region = resp.region;
+    } else {
+      return UploadPartResponse(resp);
+    }
+
+    s3_rdma_client_ctx putCtx = {
+        .provider = provider_,
+        .bucket = args.bucket,
+        .object = args.object,
+        .uploadId = args.upload_id,
+        .partNumber = args.part_number,
+        .url = base_url_,
+        .region = region,
+        .op = CUOBJ_PUT,
+        .checksum = args.checksum_crc64nvme,
+    };
+
+    ssize_t ret =
+        rdmaPutWithRetry(args.rdmaclient, &putCtx, args.buf, args.part_size);
+    if (ret > 0) {
+      UploadPartResponse resp;
+      resp.etag = putCtx.etag;
+      resp.checksum_crc64nvme = putCtx.checksum;
+      return resp;
+    }
+    // ret < 0 (retries exhausted) or kRDMANotSupported (server declined):
+    // fall through to HTTP upload part path.
+  }
+#endif
 
   utils::Multimap query_params;
   query_params.Add("partNumber", std::to_string(args.part_number));

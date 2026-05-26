@@ -42,6 +42,7 @@ struct Response {
   std::string host_id;
   std::string bucket_name;
   std::string object_name;
+  std::string etag;
 
  private:
   error::Error err_;
@@ -157,6 +158,7 @@ struct CompleteMultipartUploadResponse : public Response {
   std::string checksumCRC32C;
   std::string checksumSHA1;
   std::string checksumSHA256;
+  std::string checksum_crc64nvme;
 
   CompleteMultipartUploadResponse() = default;
 
@@ -194,6 +196,7 @@ struct PutObjectResponse : public Response {
   std::string checksumCRC32C;
   std::string checksumSHA1;
   std::string checksumSHA256;
+  std::string checksum_crc64nvme;
 
   PutObjectResponse() = default;
 
