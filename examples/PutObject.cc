@@ -20,7 +20,6 @@
 #include <miniocpp/providers.h>
 #include <miniocpp/request.h>
 #include <miniocpp/response.h>
-#include <unistd.h>
 
 #include <filesystem>
 #include <fstream>

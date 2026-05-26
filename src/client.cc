@@ -17,7 +17,11 @@
 
 #include "miniocpp/client.h"
 
+#ifdef _MSC_VER
+#include <malloc.h>
+#else
 #include <unistd.h>
+#endif
 
 #include <curlpp/cURLpp.hpp>
 #include <filesystem>
@@ -45,6 +49,25 @@
 #endif
 
 namespace minio::s3 {
+
+namespace {
+
+#ifdef _MSC_VER
+inline size_t GetPageSize() { return 4096; }
+inline int AlignedAlloc(void** out, size_t alignment, size_t size) {
+  *out = _aligned_malloc(size, alignment);
+  return *out ? 0 : -1;
+}
+inline void AlignedFree(void* p) { _aligned_free(p); }
+#else
+inline size_t GetPageSize() { return static_cast<size_t>(getpagesize()); }
+inline int AlignedAlloc(void** out, size_t alignment, size_t size) {
+  return posix_memalign(out, alignment, size);
+}
+inline void AlignedFree(void* p) { free(p); }
+#endif
+
+}  // namespace
 
 ListObjectsResult::ListObjectsResult(error::Error err) : failed_(true) {
   this->resp_.contents.push_back(Item(std::move(err)));
@@ -889,9 +912,9 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
 #endif
 
   char* buf;
-  int res = posix_memalign(
-      (void**)&buf, getpagesize(),
-      (args.part_count > 0) ? args.part_size : args.part_size + 1);
+  int res =
+      AlignedAlloc((void**)&buf, GetPageSize(),
+                   (args.part_count > 0) ? args.part_size : args.part_size + 1);
   if (res) {
     return error::make<PutObjectResponse>(
         "unable to allocate system memory with alignment");
@@ -906,7 +929,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
   if (rdma_client.isConnected()) {
     res = rdma_client.cuMemObjGetDescriptor(buf, args.part_size);
     if (res) {
-      free(buf);
+      AlignedFree(buf);
       return error::make<PutObjectResponse>("unable to register RDMA buffer");
     }
   }
@@ -929,13 +952,13 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
   if (rdma_client.isConnected()) {
     res = rdma_client.cuMemObjPutDescriptor(buf);
     if (res) {
-      free(buf);
+      AlignedFree(buf);
       return error::make<PutObjectResponse>("unable to deregister RDMA buffer");
     }
   }
 #endif
 
-  free(buf);
+  AlignedFree(buf);
   return resp;
 }
 
