@@ -19,6 +19,7 @@
 #define MINIO_CPP_BASECLIENT_H_INCLUDED
 
 #include <map>
+#include <shared_mutex>
 #include <string>
 #include <type_traits>
 
@@ -56,6 +57,7 @@ class BaseClient {
   BaseUrl base_url_;
   creds::Provider* const provider_ = nullptr;
   std::map<std::string, std::string> region_map_;
+  mutable std::shared_mutex region_map_mutex_;
   bool debug_ = false;
   bool ignore_cert_check_ = false;
   std::string ssl_cert_file_;

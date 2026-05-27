@@ -618,6 +618,12 @@ class Tests {
       minio::s3::SelectObjectContentResponse resp =
           client_.SelectObjectContent(args);
       if (!resp) {
+        if (resp.code == "MethodNotAllowed") {
+          std::cout << "  skipped: server does not implement S3 Select"
+                    << std::endl;
+          RemoveObject(bucket_name_, object_name);
+          return;
+        }
         throw std::runtime_error("SelectObjectContent(): " +
                                  resp.Error().String());
       }

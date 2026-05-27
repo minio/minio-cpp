@@ -30,6 +30,7 @@
 #include <iosfwd>
 #include <iostream>
 #include <list>
+#include <mutex>
 #include <ostream>
 #include <sstream>
 #include <stdexcept>
@@ -49,6 +50,59 @@
 #endif
 
 namespace minio::http {
+
+namespace {
+
+// curl_global_init() is documented as not thread-safe and is expensive
+// (OpenSSL init etc). Run it exactly once per process via a function-local
+// static (Meyers singleton; C++11 [stmt.dcl]/4 guarantees thread-safe
+// initialization), instead of paying the cost — and the race — on every
+// request via a stack-local curlpp::Cleanup.
+void EnsureGlobalCurlInit() {
+  static const curlpp::Cleanup kCleanup;
+  (void)kCleanup;
+}
+
+// One mutex per CURL_LOCK_DATA_* slot. A single global mutex deadlocks
+// because libcurl can hold one slot's lock (e.g. SSL_SESSION) while
+// acquiring another (e.g. CONNECT) on the same thread.
+constexpr int kCurlShareSlots = CURL_LOCK_DATA_LAST;
+std::mutex* CurlShareMutexes() {
+  static std::mutex m[kCurlShareSlots];
+  return m;
+}
+
+void CurlShareLockCb(CURL*, curl_lock_data data, curl_lock_access, void*) {
+  if (data >= 0 && data < kCurlShareSlots) CurlShareMutexes()[data].lock();
+}
+
+void CurlShareUnlockCb(CURL*, curl_lock_data data, void*) {
+  if (data >= 0 && data < kCurlShareSlots) CurlShareMutexes()[data].unlock();
+}
+
+// Process-wide CURLSH that keeps the connection cache, DNS cache, and TLS
+// session cache alive across requests. Without this, every Request::execute()
+// constructs a fresh curlpp::Easy whose private caches are discarded on
+// destruction — forcing a full TLS handshake on every signed S3 call.
+CURLSH* GlobalCurlShare() {
+  static CURLSH* const share = [] {
+    EnsureGlobalCurlInit();
+    CURLSH* s = curl_share_init();
+    if (s == nullptr) {
+      std::cerr << "curl_share_init failed" << std::endl;
+      std::terminate();
+    }
+    curl_share_setopt(s, CURLSHOPT_LOCKFUNC, &CurlShareLockCb);
+    curl_share_setopt(s, CURLSHOPT_UNLOCKFUNC, &CurlShareUnlockCb);
+    curl_share_setopt(s, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
+    curl_share_setopt(s, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
+    curl_share_setopt(s, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
+    return s;
+  }();
+  return share;
+}
+
+}  // namespace
 
 // MethodToString converts http Method enum to string.
 const char* MethodToString(Method method) noexcept {
@@ -337,9 +391,17 @@ Request::Request(Method method, Url url) {
 }
 
 Response Request::execute() {
-  curlpp::Cleanup cleaner;
+  EnsureGlobalCurlInit();
   curlpp::Easy request;
   curlpp::Multi requests;
+
+  // Attach the process-wide share so connections, DNS resolutions, and TLS
+  // sessions survive past this Easy handle's lifetime. Also enable TCP
+  // keep-alive so the kernel keeps pooled sockets healthy across idle gaps
+  // between S3 calls. curlpp doesn't wrap either option, so set via libcurl.
+  CURL* const raw_handle = request.getHandle();
+  curl_easy_setopt(raw_handle, CURLOPT_SHARE, GlobalCurlShare());
+  curl_easy_setopt(raw_handle, CURLOPT_TCP_KEEPALIVE, 1L);
 
   // Request settings.
   request.setOpt(new curlpp::options::CustomRequest{MethodToString(method)});
