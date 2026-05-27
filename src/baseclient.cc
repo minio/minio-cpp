@@ -390,7 +390,12 @@ CompleteMultipartUploadResponse BaseClient::CompleteMultipartUpload(
   ss << "<CompleteMultipartUpload>";
   for (auto& part : args.parts) {
     ss << "<Part>" << "<PartNumber>" << part.number << "</PartNumber>"
-       << "<ETag>" << "\"" << part.etag << "\"" << "</ETag>" << "</Part>";
+       << "<ETag>" << "\"" << part.etag << "\"" << "</ETag>";
+    if (!part.checksum_crc64nvme.empty()) {
+      ss << "<ChecksumCRC64NVME>" << part.checksum_crc64nvme
+         << "</ChecksumCRC64NVME>";
+    }
+    ss << "</Part>";
   }
   ss << "</CompleteMultipartUpload>";
   std::string body = ss.str();

@@ -38,10 +38,12 @@
 #include <zlib.h>
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <chrono>
 #include <clocale>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -328,6 +330,49 @@ std::string Md5sumHash(std::string_view str) {
   OPENSSL_free(digest);
 
   return Base64Encode(hash);
+}
+
+namespace {
+
+// NVMe CRC64 reflected lookup table for polynomial 0xad93d23594c93659.
+// Built lazily once; thread-safe via the C++11 static-init guarantee.
+const std::array<uint64_t, 256>& Crc64NvmeTable() {
+  static const std::array<uint64_t, 256> kTable = []() {
+    constexpr uint64_t kPoly = 0x9a6c9329ac4bc9b5ULL;  // reflected polynomial
+    std::array<uint64_t, 256> table{};
+    for (uint32_t i = 0; i < 256; ++i) {
+      uint64_t crc = static_cast<uint64_t>(i);
+      for (int j = 0; j < 8; ++j) {
+        crc = (crc & 1ULL) ? (crc >> 1) ^ kPoly : (crc >> 1);
+      }
+      table[i] = crc;
+    }
+    return table;
+  }();
+  return kTable;
+}
+
+}  // namespace
+
+uint64_t Crc64Nvme(const char* data, size_t len) {
+  const auto& table = Crc64NvmeTable();
+  uint64_t crc = 0xffffffffffffffffULL;
+  const auto* p = reinterpret_cast<const unsigned char*>(data);
+  for (size_t i = 0; i < len; ++i) {
+    crc = table[(crc ^ p[i]) & 0xff] ^ (crc >> 8);
+  }
+  return crc ^ 0xffffffffffffffffULL;
+}
+
+std::string Crc64NvmeBase64(const char* data, size_t len) {
+  const uint64_t crc = Crc64Nvme(data, len);
+  // S3 expects big-endian bytes of the CRC value, base64-encoded.
+  unsigned char be[8];
+  for (int i = 0; i < 8; ++i) {
+    be[i] = static_cast<unsigned char>((crc >> (56 - i * 8)) & 0xff);
+  }
+  return Base64Encode(
+      std::string_view(reinterpret_cast<const char*>(be), sizeof(be)));
 }
 
 std::string FormatTime(const std::tm& time, const char* format) {
