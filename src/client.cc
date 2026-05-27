@@ -26,6 +26,7 @@
 #include <curlpp/cURLpp.hpp>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <list>
 #include <memory>
 #include <string>
@@ -65,6 +66,57 @@ inline int AlignedAlloc(void** out, size_t alignment, size_t size) {
   return posix_memalign(out, alignment, size);
 }
 inline void AlignedFree(void* p) { free(p); }
+#endif
+
+struct AlignedBuffer {
+  void* ptr = nullptr;
+  AlignedBuffer() = default;
+  explicit AlignedBuffer(void* p) : ptr(p) {}
+  AlignedBuffer(const AlignedBuffer&) = delete;
+  AlignedBuffer& operator=(const AlignedBuffer&) = delete;
+  ~AlignedBuffer() {
+    if (ptr) AlignedFree(ptr);
+  }
+};
+
+#ifdef MINIO_CPP_RDMA
+// Releases an RDMA buffer registration when it goes out of scope. Declared
+// *after* the buffer it covers, so destruction order (reverse of declaration)
+// guarantees deregister-before-free regardless of which control path returns.
+struct ScopedRDMARegistration {
+  cuObjClient* client = nullptr;
+  void* buf = nullptr;
+  ScopedRDMARegistration() = default;
+  ScopedRDMARegistration(cuObjClient* c, void* p) : client(c), buf(p) {}
+  ScopedRDMARegistration(const ScopedRDMARegistration&) = delete;
+  ScopedRDMARegistration& operator=(const ScopedRDMARegistration&) = delete;
+  ScopedRDMARegistration(ScopedRDMARegistration&& o) noexcept
+      : client(o.client), buf(o.buf) {
+    o.client = nullptr;
+    o.buf = nullptr;
+  }
+  ScopedRDMARegistration& operator=(ScopedRDMARegistration&& o) noexcept {
+    if (this != &o) {
+      Release();
+      client = o.client;
+      buf = o.buf;
+      o.client = nullptr;
+      o.buf = nullptr;
+    }
+    return *this;
+  }
+  ~ScopedRDMARegistration() { Release(); }
+
+ private:
+  void Release() {
+    if (client && buf && client->cuMemObjPutDescriptor(buf) != 0) {
+      std::cerr << "warning: cuMemObjPutDescriptor failed during teardown"
+                << std::endl;
+    }
+    client = nullptr;
+    buf = nullptr;
+  }
+};
 #endif
 
 }  // namespace
@@ -171,6 +223,13 @@ void RemoveObjectsResult::Populate() {
     } else {
       done_ = true;
     }
+  }
+  // Caller's func may have returned false on the very first call (empty
+  // batch). `done_` flips to true above but itr_ was never assigned, so
+  // operator bool() would compare an uninitialized iterator. Pin it to
+  // end() so the result evaluates to false cleanly.
+  if (done_ && resp_.errors.empty()) {
+    itr_ = resp_.errors.end();
   }
 }
 
@@ -611,9 +670,16 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
         return progressfunc(actual_args);
       };
     }
+    // Propagate caller-supplied x-amz-content-sha256 (e.g. UNSIGNED-PAYLOAD
+    // for GPU-resident buffers) into each UploadPart so the per-part signing
+    // path also skips hashing the body.
+    if (headers.Contains("x-amz-content-sha256")) {
+      up_args.headers.Add("x-amz-content-sha256",
+                          headers.GetFront("x-amz-content-sha256"));
+    }
     if (args.sse != nullptr) {
       if (SseCustomerKey* ssec = dynamic_cast<SseCustomerKey*>(args.sse)) {
-        up_args.headers = ssec->Headers();
+        up_args.headers.AddAll(ssec->Headers());
       }
     }
 
@@ -900,6 +966,9 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
     }
 
     // HTTP fallback from the same buffer (single-shot, not multipart).
+    // Skip body hashing for signing — caller's buffer may be GPU-resident,
+    // and we'd otherwise drag device memory through OpenSSL just to compute
+    // a hash that TLS already authenticates.
     std::stringstream ss(std::ios_base::in | std::ios_base::out);
     ss.rdbuf()->pubsetbuf(args.buf, size);
 
@@ -907,33 +976,39 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
     http_args.bucket = args.bucket;
     http_args.object = args.object;
     http_args.region = region;
+    http_args.headers.Add("x-amz-content-sha256", "UNSIGNED-PAYLOAD");
     return PutObject(http_args);
   }
 #endif
 
-  char* buf;
-  int res =
-      AlignedAlloc((void**)&buf, GetPageSize(),
-                   (args.part_count > 0) ? args.part_size : args.part_size + 1);
-  if (res) {
+  void* raw = nullptr;
+  if (AlignedAlloc(
+          &raw, GetPageSize(),
+          (args.part_count > 0) ? args.part_size : args.part_size + 1)) {
     return error::make<PutObjectResponse>(
         "unable to allocate system memory with alignment");
   }
+  AlignedBuffer aligned_buf(raw);
+  char* buf = static_cast<char*>(aligned_buf.ptr);
 
 #ifdef MINIO_CPP_RDMA
   // Reuse the process-wide SharedRDMAClient() rather than constructing
   // per-call; see client.h for the race rationale. `buf` here is the
   // multipart part buffer, registered once for the whole multipart
-  // upload and deregistered at the end.
+  // upload and deregistered when scope exits.
+  //
+  // If the cuObj layer is connected but declines to register this buffer
+  // (e.g. nvidia_peermem.ko not loaded, IB device unhealthy, GPUDirect
+  // misconfigured), fall back to the plain HTTP multipart path instead of
+  // failing the whole call — BaseClient::PutObject keys off args.rdmaclient
+  // being non-null to even attempt the RDMA path.
   cuObjClient& rdma_client = SharedRDMAClient();
-  if (rdma_client.isConnected()) {
-    res = rdma_client.cuMemObjGetDescriptor(buf, args.part_size);
-    if (res) {
-      AlignedFree(buf);
-      return error::make<PutObjectResponse>("unable to register RDMA buffer");
-    }
+  ScopedRDMARegistration rdma_reg;
+  if (rdma_client.isConnected() &&
+      rdma_client.cuMemObjGetDescriptor(buf, args.part_size) == 0) {
+    rdma_reg = ScopedRDMARegistration(&rdma_client, buf);
+    args.rdmaclient = &rdma_client;
   }
-  args.rdmaclient = &rdma_client;
 #endif
 
   std::string upload_id;
@@ -948,17 +1023,6 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
     AbortMultipartUpload(amu_args);
   }
 
-#ifdef MINIO_CPP_RDMA
-  if (rdma_client.isConnected()) {
-    res = rdma_client.cuMemObjPutDescriptor(buf);
-    if (res) {
-      AlignedFree(buf);
-      return error::make<PutObjectResponse>("unable to deregister RDMA buffer");
-    }
-  }
-#endif
-
-  AlignedFree(buf);
   return resp;
 }
 
