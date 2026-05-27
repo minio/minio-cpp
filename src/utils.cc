@@ -39,11 +39,11 @@
 
 #include <algorithm>
 #include <array>
-#include <cstdint>
 #include <cctype>
 #include <chrono>
 #include <clocale>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>

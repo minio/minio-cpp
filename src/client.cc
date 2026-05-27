@@ -656,8 +656,8 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
     up_args.part_size = part_size;
 #ifdef MINIO_CPP_RDMA
     up_args.rdmaclient = args.rdmaclient;
-    if (buf != nullptr && cuObjClient::getMemoryType(buf) ==
-                              CUOBJ_MEMORY_SYSTEM) {
+    if (buf != nullptr &&
+        cuObjClient::getMemoryType(buf) == CUOBJ_MEMORY_SYSTEM) {
       const std::string crc = utils::Crc64NvmeBase64(buf, part_size);
       up_args.checksum_crc64nvme = crc;
       up_args.headers.Add("x-amz-checksum-crc64nvme", crc);
@@ -710,8 +710,9 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
               error::Error("aborted by progress function"));
         }
       }
+      // HTTP fallback leaves resp.checksum_crc64nvme empty; use the local CRC.
       parts.push_back(Part(part_number, std::move(resp.etag),
-                            std::move(resp.checksum_crc64nvme)));
+                           std::move(up_args.checksum_crc64nvme)));
     } else {
       return resp;
     }
