@@ -23,9 +23,11 @@
 #include <iostream>
 #include <list>
 #include <map>
+#include <mutex>
 #include <nlohmann/json.hpp>
 #include <ostream>
 #include <pugixml.hpp>
+#include <shared_mutex>
 #include <sstream>
 #include <string>
 #include <type_traits>
@@ -117,9 +119,13 @@ void BaseClient::HandleRedirectResponse(std::string& code, std::string& message,
   }
 
   if (retry && !region.empty() && method == http::Method::kHead &&
-      !bucket_name.empty() && !region_map_[bucket_name].empty()) {
-    code = "RetryHead";
-    message.clear();
+      !bucket_name.empty()) {
+    std::shared_lock<std::shared_mutex> lock(region_map_mutex_);
+    if (auto it = region_map_.find(bucket_name);
+        it != region_map_.end() && !it->second.empty()) {
+      code = "RetryHead";
+      message.clear();
+    }
   }
 }
 
@@ -232,6 +238,7 @@ Response BaseClient::execute(Request& req) {
   Response resp = GetErrorResponse(response, request.url.path, req.method,
                                    req.bucket_name, req.object_name);
   if (resp.code == "NoSuchBucket" || resp.code == "RetryHead") {
+    std::unique_lock<std::shared_mutex> lock(region_map_mutex_);
     region_map_.erase(req.bucket_name);
   }
 
@@ -276,9 +283,12 @@ GetRegionResponse BaseClient::GetRegion(const std::string& bucket_name,
     return GetRegionResponse("us-east-1");
   }
 
-  std::string stored_region = region_map_[bucket_name];
-  if (!stored_region.empty()) {
-    return GetRegionResponse(stored_region);
+  {
+    std::shared_lock<std::shared_mutex> lock(region_map_mutex_);
+    if (auto it = region_map_.find(bucket_name);
+        it != region_map_.end() && !it->second.empty()) {
+      return GetRegionResponse(it->second);
+    }
   }
   Request req(http::Method::kGet, "us-east-1", base_url_, utils::Multimap(),
               utils::Multimap());
@@ -304,7 +314,10 @@ GetRegionResponse BaseClient::GetRegion(const std::string& bucket_name,
     if (!base_url_.aws_domain_suffix.empty()) value = "eu-west-1";
   }
 
-  region_map_[bucket_name] = value;
+  {
+    std::unique_lock<std::shared_mutex> lock(region_map_mutex_);
+    region_map_[bucket_name] = value;
+  }
 
   return GetRegionResponse(value);
 }
@@ -1992,6 +2005,7 @@ UploadPartResponse BaseClient::UploadPart(UploadPartArgs args) {
   api_args.region = args.region;
   api_args.object = args.object;
   api_args.data = args.data;
+  api_args.headers = args.headers;
   api_args.progressfunc = args.progressfunc;
   api_args.progress_userdata = args.progress_userdata;
   api_args.query_params = query_params;
