@@ -329,10 +329,16 @@ struct Part {
   std::string etag;
   utils::UtcTime last_modified = {};
   size_t size = 0;
+  std::string checksum_crc64nvme;
 
   Part() = default;
   explicit Part(unsigned int number, std::string etag)
       : number(number), etag(std::move(etag)) {}
+  explicit Part(unsigned int number, std::string etag,
+                std::string checksum_crc64nvme)
+      : number(number),
+        etag(std::move(etag)),
+        checksum_crc64nvme(std::move(checksum_crc64nvme)) {}
   ~Part() = default;
 };  // struct Part
 

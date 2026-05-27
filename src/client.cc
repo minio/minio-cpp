@@ -631,6 +631,12 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
       cmu_args.region = args.region;
       cmu_args.object = args.object;
       cmu_args.headers = headers;
+#ifdef MINIO_CPP_RDMA
+      // Declare CRC64NVME so the server enforces per-part integrity on the
+      // RDMA UploadPart path (server returns 501 if checksum is missing when
+      // an algorithm was declared on Create).
+      cmu_args.headers.Add("x-amz-checksum-algorithm", "CRC64NVME");
+#endif
       if (CreateMultipartUploadResponse resp =
               CreateMultipartUpload(cmu_args)) {
         upload_id = resp.upload_id;
@@ -648,6 +654,15 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
     up_args.data = data;
     up_args.buf = buf;
     up_args.part_size = part_size;
+#ifdef MINIO_CPP_RDMA
+    up_args.rdmaclient = args.rdmaclient;
+    if (buf != nullptr && cuObjClient::getMemoryType(buf) ==
+                              CUOBJ_MEMORY_SYSTEM) {
+      const std::string crc = utils::Crc64NvmeBase64(buf, part_size);
+      up_args.checksum_crc64nvme = crc;
+      up_args.headers.Add("x-amz-checksum-crc64nvme", crc);
+    }
+#endif
     if (args.progressfunc != nullptr) {
       up_args.progressfunc =
           [&object_size = object_size, &uploaded_bytes = uploaded_bytes,
@@ -695,7 +710,8 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
               error::Error("aborted by progress function"));
         }
       }
-      parts.push_back(Part(part_number, std::move(resp.etag)));
+      parts.push_back(Part(part_number, std::move(resp.etag),
+                            std::move(resp.checksum_crc64nvme)));
     } else {
       return resp;
     }

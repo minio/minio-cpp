@@ -108,6 +108,16 @@ std::string Base64Encode(std::string_view str);
 // Md5sumHash computes MD5 of data and return hash as Base64 encoded value.
 std::string Md5sumHash(std::string_view str);
 
+// Crc64Nvme computes the NVM Express End-to-End Data Protection CRC-64
+// (polynomial 0xad93d23594c93659, reflected, init/xor 0xffffffffffffffff)
+// of `data`/`len` and returns the 8-byte raw value. Used to populate the
+// per-part `x-amz-checksum-crc64nvme` header on RDMA multipart uploads.
+uint64_t Crc64Nvme(const char* data, size_t len);
+
+// Crc64NvmeBase64 returns the Crc64Nvme of `data`/`len` encoded as the
+// 12-character base64 string the S3 RDMA UploadPart protocol expects.
+std::string Crc64NvmeBase64(const char* data, size_t len);
+
 error::Error CheckBucketName(std::string_view bucket_name, bool strict = false);
 error::Error ReadPart(std::istream& stream, char* buf, size_t size,
                       size_t& bytes_read);
