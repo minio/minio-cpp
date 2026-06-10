@@ -90,7 +90,8 @@ std::string GetSignature(std::string_view signing_key,
   signature.resize(hash.size() * 2);
   char* out = signature.data();
   for (std::size_t i = 0, n_size = hash.size(); i < n_size; ++i) {
-    auto [ptr, ec] = std::to_chars(out, out + 2, hash[i], 16);
+    auto [ptr, ec] =
+        std::to_chars(out, out + 2, static_cast<unsigned char>(hash[i]), 16);
     if (ptr - out == 1) {
       out[1] = out[0];
       out[0] = '0';
