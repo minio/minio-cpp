@@ -533,18 +533,6 @@ std::list<std::string> Multimap::ToHttpHeaders() const {
   return headers;
 }
 
-std::string Multimap::ToQueryString() const {
-  std::string query_string;
-  for (auto& [key, values] : map_) {
-    for (auto& value : values) {
-      std::string s = curlpp::escape(key) + "=" + curlpp::escape(value);
-      if (!query_string.empty()) query_string += "&";
-      query_string += s;
-    }
-  }
-  return query_string;
-}
-
 bool Multimap::Contains(std::string_view key) const {
   return keys_.find(ToLower(std::string(key))) != keys_.end();
 }
@@ -573,58 +561,62 @@ std::list<std::string> Multimap::Keys() const {
   return keys;
 }
 
+std::string removeExtraSpaces(const std::string& s) {
+  std::string result;
+  result.reserve(s.size());
+  bool inSpace = false;
+
+  for (char c : s) {
+    if (c != ' ') {
+      if (inSpace && !result.empty()) result += ' ';
+      result += c;
+      inSpace = false;
+    } else {
+      inSpace = true;
+    }
+  }
+  return result;
+}
+
 void Multimap::GetCanonicalHeaders(std::string& signed_headers,
                                    std::string& canonical_headers) const {
-  std::vector<std::string> signed_headerslist;
-  std::map<std::string, std::string> map;
-
   for (const auto& [k, values] : map_) {
     std::string key = ToLower(k);
     if ("authorization" == key || "user-agent" == key) continue;
-    if (std::find(signed_headerslist.begin(), signed_headerslist.end(), key) ==
-        signed_headerslist.end()) {
-      signed_headerslist.push_back(key);
+    if (!signed_headers.empty()) {
+      signed_headers += ";";
+      canonical_headers += "\n";
     }
+    signed_headers += key;
 
     std::string value;
     for (const auto& v : values) {
       if (!value.empty()) value += ",";
-      value += utils::Trim(std::regex_replace(v, MULTI_SPACE_REGEX, " "));
+      value += removeExtraSpaces(v);
     }
-
-    map[key] = value;
+    canonical_headers += key;
+    canonical_headers += ":";
+    canonical_headers += value;
   }
-
-  std::sort(signed_headerslist.begin(), signed_headerslist.end());
-  signed_headers = utils::Join(signed_headerslist, ";");
-
-  std::vector<std::string> canonical_headerslist;
-  for (auto& [key, value] : map) {
-    canonical_headerslist.push_back(key + ":" + value);
-  }
-
-  std::sort(canonical_headerslist.begin(), canonical_headerslist.end());
-  canonical_headers = utils::Join(canonical_headerslist, "\n");
 }
 
 std::string Multimap::GetCanonicalQueryString() const {
-  std::vector<std::string> keys;
-  for (auto& [key, _] : map_) {
-    keys.push_back(key);
-  }
+  std::string query_string;
+  query_string.reserve(map_.size() * 30);
 
-  std::sort(keys.begin(), keys.end());
-  std::vector<std::string> values;
-
-  for (auto& key : keys) {
-    if (const auto i = map_.find(key); i != map_.cend()) {
-      for (auto& value : i->second) {
-        values.push_back(curlpp::escape(key) + "=" + curlpp::escape(value));
-      }
+  for (auto& [key, values] : map_) {
+    for (auto& value : values) {
+      if (!query_string.empty()) query_string += "&";
+      query_string += curlpp::escape(key);
+      query_string += '=';
+      query_string += curlpp::escape(value);
     }
   }
+  return query_string;
+}
 
-  return utils::Join(values, "&");
+std::string Multimap::ToQueryString() const {
+  return this->GetCanonicalQueryString();
 }
 
 error::Error CheckBucketName(std::string_view bucket_name, bool strict) {
