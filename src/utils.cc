@@ -17,6 +17,8 @@
 
 #include "miniocpp/utils.h"
 
+#include <charconv>
+
 #include "miniocpp/error.h"
 
 #ifdef _WIN32
@@ -266,10 +268,15 @@ std::string Sha256Hash(std::string_view str) {
   EVP_MD_CTX_destroy(ctx);
 
   std::string hash;
-  char buf[3];
+  hash.resize(length * 2);
+  char* out = hash.data();
   for (unsigned int i = 0; i < length; ++i) {
-    snprintf(buf, 3, "%02x", digest[i]);
-    hash += buf;
+    if (auto [ptr, ec] = std::to_chars(out, out + 2, digest[i], 16);
+        ptr - out == 1) {
+      out[1] = out[0];
+      out[0] = '0';
+    }
+    out += 2;
   }
 
   OPENSSL_free(digest);

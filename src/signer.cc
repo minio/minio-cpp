@@ -21,6 +21,7 @@
 #include <openssl/hmac.h>
 
 #include <array>
+#include <charconv>
 #include <cstdio>
 #include <string>
 #include <type_traits>
@@ -86,10 +87,15 @@ std::string GetSignature(std::string_view signing_key,
                          std::string_view string_to_sign) {
   std::string hash = HmacHash(signing_key, string_to_sign);
   std::string signature;
-  char buf[3];
+  signature.resize(hash.size() * 2);
+  char* out = signature.data();
   for (std::size_t i = 0, n_size = hash.size(); i < n_size; ++i) {
-    snprintf(buf, 3, "%02x", (unsigned char)hash[i]);
-    signature += buf;
+    auto [ptr, ec] = std::to_chars(out, out + 2, hash[i], 16);
+    if (ptr - out == 1) {
+      out[1] = out[0];
+      out[0] = '0';
+    }
+    out += 2;
   }
   return signature;
 }
