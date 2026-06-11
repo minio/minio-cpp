@@ -91,7 +91,7 @@ utils::Multimap ObjectConditionalReadArgs::Headers() const {
   if (len.has_value() && !off.has_value()) {
     off = 0;
   }
-  
+
   std::string range;
   if (off.has_value()) {
     range = "bytes=" + std::to_string(*off) + "-";
