@@ -85,18 +85,17 @@ utils::Multimap ObjectWriteArgs::Headers() const {
 }
 
 utils::Multimap ObjectConditionalReadArgs::Headers() const {
-  size_t* off = offset;
-  size_t* len = length;
+  std::optional<size_t> off = offset;
+  std::optional<size_t> len = length;
 
-  size_t zero = 0;
-  if (len != nullptr && off == nullptr) {
-    off = &zero;
+  if (len.has_value() && !off.has_value()) {
+    off = 0;
   }
 
   std::string range;
-  if (off != nullptr) {
+  if (off.has_value()) {
     range = "bytes=" + std::to_string(*off) + "-";
-    if (len != nullptr) {
+    if (len.has_value()) {
       range += std::to_string(*off + *len - 1);
     }
   }
@@ -329,7 +328,7 @@ error::Error CopyObjectArgs::Validate() const {
   if (error::Error err = source.Validate()) {
     return err;
   }
-  if (source.offset != nullptr || source.length != nullptr) {
+  if (source.offset.has_value() || source.length.has_value()) {
     if (metadata_directive != nullptr &&
         *metadata_directive == Directive::kCopy) {
       return error::Error(
@@ -356,13 +355,13 @@ error::Error ComposeSource::BuildHeaders(size_t object_size,
   }
   msg += ": ";
 
-  if (offset != nullptr && *offset >= object_size) {
+  if (offset.has_value() && *offset >= object_size) {
     return error::Error(msg + "offset " + std::to_string(*offset) +
                         " is beyond object size " +
                         std::to_string(object_size));
   }
 
-  if (length != nullptr) {
+  if (length.has_value()) {
     if (*length > object_size) {
       return error::Error(msg + "length " + std::to_string(*length) +
                           " is beyond object size " +
@@ -370,8 +369,8 @@ error::Error ComposeSource::BuildHeaders(size_t object_size,
     }
 
     size_t off = 0;
-    if (offset != nullptr) off = *offset;
-    if ((off + *length) > object_size) {
+    if (offset.has_value()) off = *offset;
+    if (length.has_value() && (off + *length) > object_size) {
       return error::Error(
           msg + "compose size " + std::to_string(off + *length) +
           " is beyond object size " + std::to_string(object_size));

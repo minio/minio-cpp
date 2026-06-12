@@ -279,9 +279,9 @@ StatObjectResponse Client::CalculatePartCount(
     if (error::Error err = source.BuildHeaders(size, etag)) {
       return StatObjectResponse(err);
     }
-    if (source.length != nullptr) {
+    if (source.length.has_value()) {
       size = *source.length;
-    } else if (source.offset != nullptr) {
+    } else if (source.offset.has_value()) {
       size -= *source.offset;
     }
 
@@ -349,7 +349,8 @@ ComposeObjectResponse Client::ComposeObject(ComposeObjectArgs args,
   }
 
   ComposeSource& source = args.sources.front();
-  if (part_count == 1 && source.offset == nullptr && source.length == nullptr) {
+  if (part_count == 1 && !source.offset.has_value() &&
+      !source.length.has_value()) {
     CopyObjectArgs coargs;
     coargs.extra_headers = args.extra_headers;
     coargs.extra_query_params = args.extra_query_params;
@@ -389,14 +390,14 @@ ComposeObjectResponse Client::ComposeObject(ComposeObjectArgs args,
   std::list<Part> parts;
   for (auto& source : args.sources) {
     size_t size = source.ObjectSize();
-    if (source.length != nullptr) {
+    if (source.length.has_value()) {
       size = *source.length;
-    } else if (source.offset != nullptr) {
+    } else if (source.offset.has_value()) {
       size -= *source.offset;
     }
 
     size_t offset = 0;
-    if (source.offset != nullptr) offset = *source.offset;
+    if (source.offset.has_value()) offset = *source.offset;
 
     utils::Multimap headers;
     headers.AddAll(source.Headers());
@@ -404,11 +405,11 @@ ComposeObjectResponse Client::ComposeObject(ComposeObjectArgs args,
 
     if (size <= utils::kMaxPartSize) {
       part_number++;
-      if (source.length != nullptr) {
+      if (source.length.has_value()) {
         headers.Add("x-amz-copy-source-range",
                     "bytes=" + std::to_string(offset) + "-" +
                         std::to_string(offset + *source.length - 1));
-      } else if (source.offset != nullptr) {
+      } else if (source.offset.has_value()) {
         headers.Add("x-amz-copy-source-range",
                     "bytes=" + std::to_string(offset) + "-" +
                         std::to_string(offset + size - 1));
@@ -785,7 +786,7 @@ CopyObjectResponse Client::CopyObject(CopyObjectArgs args) {
     size = resp.size;
   }
 
-  if (args.source.offset != nullptr || args.source.length != nullptr ||
+  if (args.source.offset.has_value() || args.source.length.has_value() ||
       size > utils::kMaxPartSize) {
     if (args.metadata_directive != nullptr &&
         *args.metadata_directive == Directive::kCopy) {

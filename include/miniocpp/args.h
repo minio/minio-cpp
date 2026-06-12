@@ -92,8 +92,8 @@ struct ObjectReadArgs : public ObjectVersionArgs {
 };  // struct ObjectReadArgs
 
 struct ObjectConditionalReadArgs : public ObjectReadArgs {
-  size_t* offset = nullptr;
-  size_t* length = nullptr;
+  std::optional<size_t> offset;
+  std::optional<size_t> length;
   std::string match_etag;
   std::string not_match_etag;
   utils::UtcTime modified_since;
