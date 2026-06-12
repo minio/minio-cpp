@@ -557,9 +557,9 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
     part_number++;
 
     size_t bytes_read = 0;
-    if (part_count.value_or(-1) > 0) {
+    if (part_count.has_value()) {
       if (part_number == *part_count) {
-        part_size = object_size.value_or(-1) - uploaded_size;
+        part_size = *object_size - uploaded_size;
         stop = true;
       }
 
@@ -608,7 +608,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
 
     uploaded_size += part_size;
 
-    if (part_count.value_or(-1) == 1) {
+    if (part_count.has_value() && *part_count == 1) {
       PutObjectApiArgs api_args;
       api_args.extra_query_params = args.extra_query_params;
       api_args.bucket = args.bucket;

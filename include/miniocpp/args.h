@@ -150,7 +150,7 @@ struct CreateMultipartUploadArgs : public ObjectArgs {
 struct PutObjectBaseArgs : public ObjectWriteArgs {
   std::optional<uint64_t> object_size;
   size_t part_size = 0;
-  std::optional<size_t> part_count = 0;
+  std::optional<size_t> part_count;
   std::string content_type;
 
   PutObjectBaseArgs() = default;
