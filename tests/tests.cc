@@ -276,7 +276,7 @@ class Tests {
 
     std::string data = "StatObject()";
     std::stringstream ss(data);
-    minio::s3::PutObjectArgs args(ss, static_cast<long>(data.length()), 0);
+    minio::s3::PutObjectArgs args(ss, static_cast<uint64_t>(data.length()), 0);
     args.bucket = bucket_name_;
     args.object = object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
@@ -309,7 +309,7 @@ class Tests {
     std::string object_name = RandObjectName();
     std::string data = "RemoveObject()";
     std::stringstream ss(data);
-    minio::s3::PutObjectArgs args(ss, static_cast<long>(data.length()), 0);
+    minio::s3::PutObjectArgs args(ss, static_cast<uint64_t>(data.length()), 0);
     args.bucket = bucket_name_;
     args.object = object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
@@ -326,7 +326,7 @@ class Tests {
 
     std::string data = "DownloadObject()";
     std::stringstream ss(data);
-    minio::s3::PutObjectArgs args(ss, static_cast<long>(data.length()), 0);
+    minio::s3::PutObjectArgs args(ss, static_cast<uint64_t>(data.length()), 0);
     args.bucket = bucket_name_;
     args.object = object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
@@ -372,7 +372,7 @@ class Tests {
 
     std::string data = "GetObject()";
     std::stringstream ss(data);
-    minio::s3::PutObjectArgs args(ss, static_cast<long>(data.length()), 0);
+    minio::s3::PutObjectArgs args(ss, static_cast<uint64_t>(data.length()), 0);
     args.bucket = bucket_name_;
     args.object = object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
@@ -461,7 +461,8 @@ class Tests {
       std::string object_name = RandObjectName();
       std::string data = "PutObject()";
       std::stringstream ss(data);
-      minio::s3::PutObjectArgs args(ss, static_cast<long>(data.length()), 0);
+      minio::s3::PutObjectArgs args(ss, static_cast<uint64_t>(data.length()),
+                                    0);
       args.bucket = bucket_name_;
       args.object = object_name;
       minio::s3::PutObjectResponse resp = client_.PutObject(args);
@@ -475,7 +476,7 @@ class Tests {
       std::string object_name = RandObjectName();
       size_t size = 67108865;  // (64MiB + 1) bytes
       RandCharStream stream(size);
-      minio::s3::PutObjectArgs args(stream, static_cast<long>(size), 0);
+      minio::s3::PutObjectArgs args(stream, static_cast<uint64_t>(size), 0);
       args.bucket = bucket_name_;
       args.object = object_name;
       minio::s3::PutObjectResponse resp = client_.PutObject(args);
@@ -497,7 +498,7 @@ class Tests {
     std::string src_object_name = RandObjectName();
     std::string data = "CopyObject()";
     std::stringstream ss(data);
-    minio::s3::PutObjectArgs args(ss, static_cast<long>(data.length()), 0);
+    minio::s3::PutObjectArgs args(ss, static_cast<uint64_t>(data.length()), 0);
     args.bucket = bucket_name_;
     args.object = src_object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
@@ -584,7 +585,8 @@ class Tests {
         "1996,Jeep,Grand Cherokee,\"MUST SELL!\n"
         "air, moon roof, loaded\",4799.00\n";
     std::stringstream ss("Year,Make,Model,Description,Price\n" + data);
-    minio::s3::PutObjectArgs args(ss, static_cast<long>(ss.str().length()), 0);
+    minio::s3::PutObjectArgs args(ss, static_cast<uint64_t>(ss.str().length()),
+                                  0);
     args.bucket = bucket_name_;
     args.object = object_name;
     minio::s3::PutObjectResponse resp = client_.PutObject(args);
@@ -664,7 +666,8 @@ class Tests {
     try {
       std::string data = "ListenBucketNotification()";
       std::stringstream ss(data);
-      minio::s3::PutObjectArgs args(ss, static_cast<long>(data.length()), 0);
+      minio::s3::PutObjectArgs args(ss, static_cast<uint64_t>(data.length()),
+                                    0);
       args.bucket = bucket_name_;
       args.object = object_name;
       minio::s3::PutObjectResponse resp = client_.PutObject(args);

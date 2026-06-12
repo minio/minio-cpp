@@ -542,14 +542,14 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
     }
   }
 
-  std::optional<u_int64_t> object_size = args.object_size;
+  std::optional<uint64_t> object_size = args.object_size;
   size_t part_size = args.part_size;
   size_t uploaded_size = 0;
   unsigned int part_number = 0;
   std::string one_byte;
   bool stop = false;
   std::list<Part> parts;
-  long part_count = args.part_count;
+  std::optional<size_t> part_count = args.part_count;
   double uploaded_bytes = 0;  // for progress
   double upload_speed = -1;   // for progress
 
@@ -557,8 +557,8 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
     part_number++;
 
     size_t bytes_read = 0;
-    if (part_count > 0) {
-      if (part_number == part_count) {
+    if (part_count.value_or(-1) > 0) {
+      if (part_number == *part_count) {
         part_size = object_size.value_or(-1) - uploaded_size;
         stop = true;
       }
@@ -596,7 +596,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
       // If bytes read is less than or equals to part size, then we have reached
       // last part.
       if (bytes_read <= part_size) {
-        part_count = part_number;
+        part_count = std::optional<size_t>(part_number);
         part_size = bytes_read;
         stop = true;
       } else {
@@ -608,7 +608,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
 
     uploaded_size += part_size;
 
-    if (part_count == 1) {
+    if (part_count.value_or(-1) == 1) {
       PutObjectApiArgs api_args;
       api_args.extra_query_params = args.extra_query_params;
       api_args.bucket = args.bucket;
@@ -680,7 +680,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
 
         http::ProgressFunctionArgs actual_args;
         actual_args.upload_total_bytes =
-            static_cast<double>(object_size.value_or(-1));
+            object_size ? static_cast<double>(*object_size) : -1.0;
         actual_args.uploaded_bytes = uploaded_bytes + args.uploaded_bytes;
         actual_args.userdata = progress_userdata;
         return progressfunc(actual_args);
@@ -704,7 +704,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
         uploaded_bytes += static_cast<double>(data.length());
         http::ProgressFunctionArgs actual_args;
         actual_args.upload_total_bytes =
-            static_cast<double>(object_size.value_or(-1));
+            object_size ? static_cast<double>(*object_size) : -1.0;
         actual_args.uploaded_bytes = uploaded_bytes;
         actual_args.userdata = args.progress_userdata;
         if (!args.progressfunc(actual_args)) {
@@ -991,7 +991,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
     std::stringstream ss(std::ios_base::in | std::ios_base::out);
     ss.rdbuf()->pubsetbuf(args.buf, size);
 
-    PutObjectArgs http_args(ss, static_cast<long>(size), 16 * 1024 * 1024L);
+    PutObjectArgs http_args(ss, static_cast<uint64_t>(size), 16 * 1024 * 1024L);
     http_args.bucket = args.bucket;
     http_args.object = args.object;
     http_args.region = region;
@@ -1059,8 +1059,7 @@ UploadObjectResponse Client::UploadObject(UploadObjectArgs args) {
         "unable to open file " + args.filename + "; " + err.code().message());
   }
 
-  PutObjectArgs po_args(file, static_cast<long>(args.object_size.value_or(-1)),
-                        0);
+  PutObjectArgs po_args(file, args.object_size, 0);
   po_args.extra_headers = std::move(args.extra_headers);
   po_args.extra_query_params = std::move(args.extra_query_params);
   po_args.bucket = std::move(args.bucket);

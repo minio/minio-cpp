@@ -663,8 +663,9 @@ error::Error ReadPart(std::istream& stream, char* buf, size_t size,
   return error::SUCCESS;
 }
 
-error::Error CalcPartInfo(std::optional<u_int64_t> object_size,
-                          size_t& part_size, long& part_count) {
+error::Error CalcPartInfo(std::optional<uint64_t> object_size,
+                          size_t& part_size,
+                          std::optional<size_t>& part_count) {
   if (part_size > 0) {
     if (part_size < kMinPartSize) {
       return error::Error("part size " + std::to_string(part_size) +
@@ -688,7 +689,7 @@ error::Error CalcPartInfo(std::optional<u_int64_t> object_size,
   }
 
   if (!object_size.has_value()) {
-    part_count = -1;
+    part_count.reset();
     return error::SUCCESS;
   }
 
@@ -699,9 +700,9 @@ error::Error CalcPartInfo(std::optional<u_int64_t> object_size,
   }
 
   if (part_size > *object_size) part_size = *object_size;
-  part_count = static_cast<long>(
+  part_count = static_cast<size_t>(
       (part_size > 0) ? ((*object_size + part_size - 1) / part_size) : 1);
-  if (part_count > kMaxMultipartCount) {
+  if (*part_count > kMaxMultipartCount) {
     return error::Error(
         "object size " + std::to_string(*object_size) + " and part size " +
         std::to_string(part_size) + " make more than " +
