@@ -148,7 +148,7 @@ struct CreateMultipartUploadArgs : public ObjectArgs {
 };  // struct CreateMultipartUploadArgs
 
 struct PutObjectBaseArgs : public ObjectWriteArgs {
-  long object_size = -1;
+  std::optional<u_int64_t> object_size;
   size_t part_size = 0;
   long part_count = 0;
   std::string content_type;

@@ -28,6 +28,7 @@
 #include <ios>
 #include <list>
 #include <map>
+#include <optional>
 #include <set>
 #include <streambuf>
 #include <string>
@@ -121,8 +122,8 @@ std::string Crc64NvmeBase64(const char* data, size_t len);
 error::Error CheckBucketName(std::string_view bucket_name, bool strict = false);
 error::Error ReadPart(std::istream& stream, char* buf, size_t size,
                       size_t& bytes_read);
-error::Error CalcPartInfo(long object_size, size_t& part_size,
-                          long& part_count);
+error::Error CalcPartInfo(std::optional<u_int64_t> object_size,
+                          size_t& part_size, long& part_count);
 
 /**
  * UtcTime represents date and time in UTC timezone.

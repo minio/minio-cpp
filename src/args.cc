@@ -302,7 +302,7 @@ ListObjectVersionsArgs& ListObjectVersionsArgs::operator=(
 PutObjectArgs::PutObjectArgs(std::istream& istream, long object_size,
                              long part_size)
     : stream(&istream) {
-  this->object_size = object_size;
+  if (object_size >= 0) this->object_size = static_cast<u_int64_t>(object_size);
   this->part_size = part_size;
 }
 
@@ -317,7 +317,7 @@ error::Error PutObjectArgs::Validate() {
     if (!size.has_value()) {
       return error::Error("size must be set when buf is set");
     }
-    if (object_size < 0) object_size = static_cast<long>(*size);
+    if (!object_size.has_value()) object_size = static_cast<u_int64_t>(*size);
   }
   return utils::CalcPartInfo(object_size, part_size, part_count);
 }
@@ -441,7 +441,7 @@ error::Error UploadObjectArgs::Validate() {
 
   std::filesystem::path file_path = filename;
   size_t obj_size = std::filesystem::file_size(file_path);
-  object_size = static_cast<long>(obj_size);
+  object_size = static_cast<u_int64_t>(obj_size);
   return utils::CalcPartInfo(object_size, part_size, part_count);
 }
 
