@@ -272,10 +272,10 @@ ListObjectsResponse ListObjectsResponse::ParseXML(std::string_view data,
       raw = text.node().value();
       if (resp.encoding_type == "url") {
         resp.owned_.emplace_back(curlpp::unescape(raw));
+        item.name = resp.owned_.back();
       } else {
-        resp.owned_.emplace_back(raw);
+        item.name = raw;
       }
-      item.name = resp.owned_.back();
 
       text = content.node().select_node("LastModified/text()");
       value = text.node().value();
@@ -329,10 +329,10 @@ ListObjectsResponse ListObjectsResponse::ParseXML(std::string_view data,
     raw = text.node().value();
     if (resp.encoding_type == "url") {
       resp.owned_.emplace_back(curlpp::unescape(raw));
+      item.name = resp.owned_.back();
     } else {
-      resp.owned_.emplace_back(raw);
+      item.name = raw;
     }
-    item.name = resp.owned_.back();
     item.is_prefix = true;
 
     resp.contents.push_back(item);
