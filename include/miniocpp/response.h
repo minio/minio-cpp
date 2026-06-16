@@ -20,8 +20,10 @@
 
 #include <list>
 #include <map>
+#include <memory>
 #include <pugixml.hpp>
 #include <string>
+#include <string_view>
 #include <type_traits>
 
 #include "error.h"

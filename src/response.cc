@@ -54,7 +54,7 @@ Response Response::ParseXML(std::string_view data, int status_code,
   resp.headers = headers;
 
   pugi::xml_document xdoc;
-  pugi::xml_parse_result result = xdoc.load_string(data.data());
+  pugi::xml_parse_result result = xdoc.load_buffer(data.data(), data.size());
   if (!result) {
     resp.err_ = error::Error("unable to parse XML; " + std::string(data));
     return resp;
@@ -91,7 +91,7 @@ ListBucketsResponse ListBucketsResponse::ParseXML(std::string_view data) {
   std::list<Bucket> buckets;
 
   pugi::xml_document xdoc;
-  pugi::xml_parse_result result = xdoc.load_string(data.data());
+  pugi::xml_parse_result result = xdoc.load_buffer(data.data(), data.size());
   if (!result) {
     return error::make<ListBucketsResponse>("unable to parse XML");
   }
@@ -119,7 +119,7 @@ CompleteMultipartUploadResponse CompleteMultipartUploadResponse::ParseXML(
   CompleteMultipartUploadResponse resp;
 
   pugi::xml_document xdoc;
-  pugi::xml_parse_result result = xdoc.load_string(data.data());
+  pugi::xml_parse_result result = xdoc.load_buffer(data.data(), data.size());
   if (!result) {
     return error::make<CompleteMultipartUploadResponse>("unable to parse XML");
   }
@@ -161,7 +161,7 @@ ListObjectsResponse ListObjectsResponse::ParseXML(std::string_view data,
   ListObjectsResponse resp;
 
   auto xdoc = std::make_shared<pugi::xml_document>();
-  pugi::xml_parse_result result = xdoc->load_string(data.data());
+  pugi::xml_parse_result result = xdoc->load_buffer(data.data(), data.size());
   if (!result) {
     return error::make<ListObjectsResponse>("unable to parse XML");
   }
@@ -348,7 +348,7 @@ RemoveObjectsResponse RemoveObjectsResponse::ParseXML(std::string_view data) {
   RemoveObjectsResponse resp;
 
   pugi::xml_document xdoc;
-  pugi::xml_parse_result result = xdoc.load_string(data.data());
+  pugi::xml_parse_result result = xdoc.load_buffer(data.data(), data.size());
   if (!result) {
     return error::make<RemoveObjectsResponse>("unable to parse XML");
   }
@@ -405,7 +405,7 @@ GetBucketNotificationResponse GetBucketNotificationResponse::ParseXML(
   NotificationConfig config;
 
   pugi::xml_document xdoc;
-  pugi::xml_parse_result result = xdoc.load_string(data.data());
+  pugi::xml_parse_result result = xdoc.load_buffer(data.data(), data.size());
   if (!result) {
     return error::make<GetBucketNotificationResponse>("unable to parse XML");
   }
@@ -500,7 +500,7 @@ GetBucketEncryptionResponse GetBucketEncryptionResponse::ParseXML(
   SseConfig config;
 
   pugi::xml_document xdoc;
-  pugi::xml_parse_result result = xdoc.load_string(data.data());
+  pugi::xml_parse_result result = xdoc.load_buffer(data.data(), data.size());
   if (!result) {
     return error::make<GetBucketEncryptionResponse>("unable to parse XML");
   }
@@ -522,7 +522,7 @@ GetBucketReplicationResponse GetBucketReplicationResponse::ParseXML(
   ReplicationConfig config;
 
   pugi::xml_document xdoc;
-  pugi::xml_parse_result result = xdoc.load_string(data.data());
+  pugi::xml_parse_result result = xdoc.load_buffer(data.data(), data.size());
   if (!result) {
     return error::make<GetBucketReplicationResponse>("unable to parse XML");
   }
@@ -688,7 +688,7 @@ GetBucketLifecycleResponse GetBucketLifecycleResponse::ParseXML(
   LifecycleConfig config;
 
   pugi::xml_document xdoc;
-  pugi::xml_parse_result result = xdoc.load_string(data.data());
+  pugi::xml_parse_result result = xdoc.load_buffer(data.data(), data.size());
   if (!result) {
     return error::make<GetBucketLifecycleResponse>("unable to parse XML");
   }
@@ -815,7 +815,7 @@ GetBucketTagsResponse GetBucketTagsResponse::ParseXML(std::string_view data) {
   std::map<std::string, std::string> map;
 
   pugi::xml_document xdoc;
-  pugi::xml_parse_result result = xdoc.load_string(data.data());
+  pugi::xml_parse_result result = xdoc.load_buffer(data.data(), data.size());
   if (!result) {
     return error::make<GetBucketTagsResponse>("unable to parse XML");
   }
@@ -840,7 +840,7 @@ GetObjectTagsResponse GetObjectTagsResponse::ParseXML(std::string_view data) {
   std::map<std::string, std::string> map;
 
   pugi::xml_document xdoc;
-  pugi::xml_parse_result result = xdoc.load_string(data.data());
+  pugi::xml_parse_result result = xdoc.load_buffer(data.data(), data.size());
   if (!result) {
     return error::make<GetObjectTagsResponse>("unable to parse XML");
   }
