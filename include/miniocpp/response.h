@@ -20,6 +20,7 @@
 
 #include <list>
 #include <map>
+#include <pugixml.hpp>
 #include <string>
 #include <type_traits>
 
@@ -238,19 +239,21 @@ MINIO_S3_DERIVE_FROM_RESPONSE(DownloadObjectResponse)
 MINIO_S3_DERIVE_FROM_RESPONSE(GetObjectResponse)
 
 struct Item : public Response {
-  std::string etag;  // except DeleteMarker
-  std::string name;
+  // etag and name stored in owning ListObjectsResponse's owned_.
+  std::string_view etag;  // except DeleteMarker
+  std::string_view name;
   utils::UtcTime last_modified;
-  std::string owner_id;
-  std::string owner_name;
+  // Fields below point into owning ListObjectsResponse's xml_document memory.
+  std::string_view owner_id;
+  std::string_view owner_name;
   size_t size = 0;  // except DeleteMarker
-  std::string storage_class;
-  bool is_latest = false;  // except ListObjects V1/V2
-  std::string version_id;  // except ListObjects V1/V2
+  std::string_view storage_class;
+  bool is_latest = false;       // except ListObjects V1/V2
+  std::string_view version_id;  // except ListObjects V1/V2
   std::map<std::string, std::string> user_metadata;
   bool is_prefix = false;
   bool is_delete_marker = false;
-  std::string encoding_type;
+  std::string_view encoding_type;
 
   Item() = default;
 
@@ -263,37 +266,40 @@ struct Item : public Response {
 
 struct ListObjectsResponse : public Response {
   // Common
-  std::string name;
-  std::string encoding_type;
-  std::string prefix;
-  std::string delimiter;
+  std::string_view name;
+  std::string_view encoding_type;
+  std::string_view prefix;
+  std::string_view delimiter;
   bool is_truncated;
   unsigned int max_keys;
   std::list<Item> contents;
 
+  // Owned XML document for zero-copy string_view backing.
+  std::shared_ptr<pugi::xml_document> doc_;
+  // Owned strings for non-XML-assigned string_view backing storage.
+  std::list<std::string> owned_;
+
   // ListObjectsV1
-  std::string marker;
-  std::string next_marker;
+  std::string_view marker;
+  std::string_view next_marker;
 
   // ListObjectsV2
   unsigned int key_count;
-  std::string start_after;
-  std::string continuation_token;
-  std::string next_continuation_token;
+  std::string_view start_after;
+  std::string_view continuation_token;
+  std::string_view next_continuation_token;
 
   // ListObjectVersions
-  std::string key_marker;
-  std::string next_key_marker;
-  std::string version_id_marker;
-  std::string next_version_id_marker;
+  std::string_view key_marker;
+  std::string_view next_key_marker;
+  std::string_view version_id_marker;
+  std::string_view next_version_id_marker;
 
   ListObjectsResponse() = default;
 
   explicit ListObjectsResponse(error::Error err) : Response(std::move(err)) {}
 
   explicit ListObjectsResponse(const Response& resp) : Response(resp) {}
-
-  ~ListObjectsResponse() = default;
 
   static ListObjectsResponse ParseXML(std::string_view data, bool version);
 };  // struct ListObjectsResponse

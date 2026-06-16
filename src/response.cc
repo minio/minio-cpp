@@ -160,17 +160,31 @@ ListObjectsResponse ListObjectsResponse::ParseXML(std::string_view data,
                                                   bool version) {
   ListObjectsResponse resp;
 
-  pugi::xml_document xdoc;
-  pugi::xml_parse_result result = xdoc.load_string(data.data());
+  auto xdoc = std::make_shared<pugi::xml_document>();
+  pugi::xml_parse_result result = xdoc->load_string(data.data());
   if (!result) {
     return error::make<ListObjectsResponse>("unable to parse XML");
   }
+  resp.doc_ = std::move(xdoc);
   std::string xpath = version ? "/ListVersionsResult" : "/ListBucketResult";
 
-  auto root = xdoc.select_node(xpath.c_str());
+  auto root = resp.doc_->select_node(xpath.c_str());
 
   pugi::xpath_node text;
   std::string value;
+  const char* raw = nullptr;
+
+  // Helper to store an unescaped string or point into doc memory.
+  auto assign_unescaped = [&resp](std::string_view encoding_type,
+                                  const char* raw,
+                                  std::string_view& target) -> void {
+    if (encoding_type == "url") {
+      resp.owned_.emplace_back(curlpp::unescape(raw));
+      target = resp.owned_.back();
+    } else {
+      target = raw;
+    }
+  };
 
   text = root.node().select_node("Name/text()");
   resp.name = text.node().value();
@@ -179,8 +193,8 @@ ListObjectsResponse ListObjectsResponse::ParseXML(std::string_view data,
   resp.encoding_type = text.node().value();
 
   text = root.node().select_node("Prefix/text()");
-  value = text.node().value();
-  resp.prefix = (resp.encoding_type == "url") ? curlpp::unescape(value) : value;
+  raw = text.node().value();
+  assign_unescaped(resp.encoding_type, raw, resp.prefix);
 
   text = root.node().select_node("Delimiter/text()");
   resp.delimiter = text.node().value();
@@ -196,14 +210,12 @@ ListObjectsResponse ListObjectsResponse::ParseXML(std::string_view data,
   // ListBucketResult V1
   {
     text = root.node().select_node("Marker/text()");
-    value = text.node().value();
-    resp.marker =
-        (resp.encoding_type == "url") ? curlpp::unescape(value) : value;
+    raw = text.node().value();
+    assign_unescaped(resp.encoding_type, raw, resp.marker);
 
     text = root.node().select_node("NextMarker/text()");
-    value = text.node().value();
-    resp.next_marker =
-        (resp.encoding_type == "url") ? curlpp::unescape(value) : value;
+    raw = text.node().value();
+    assign_unescaped(resp.encoding_type, raw, resp.next_marker);
   }
 
   // ListBucketResult V2
@@ -214,9 +226,8 @@ ListObjectsResponse ListObjectsResponse::ParseXML(std::string_view data,
       resp.key_count = static_cast<unsigned>(std::stoul(value));
 
     text = root.node().select_node("StartAfter/text()");
-    value = text.node().value();
-    resp.start_after =
-        (resp.encoding_type == "url") ? curlpp::unescape(value) : value;
+    raw = text.node().value();
+    assign_unescaped(resp.encoding_type, raw, resp.start_after);
 
     text = root.node().select_node("ContinuationToken/text()");
     resp.continuation_token = text.node().value();
@@ -228,14 +239,12 @@ ListObjectsResponse ListObjectsResponse::ParseXML(std::string_view data,
   // ListVersionsResult
   {
     text = root.node().select_node("KeyMarker/text()");
-    value = text.node().value();
-    resp.key_marker =
-        (resp.encoding_type == "url") ? curlpp::unescape(value) : value;
+    raw = text.node().value();
+    assign_unescaped(resp.encoding_type, raw, resp.key_marker);
 
     text = root.node().select_node("NextKeyMarker/text()");
-    value = text.node().value();
-    resp.next_key_marker =
-        (resp.encoding_type == "url") ? curlpp::unescape(value) : value;
+    raw = text.node().value();
+    assign_unescaped(resp.encoding_type, raw, resp.next_key_marker);
 
     text = root.node().select_node("VersionIdMarker/text()");
     resp.version_id_marker = text.node().value();
@@ -249,18 +258,24 @@ ListObjectsResponse ListObjectsResponse::ParseXML(std::string_view data,
   auto populate = [&resp = resp, &last_item = last_item](
                       std::list<Item>& items, pugi::xpath_node_set& contents,
                       bool is_delete_marker) -> void {
+    const char* raw = nullptr;
     for (auto content : contents) {
       pugi::xpath_node text;
       std::string value;
       Item item;
 
       text = content.node().select_node("ETag/text()");
-      item.etag = utils::Trim(text.node().value(), '"');
+      resp.owned_.emplace_back(utils::Trim(text.node().value(), '"'));
+      item.etag = resp.owned_.back();
 
       text = content.node().select_node("Key/text()");
-      value = text.node().value();
-      item.name =
-          (resp.encoding_type == "url") ? curlpp::unescape(value) : value;
+      raw = text.node().value();
+      if (resp.encoding_type == "url") {
+        resp.owned_.emplace_back(curlpp::unescape(raw));
+      } else {
+        resp.owned_.emplace_back(raw);
+      }
+      item.name = resp.owned_.back();
 
       text = content.node().select_node("LastModified/text()");
       value = text.node().value();
@@ -303,17 +318,21 @@ ListObjectsResponse ListObjectsResponse::ParseXML(std::string_view data,
   populate(resp.contents, contents, false);
   // Only for ListObjectsV1.
   if (resp.is_truncated && resp.next_marker.empty()) {
-    resp.next_marker = last_item.name;
+    resp.owned_.emplace_back(last_item.name);
+    resp.next_marker = resp.owned_.back();
   }
 
   auto common_prefixes = root.node().select_nodes("CommonPrefixes");
   for (auto common_prefix : common_prefixes) {
     Item item;
-
     text = common_prefix.node().select_node("Prefix/text()");
-    value = text.node().value();
-    item.name = (resp.encoding_type == "url") ? curlpp::unescape(value) : value;
-
+    raw = text.node().value();
+    if (resp.encoding_type == "url") {
+      resp.owned_.emplace_back(curlpp::unescape(raw));
+    } else {
+      resp.owned_.emplace_back(raw);
+    }
+    item.name = resp.owned_.back();
     item.is_prefix = true;
 
     resp.contents.push_back(item);
