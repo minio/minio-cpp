@@ -148,9 +148,9 @@ struct CreateMultipartUploadArgs : public ObjectArgs {
 };  // struct CreateMultipartUploadArgs
 
 struct PutObjectBaseArgs : public ObjectWriteArgs {
-  long object_size = -1;
+  std::optional<uint64_t> object_size;
   size_t part_size = 0;
-  long part_count = 0;
+  std::optional<size_t> part_count;
   std::string content_type;
 
   PutObjectBaseArgs() = default;
@@ -348,7 +348,8 @@ struct PutObjectArgs : public PutObjectBaseArgs {
   std::string checksum_crc64nvme;  // CRC64NVME checksum for multipart uploads
 
   PutObjectArgs() = default;
-  PutObjectArgs(std::istream& stream, long object_size, long part_size);
+  PutObjectArgs(std::istream& stream, std::optional<uint64_t> object_size,
+                size_t part_size);
   ~PutObjectArgs() = default;
 
   error::Error Validate();

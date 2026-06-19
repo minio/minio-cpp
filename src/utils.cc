@@ -18,6 +18,7 @@
 #include "miniocpp/utils.h"
 
 #include <charconv>
+#include <optional>
 
 #include "miniocpp/error.h"
 
@@ -662,8 +663,9 @@ error::Error ReadPart(std::istream& stream, char* buf, size_t size,
   return error::SUCCESS;
 }
 
-error::Error CalcPartInfo(long object_size, size_t& part_size,
-                          long& part_count) {
+error::Error CalcPartInfo(std::optional<uint64_t> object_size,
+                          size_t& part_size,
+                          std::optional<size_t>& part_count) {
   if (part_size > 0) {
     if (part_size < kMinPartSize) {
       return error::Error("part size " + std::to_string(part_size) +
@@ -676,9 +678,9 @@ error::Error CalcPartInfo(long object_size, size_t& part_size,
     }
   }
 
-  if (object_size >= 0) {
-    if (static_cast<uint64_t>(object_size) > kMaxObjectSize) {
-      return error::Error("object size " + std::to_string(object_size) +
+  if (object_size.has_value()) {
+    if (*object_size > kMaxObjectSize) {
+      return error::Error("object size " + std::to_string(*object_size) +
                           " is not supported; maximum allowed 5TiB");
     }
   } else if (part_size <= 0) {
@@ -686,23 +688,23 @@ error::Error CalcPartInfo(long object_size, size_t& part_size,
         "valid part size must be provided when object size is unknown");
   }
 
-  if (object_size < 0) {
-    part_count = -1;
+  if (!object_size.has_value()) {
+    part_count.reset();
     return error::SUCCESS;
   }
 
   if (part_size <= 0) {
     // Calculate part size by multiple of kOptPartSize.
-    double psize = std::ceil((double)object_size / kMaxMultipartCount);
+    double psize = std::ceil((double)*object_size / kMaxMultipartCount);
     part_size = (size_t)std::ceil(psize / kMinPartSize) * kMinPartSize;
   }
 
-  if (static_cast<long>(part_size) > object_size) part_size = object_size;
-  part_count = static_cast<long>(
-      (part_size > 0) ? ((object_size + part_size - 1) / part_size) : 1);
-  if (part_count > kMaxMultipartCount) {
+  if (part_size > *object_size) part_size = *object_size;
+  part_count = static_cast<size_t>(
+      (part_size > 0) ? ((*object_size + part_size - 1) / part_size) : 1);
+  if (*part_count > kMaxMultipartCount) {
     return error::Error(
-        "object size " + std::to_string(object_size) + " and part size " +
+        "object size " + std::to_string(*object_size) + " and part size " +
         std::to_string(part_size) + " make more than " +
         std::to_string(kMaxMultipartCount) + "parts for upload");
   }
