@@ -25,12 +25,14 @@
 #include <curlpp/Multi.hpp>
 #include <curlpp/Options.hpp>
 #include <curlpp/cURLpp.hpp>
+#include <chrono>
 #include <exception>
 #include <functional>
 #include <iosfwd>
 #include <iostream>
 #include <list>
 #include <mutex>
+#include <thread>
 #include <ostream>
 #include <sstream>
 #include <stdexcept>
@@ -52,6 +54,12 @@
 namespace minio::http {
 
 namespace {
+
+// Abort a transfer that makes no progress for this long. Guards against a
+// connection that drops mid-transfer without a clean close (TCP never RSTs),
+// which would otherwise keep the request alive indefinitely.
+// ponytail: fixed default; promote to a Request field if callers need it tunable.
+constexpr long kStallTimeoutSecs = 60;
 
 // curl_global_init() is documented as not thread-safe and is expensive
 // (OpenSSL init etc). Run it exactly once per process via a function-local
@@ -403,6 +411,13 @@ Response Request::execute() {
   curl_easy_setopt(raw_handle, CURLOPT_SHARE, GlobalCurlShare());
   curl_easy_setopt(raw_handle, CURLOPT_TCP_KEEPALIVE, 1L);
 
+  // Fail a stalled transfer instead of hanging forever. Skipped when the caller
+  // set an explicit total timeout (RDMA control plane) — that already bounds it.
+  if (timeout_secs <= 0) {
+    curl_easy_setopt(raw_handle, CURLOPT_LOW_SPEED_LIMIT, 1L);
+    curl_easy_setopt(raw_handle, CURLOPT_LOW_SPEED_TIME, kStallTimeoutSecs);
+  }
+
   // Request settings.
   request.setOpt(new curlpp::options::CustomRequest{MethodToString(method)});
   std::string urlstring = url.String();
@@ -503,7 +518,7 @@ Response Request::execute() {
     fd_set fdread{};
     fd_set fdwrite{};
     fd_set fdexcep{};
-    int maxfd = 0;
+    int maxfd = -1;
 
     FD_ZERO(&fdread);
     FD_ZERO(&fdwrite);
@@ -511,9 +526,23 @@ Response Request::execute() {
 
     requests.fdset(&fdread, &fdwrite, &fdexcep, &maxfd);
 
-    if (select(maxfd + 1, &fdread, &fdwrite, &fdexcep, nullptr) < 0) {
-      std::cerr << "select() failed; this should not happen" << std::endl;
-      std::terminate();
+    // Bound the wait so the loop keeps pumping libcurl even when no socket ever
+    // becomes ready — otherwise a dropped/stalled connection blocks select()
+    // forever and this (synchronous) call hangs the calling thread. The bounded
+    // poll lets libcurl enforce its own timeouts (e.g. the low-speed limit set
+    // above) and abort the dead transfer.
+    if (maxfd < 0) {
+      // libcurl has no fd to wait on yet; select() with empty sets errors out on
+      // Windows, so just poll again shortly.
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    } else {
+      timeval timeout{};
+      timeout.tv_sec = 1;
+      timeout.tv_usec = 0;
+      if (select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &timeout) < 0) {
+        std::cerr << "select() failed; this should not happen" << std::endl;
+        std::terminate();
+      }
     }
     while (!requests.perform(&left)) {
     }
