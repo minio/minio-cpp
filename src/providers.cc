@@ -76,6 +76,7 @@ Provider::~Provider() {}
 ChainedProvider::~ChainedProvider() {}
 
 Credentials ChainedProvider::Fetch() {
+  std::lock_guard<std::mutex> lock(fetch_mutex_);
   if (err_) return Credentials{err_};
 
   if (creds_) return creds_;

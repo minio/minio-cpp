@@ -708,6 +708,78 @@ class Tests {
       throw;
     }
   }
+
+  void PutObjectWithInflight() {
+    std::cout << "PutObjectWithInflight()" << std::endl;
+    auto remove_object_best_effort = [this](const std::string& object_name) {
+      try {
+        RemoveObject(bucket_name_, object_name);
+      } catch (...) {
+        // Keep original failure context from upload/download/verification.
+      }
+    };
+
+    // Generate 100MB of random data.
+    const size_t data_size = 100 * 1024 * 1024;
+    std::string data;
+    data.reserve(data_size);
+    for (size_t i = 0; i < data_size; ++i) {
+      data += charset[pick(rg)];
+    }
+
+    std::string orig_md5 = minio::utils::Md5sumHash(data);
+
+    unsigned int inflight_values[] = {1, 2, 4};
+    for (auto max_inflight : inflight_values) {
+      std::string object_name = RandObjectName();
+      std::string label = "max_inflight_parts=" + std::to_string(max_inflight);
+
+      // Upload.
+      {
+        std::stringstream ss(data);
+        minio::s3::PutObjectArgs args(ss, static_cast<uint64_t>(data_size), 0);
+        args.bucket = bucket_name_;
+        args.object = object_name;
+        args.max_inflight_parts = max_inflight;
+
+        minio::s3::PutObjectResponse resp = client_.PutObject(args);
+        if (!resp) {
+          remove_object_best_effort(object_name);
+          throw std::runtime_error("PutObject(" + label +
+                                   "): " + resp.Error().String());
+        }
+      }
+
+      // Download and verify MD5.
+      try {
+        std::string content;
+        minio::s3::GetObjectArgs gargs;
+        gargs.bucket = bucket_name_;
+        gargs.object = object_name;
+        gargs.datafunc =
+            [&content](minio::http::DataFunctionArgs args) -> bool {
+          content += args.datachunk;
+          return true;
+        };
+
+        minio::s3::GetObjectResponse get_resp = client_.GetObject(gargs);
+        if (!get_resp) {
+          throw std::runtime_error("GetObject(" + label +
+                                   "): " + get_resp.Error().String());
+        }
+
+        std::string got_md5 = minio::utils::Md5sumHash(content);
+        if (orig_md5 != got_md5) {
+          throw std::runtime_error(label + ": MD5 mismatch");
+        }
+
+        RemoveObject(bucket_name_, object_name);
+      } catch (const std::runtime_error&) {
+        remove_object_best_effort(object_name);
+        throw;
+      }
+    }
+  }
 };  // class Tests
 
 int main(int /*argc*/, char* /*argv*/[]) {
@@ -760,6 +832,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
   tests.ListObjects();
   tests.ListObjects1010();
   tests.PutObject();
+  tests.PutObjectWithInflight();
   tests.CopyObject();
   tests.UploadObject();
   tests.RemoveObjects();

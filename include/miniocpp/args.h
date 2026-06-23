@@ -346,6 +346,7 @@ struct PutObjectArgs : public PutObjectBaseArgs {
   cuObjClient* rdmaclient = nullptr;
 #endif
   std::string checksum_crc64nvme;  // CRC64NVME checksum for multipart uploads
+  unsigned int max_inflight_parts = 1;  // Max concurrent UploadPart calls
 
   PutObjectArgs() = default;
   PutObjectArgs(std::istream& stream, std::optional<uint64_t> object_size,
