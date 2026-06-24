@@ -1024,9 +1024,8 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
   }
 
   // === Parallel multipart upload with bounded inflight ===
-  if (args.max_inflight_parts > 1) {
-    unsigned int max_inflight = args.max_inflight_parts;
-
+  unsigned int max_inflight = args.max_inflight_parts.value_or(1);
+  if (max_inflight > 1) {
     // Clamp to a reasonable maximum and to part_count to prevent memory
     // exhaustion from untrusted input.
     constexpr unsigned int kMaxInflightParts = 100;
