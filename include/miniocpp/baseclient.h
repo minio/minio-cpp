@@ -18,6 +18,7 @@
 #ifndef MINIO_CPP_BASECLIENT_H_INCLUDED
 #define MINIO_CPP_BASECLIENT_H_INCLUDED
 
+#include <future>
 #include <map>
 #include <shared_mutex>
 #include <string>
@@ -170,6 +171,99 @@ class BaseClient {
   StatObjectResponse StatObject(StatObjectArgs args);
   UploadPartResponse UploadPart(UploadPartArgs args);
   UploadPartCopyResponse UploadPartCopy(UploadPartCopyArgs args);
+
+  // Async overloads — return std::future<T> backed by std::async.
+  // These are additive and non-breaking; sync methods remain unchanged.
+  std::future<AbortMultipartUploadResponse> AbortMultipartUploadAsync(
+      AbortMultipartUploadArgs args);
+  std::future<BucketExistsResponse> BucketExistsAsync(BucketExistsArgs args);
+  std::future<CompleteMultipartUploadResponse> CompleteMultipartUploadAsync(
+      CompleteMultipartUploadArgs args);
+  std::future<CreateMultipartUploadResponse> CreateMultipartUploadAsync(
+      CreateMultipartUploadArgs args);
+  std::future<DeleteBucketEncryptionResponse> DeleteBucketEncryptionAsync(
+      DeleteBucketEncryptionArgs args);
+  std::future<DeleteBucketLifecycleResponse> DeleteBucketLifecycleAsync(
+      DeleteBucketLifecycleArgs args);
+  std::future<DeleteBucketNotificationResponse> DeleteBucketNotificationAsync(
+      DeleteBucketNotificationArgs args);
+  std::future<DeleteBucketPolicyResponse> DeleteBucketPolicyAsync(
+      DeleteBucketPolicyArgs args);
+  std::future<DeleteBucketReplicationResponse> DeleteBucketReplicationAsync(
+      DeleteBucketReplicationArgs args);
+  std::future<DeleteBucketTagsResponse> DeleteBucketTagsAsync(
+      DeleteBucketTagsArgs args);
+  std::future<DeleteObjectLockConfigResponse> DeleteObjectLockConfigAsync(
+      DeleteObjectLockConfigArgs args);
+  std::future<DeleteObjectTagsResponse> DeleteObjectTagsAsync(
+      DeleteObjectTagsArgs args);
+  std::future<DisableObjectLegalHoldResponse> DisableObjectLegalHoldAsync(
+      DisableObjectLegalHoldArgs args);
+  std::future<EnableObjectLegalHoldResponse> EnableObjectLegalHoldAsync(
+      EnableObjectLegalHoldArgs args);
+  std::future<GetBucketEncryptionResponse> GetBucketEncryptionAsync(
+      GetBucketEncryptionArgs args);
+  std::future<GetBucketLifecycleResponse> GetBucketLifecycleAsync(
+      GetBucketLifecycleArgs args);
+  std::future<GetBucketNotificationResponse> GetBucketNotificationAsync(
+      GetBucketNotificationArgs args);
+  std::future<GetBucketPolicyResponse> GetBucketPolicyAsync(
+      GetBucketPolicyArgs args);
+  std::future<GetBucketReplicationResponse> GetBucketReplicationAsync(
+      GetBucketReplicationArgs args);
+  std::future<GetBucketTagsResponse> GetBucketTagsAsync(GetBucketTagsArgs args);
+  std::future<GetBucketVersioningResponse> GetBucketVersioningAsync(
+      GetBucketVersioningArgs args);
+  std::future<GetObjectResponse> GetObjectAsync(GetObjectArgs args);
+  std::future<GetObjectLockConfigResponse> GetObjectLockConfigAsync(
+      GetObjectLockConfigArgs args);
+  std::future<GetObjectRetentionResponse> GetObjectRetentionAsync(
+      GetObjectRetentionArgs args);
+  std::future<GetObjectTagsResponse> GetObjectTagsAsync(GetObjectTagsArgs args);
+  std::future<GetPresignedObjectUrlResponse> GetPresignedObjectUrlAsync(
+      GetPresignedObjectUrlArgs args);
+  std::future<GetPresignedPostFormDataResponse> GetPresignedPostFormDataAsync(
+      PostPolicy policy);
+  std::future<IsObjectLegalHoldEnabledResponse> IsObjectLegalHoldEnabledAsync(
+      IsObjectLegalHoldEnabledArgs args);
+  std::future<ListBucketsResponse> ListBucketsAsync(ListBucketsArgs args);
+  std::future<ListBucketsResponse> ListBucketsAsync();
+  std::future<ListenBucketNotificationResponse> ListenBucketNotificationAsync(
+      ListenBucketNotificationArgs args);
+  std::future<ListObjectsResponse> ListObjectsV1Async(ListObjectsV1Args args);
+  std::future<ListObjectsResponse> ListObjectsV2Async(ListObjectsV2Args args);
+  std::future<ListObjectsResponse> ListObjectVersionsAsync(
+      ListObjectVersionsArgs args);
+  std::future<MakeBucketResponse> MakeBucketAsync(MakeBucketArgs args);
+  std::future<PutObjectResponse> PutObjectAsync(PutObjectApiArgs args);
+  std::future<RemoveBucketResponse> RemoveBucketAsync(RemoveBucketArgs args);
+  std::future<RemoveObjectResponse> RemoveObjectAsync(RemoveObjectArgs args);
+  std::future<RemoveObjectsResponse> RemoveObjectsAsync(
+      RemoveObjectsApiArgs args);
+  std::future<SelectObjectContentResponse> SelectObjectContentAsync(
+      SelectObjectContentArgs args);
+  std::future<SetBucketEncryptionResponse> SetBucketEncryptionAsync(
+      SetBucketEncryptionArgs args);
+  std::future<SetBucketLifecycleResponse> SetBucketLifecycleAsync(
+      SetBucketLifecycleArgs args);
+  std::future<SetBucketNotificationResponse> SetBucketNotificationAsync(
+      SetBucketNotificationArgs args);
+  std::future<SetBucketPolicyResponse> SetBucketPolicyAsync(
+      SetBucketPolicyArgs args);
+  std::future<SetBucketReplicationResponse> SetBucketReplicationAsync(
+      SetBucketReplicationArgs args);
+  std::future<SetBucketTagsResponse> SetBucketTagsAsync(SetBucketTagsArgs args);
+  std::future<SetBucketVersioningResponse> SetBucketVersioningAsync(
+      SetBucketVersioningArgs args);
+  std::future<SetObjectLockConfigResponse> SetObjectLockConfigAsync(
+      SetObjectLockConfigArgs args);
+  std::future<SetObjectRetentionResponse> SetObjectRetentionAsync(
+      SetObjectRetentionArgs args);
+  std::future<SetObjectTagsResponse> SetObjectTagsAsync(SetObjectTagsArgs args);
+  std::future<StatObjectResponse> StatObjectAsync(StatObjectArgs args);
+  std::future<UploadPartResponse> UploadPartAsync(UploadPartArgs args);
+  std::future<UploadPartCopyResponse> UploadPartCopyAsync(
+      UploadPartCopyArgs args);
 
   // Windows API fix:
   //
