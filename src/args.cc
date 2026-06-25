@@ -319,6 +319,9 @@ error::Error PutObjectArgs::Validate() {
     }
     if (!object_size.has_value()) object_size = static_cast<uint64_t>(*size);
   }
+  if (max_inflight_parts.has_value() && *max_inflight_parts == 0) {
+    return error::Error("max_inflight_parts must be greater than 0");
+  }
   return utils::CalcPartInfo(object_size, part_size, part_count);
 }
 

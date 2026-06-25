@@ -20,6 +20,7 @@
 
 #include <functional>
 #include <list>
+#include <mutex>
 #include <string>
 #include <type_traits>
 
@@ -75,6 +76,7 @@ class ChainedProvider : public Provider {
  private:
   std::list<Provider*> providers_;
   Provider* provider_ = nullptr;
+  std::mutex fetch_mutex_;
 
  public:
   explicit ChainedProvider(std::list<Provider*> providers)

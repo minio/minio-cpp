@@ -24,14 +24,17 @@
 #endif
 
 #include <curlpp/cURLpp.hpp>
+#include <deque>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <iostream>
 #include <list>
 #include <memory>
 #include <string>
 #include <system_error>
 #include <type_traits>
+#include <vector>
 
 #include "miniocpp/args.h"
 #include "miniocpp/baseclient.h"
@@ -74,6 +77,15 @@ struct AlignedBuffer {
   explicit AlignedBuffer(void* p) : ptr(p) {}
   AlignedBuffer(const AlignedBuffer&) = delete;
   AlignedBuffer& operator=(const AlignedBuffer&) = delete;
+  AlignedBuffer(AlignedBuffer&& o) noexcept : ptr(o.ptr) { o.ptr = nullptr; }
+  AlignedBuffer& operator=(AlignedBuffer&& o) noexcept {
+    if (this != &o) {
+      if (ptr) AlignedFree(ptr);
+      ptr = o.ptr;
+      o.ptr = nullptr;
+    }
+    return *this;
+  }
   ~AlignedBuffer() {
     if (ptr) AlignedFree(ptr);
   }
@@ -551,13 +563,10 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
   bool stop = false;
   std::list<Part> parts;
   std::optional<size_t> part_count = args.part_count;
-  double uploaded_bytes = 0;  // for progress
-  double upload_speed = -1;   // for progress
+  double uploaded_bytes = 0;           // for progress
+  std::optional<double> upload_speed;  // for progress
 
-  while (!stop) {
-    part_number++;
-
-    size_t bytes_read = 0;
+  auto read_part_data = [&](char* buf, size_t& bytes_read) -> error::Error {
     if (part_count.has_value()) {
       if (part_number == *part_count) {
         part_size = *object_size - uploaded_size;
@@ -566,14 +575,13 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
 
       if (error::Error err =
               utils::ReadPart(*args.stream, buf, part_size, bytes_read)) {
-        return PutObjectResponse(err);
+        return err;
       }
 
       if (bytes_read != part_size) {
-        return error::make<PutObjectResponse>(
-            "not enough data in the stream; expected: " +
-            std::to_string(part_size) + ", got: " + std::to_string(bytes_read) +
-            " bytes");
+        return error::Error("not enough data in the stream; expected: " +
+                            std::to_string(part_size) +
+                            ", got: " + std::to_string(bytes_read) + " bytes");
       }
     } else {
       char* b = buf;
@@ -589,7 +597,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
 
       size_t n = 0;
       if (error::Error err = utils::ReadPart(*args.stream, b, size, n)) {
-        return PutObjectResponse(err);
+        return err;
       }
 
       bytes_read += n;
@@ -601,8 +609,18 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
         part_size = bytes_read;
         stop = true;
       } else {
-        one_byte = buf[part_size + 1];
+        one_byte = buf[part_size];
       }
+    }
+    return error::Error();
+  };
+
+  while (!stop) {
+    part_number++;
+
+    size_t bytes_read = 0;
+    if (error::Error err = read_part_data(buf, bytes_read)) {
+      return PutObjectResponse(err);
     }
 
     std::string_view data(buf, part_size);
@@ -671,10 +689,10 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
            &progress_userdata = args.progress_userdata](
               http::ProgressFunctionArgs args) -> bool {
         if (args.upload_speed > 0) {
-          if (upload_speed == -1) {
+          if (!upload_speed.has_value()) {
             upload_speed = args.upload_speed;
           } else {
-            upload_speed = (upload_speed + args.upload_speed) / 2;
+            upload_speed = (*upload_speed + args.upload_speed) / 2.0;
           }
           return true;
         }
@@ -730,7 +748,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
   CompleteMultipartUploadResponse resp = CompleteMultipartUpload(cmu_args);
   if (resp && args.progressfunc != nullptr) {
     http::ProgressFunctionArgs actual_args;
-    actual_args.upload_speed = upload_speed;
+    actual_args.upload_speed = upload_speed.value_or(-1.0);
     actual_args.userdata = args.progress_userdata;
     // ignore the return value as we completed the upload
     args.progressfunc(actual_args);
@@ -1000,6 +1018,329 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
     return PutObject(http_args);
   }
 #endif
+
+  if (args.part_count.has_value() && *args.part_count == 1) {
+    args.max_inflight_parts = 1;
+  }
+
+  // === Parallel multipart upload with bounded inflight ===
+  unsigned int max_inflight = args.max_inflight_parts.value_or(1);
+  if (max_inflight > 1) {
+    // Clamp to a reasonable maximum and to part_count to prevent memory
+    // exhaustion from untrusted input.
+    constexpr unsigned int kMaxInflightParts = 100;
+    if (max_inflight > kMaxInflightParts) {
+      max_inflight = kMaxInflightParts;
+    }
+    if (args.part_count.has_value() && *args.part_count > 0 &&
+        static_cast<size_t>(max_inflight) > *args.part_count) {
+      max_inflight = static_cast<unsigned int>(*args.part_count);
+    }
+
+    size_t alloc_size =
+        (args.part_count > 0) ? args.part_size : (args.part_size + 1);
+
+    // Allocate pool of page-aligned buffers.
+    std::vector<AlignedBuffer> buf_pool;
+    for (unsigned int i = 0; i < max_inflight; i++) {
+      void* raw = nullptr;
+      if (AlignedAlloc(&raw, GetPageSize(), alloc_size)) {
+        return error::make<PutObjectResponse>(
+            "unable to allocate aligned buffer");
+      }
+      buf_pool.emplace_back(raw);
+    }
+
+#ifdef MINIO_CPP_RDMA
+    // Register each pool buffer for RDMA, indexed by buffer slot.
+    cuObjClient& rdma_client = SharedRDMAClient();
+    std::vector<ScopedRDMARegistration> rdma_regs(max_inflight);
+    bool rdma_connected = rdma_client.isConnected();
+    if (rdma_connected) {
+      for (unsigned int i = 0; i < max_inflight; i++) {
+        char* pool_buf = static_cast<char*>(buf_pool[i].ptr);
+        if (rdma_client.cuMemObjGetDescriptor(pool_buf, args.part_size) == 0) {
+          rdma_regs[i] = ScopedRDMARegistration(&rdma_client, pool_buf);
+        }
+      }
+    }
+#endif
+
+    utils::Multimap headers = args.Headers();
+    if (!headers.Contains("Content-Type")) {
+      if (args.content_type.empty()) {
+        headers.Add("Content-Type", "application/octet-stream");
+      } else {
+        headers.Add("Content-Type", args.content_type);
+      }
+    }
+
+    std::optional<uint64_t> object_size = args.object_size;
+    size_t part_size = args.part_size;
+    size_t uploaded_size = 0;
+    unsigned int part_number = 0;
+    std::string one_byte;
+    bool stop = false;
+    std::list<Part> parts;
+    std::optional<size_t> part_count = args.part_count;
+    std::string upload_id;
+    error::Error first_err;
+    double uploaded_bytes = 0;           // for progress
+    std::optional<double> upload_speed;  // for progress
+
+    struct InflightPart {
+      unsigned int part_number;
+      std::string checksum_crc64nvme;
+      size_t part_bytes;
+      std::future<UploadPartResponse> future;
+    };
+    std::deque<InflightPart> inflight;
+
+    unsigned int buf_idx = 0;
+
+    auto report_progress = [&](size_t part_bytes) -> bool {
+      if (args.progressfunc == nullptr) return true;
+      uploaded_bytes += static_cast<double>(part_bytes);
+      http::ProgressFunctionArgs actual_args;
+      actual_args.upload_total_bytes =
+          object_size ? static_cast<double>(*object_size) : -1.0;
+      actual_args.uploaded_bytes = uploaded_bytes;
+      actual_args.userdata = args.progress_userdata;
+      if (!args.progressfunc(actual_args)) {
+        first_err = error::Error("aborted by progress function");
+        return false;
+      }
+      return true;
+    };
+
+    auto read_part_data = [&](char* buf, size_t& bytes_read) -> error::Error {
+      if (part_count.has_value()) {
+        if (part_number == *part_count) {
+          part_size = *object_size - uploaded_size;
+          stop = true;
+        }
+
+        if (error::Error err =
+                utils::ReadPart(*args.stream, buf, part_size, bytes_read)) {
+          return err;
+        }
+
+        if (bytes_read != part_size) {
+          return error::Error("not enough data in the stream; expected: " +
+                              std::to_string(part_size) + ", got: " +
+                              std::to_string(bytes_read) + " bytes");
+        }
+      } else {
+        char* b = buf;
+        size_t size = part_size + 1;
+
+        if (!one_byte.empty()) {
+          buf[0] = one_byte.front();
+          b = buf + 1;
+          size--;
+          bytes_read = 1;
+          one_byte = "";
+        }
+
+        size_t n = 0;
+        if (error::Error err = utils::ReadPart(*args.stream, b, size, n)) {
+          return err;
+        }
+
+        bytes_read += n;
+
+        // If bytes read is less than or equals to part size, then we have
+        // reached last part.
+        if (bytes_read <= part_size) {
+          part_count = std::optional<size_t>(part_number);
+          part_size = bytes_read;
+          stop = true;
+        } else {
+          one_byte = buf[part_size];
+        }
+      }
+      return error::Error();
+    };
+
+    while (!stop && !first_err) {
+      part_number++;
+
+      // Wait for a slot before reusing the buffer at buf_idx.
+      if (inflight.size() >= max_inflight) {
+        InflightPart ip = std::move(inflight.front());
+        inflight.pop_front();
+        UploadPartResponse resp;
+        try {
+          resp = ip.future.get();
+        } catch (const std::exception& e) {
+          first_err =
+              error::Error(std::string("upload part failed: ") + e.what());
+          break;
+        }
+        if (!resp) {
+          first_err = resp.Error();
+          break;
+        }
+        parts.push_back(Part(ip.part_number, std::move(resp.etag),
+                             std::move(ip.checksum_crc64nvme)));
+        if (!report_progress(ip.part_bytes)) {
+          break;
+        }
+      }
+
+      char* buf = static_cast<char*>(buf_pool[buf_idx].ptr);
+      size_t bytes_read = 0;
+      if (error::Error err = read_part_data(buf, bytes_read)) {
+        first_err = err;
+        break;
+      }
+
+      uploaded_size += part_size;
+
+      // Single part discovered dynamically: use PutObject directly.
+      if (part_count.has_value() && *part_count == 1) {
+        PutObjectApiArgs api_args;
+        api_args.extra_query_params = args.extra_query_params;
+        api_args.bucket = args.bucket;
+        api_args.region = args.region;
+        api_args.object = args.object;
+        api_args.data = std::string_view(buf, part_size);
+        api_args.buf = buf;
+        api_args.size = part_size;
+        api_args.progressfunc = args.progressfunc;
+        api_args.progress_userdata = args.progress_userdata;
+        api_args.headers = headers;
+        return BaseClient::PutObject(api_args);
+      }
+
+      // Create multipart upload on first part.
+      if (upload_id.empty()) {
+        CreateMultipartUploadArgs cmu_args;
+        cmu_args.extra_query_params = args.extra_query_params;
+        cmu_args.bucket = args.bucket;
+        cmu_args.region = args.region;
+        cmu_args.object = args.object;
+        cmu_args.headers = headers;
+#ifdef MINIO_CPP_RDMA
+        cmu_args.headers.Add("x-amz-checksum-algorithm", "CRC64NVME");
+#endif
+        if (CreateMultipartUploadResponse resp =
+                CreateMultipartUpload(cmu_args)) {
+          upload_id = resp.upload_id;
+        } else {
+          first_err = resp.Error();
+          break;
+        }
+      }
+
+      // Build UploadPartArgs and dispatch via std::async.
+      UploadPartArgs up_args;
+      up_args.bucket = args.bucket;
+      up_args.region = args.region;
+      up_args.object = args.object;
+      up_args.upload_id = upload_id;
+      up_args.part_number = part_number;
+      up_args.data = std::string_view(buf, part_size);
+      up_args.buf = buf;
+      up_args.part_size = part_size;
+#ifdef MINIO_CPP_RDMA
+      if (rdma_regs[buf_idx].client != nullptr) {
+        up_args.rdmaclient = &rdma_client;
+      }
+      if (buf != nullptr &&
+          cuObjClient::getMemoryType(buf) == CUOBJ_MEMORY_SYSTEM) {
+        const std::string crc = utils::Crc64NvmeBase64(buf, part_size);
+        up_args.checksum_crc64nvme = crc;
+        up_args.headers.Add("x-amz-checksum-crc64nvme", crc);
+      }
+#endif
+      if (headers.Contains("x-amz-content-sha256")) {
+        up_args.headers.Add("x-amz-content-sha256",
+                            headers.GetFront("x-amz-content-sha256"));
+      }
+      if (args.sse != nullptr) {
+        if (SseCustomerKey* ssec = dynamic_cast<SseCustomerKey*>(args.sse)) {
+          up_args.headers.AddAll(ssec->Headers());
+        }
+      }
+
+      InflightPart ip;
+      ip.part_number = part_number;
+      ip.checksum_crc64nvme = up_args.checksum_crc64nvme;
+      ip.part_bytes = part_size;
+      try {
+        ip.future = std::async(std::launch::async, [this, up_args]() {
+          return UploadPart(up_args);
+        });
+      } catch (const std::system_error& e) {
+        first_err =
+            error::Error(std::string("unable to create thread: ") + e.what());
+        break;
+      }
+      inflight.push_back(std::move(ip));
+
+      buf_idx = (buf_idx + 1) % max_inflight;
+    }
+
+    // Drain all inflight parts.
+    while (!inflight.empty()) {
+      InflightPart ip = std::move(inflight.front());
+      inflight.pop_front();
+      UploadPartResponse resp;
+      try {
+        resp = ip.future.get();
+      } catch (const std::exception& e) {
+        if (!first_err)
+          first_err =
+              error::Error(std::string("upload part failed: ") + e.what());
+        continue;
+      }
+      if (!resp) {
+        if (!first_err) first_err = resp.Error();
+        continue;
+      }
+      parts.push_back(Part(ip.part_number, std::move(resp.etag),
+                           std::move(ip.checksum_crc64nvme)));
+      if (!first_err) report_progress(ip.part_bytes);
+    }
+
+    if (first_err) {
+      if (!upload_id.empty()) {
+        AbortMultipartUploadArgs amu_args;
+        amu_args.bucket = std::move(args.bucket);
+        amu_args.region = std::move(args.region);
+        amu_args.object = std::move(args.object);
+        amu_args.upload_id = upload_id;
+        AbortMultipartUpload(amu_args);
+      }
+      return PutObjectResponse(first_err);
+    }
+
+    // Complete multipart upload.
+    CompleteMultipartUploadArgs cmu_args;
+    cmu_args.bucket = args.bucket;
+    cmu_args.region = args.region;
+    cmu_args.object = args.object;
+    cmu_args.upload_id = upload_id;
+    cmu_args.parts = parts;
+    CompleteMultipartUploadResponse cmu_resp =
+        CompleteMultipartUpload(cmu_args);
+    if (cmu_resp && args.progressfunc != nullptr) {
+      http::ProgressFunctionArgs actual_args;
+      actual_args.upload_speed = upload_speed.value_or(-1.0);
+      actual_args.userdata = args.progress_userdata;
+      args.progressfunc(actual_args);
+    }
+    if (!cmu_resp && !upload_id.empty()) {
+      AbortMultipartUploadArgs amu_args;
+      amu_args.bucket = std::move(args.bucket);
+      amu_args.region = std::move(args.region);
+      amu_args.object = std::move(args.object);
+      amu_args.upload_id = upload_id;
+      AbortMultipartUpload(amu_args);
+    }
+    return PutObjectResponse(cmu_resp);
+  }
 
   void* raw = nullptr;
   if (AlignedAlloc(
