@@ -337,6 +337,9 @@ struct PutObjectArgs : public PutObjectBaseArgs {
   // Exactly one of (stream, buf) must be set; Validate() enforces.
   // When buf is set, the call attempts RDMA and falls back to a
   // streaming HTTP upload from the same buffer on RDMA decline.
+  //
+  // For async callers (PutObjectAsync): *stream must outlive the
+  // returned std::future, exactly as it must for sync PutObject.
   std::istream* stream = nullptr;
   char* buf = nullptr;
   std::optional<size_t> size;

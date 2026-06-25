@@ -1290,8 +1290,7 @@ class Tests {
 
         if (!r1 || !r2 || !r3) {
           cleanup(b1, b2, b3);
-          throw std::runtime_error(
-              "concurrent MakeBucketAsync(): one failed");
+          throw std::runtime_error("concurrent MakeBucketAsync(): one failed");
         }
 
         minio::s3::BucketExistsArgs be1, be2, be3;
@@ -1400,8 +1399,7 @@ class Tests {
         minio::s3::NotificationConfig notif_config;
         minio::s3::SetBucketNotificationArgs notif_args(notif_config);
         notif_args.bucket = bucket_name;
-        notif_fut =
-            client_.SetBucketNotificationAsync(std::move(notif_args));
+        notif_fut = client_.SetBucketNotificationAsync(std::move(notif_args));
         // notif_config and notif_args go out of scope here.
       }
 

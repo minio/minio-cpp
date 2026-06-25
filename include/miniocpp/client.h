@@ -141,6 +141,10 @@ class Client : public BaseClient {
   RemoveObjectsResult RemoveObjects(RemoveObjectsArgs args);
 
   // Async overloads — return std::future<T> backed by std::async.
+  //
+  // Lifetime note for PutObjectAsync: the caller must ensure
+  // args.stream (if set) outlives the returned std::future<T>,
+  // exactly as it must for the synchronous PutObject call.
   std::future<ComposeObjectResponse> ComposeObjectAsync(ComposeObjectArgs args);
   std::future<CopyObjectResponse> CopyObjectAsync(CopyObjectArgs args);
   std::future<DownloadObjectResponse> DownloadObjectAsync(
