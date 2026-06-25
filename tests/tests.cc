@@ -1246,12 +1246,10 @@ class Tests {
       args.object = "__nonexistent_object_async_test__";
       auto fut = client_.StatObjectAsync(std::move(args));
       minio::s3::StatObjectResponse resp = fut.get();
-      // Must fail — object does not exist.
       if (resp) {
         throw std::runtime_error(
             "StatObjectAsync() on nonexistent object: expected failure");
       }
-      // Error must carry a valid code from the server.
       if (resp.Error().String().empty()) {
         throw std::runtime_error(
             "StatObjectAsync() on nonexistent object: expected error message");
@@ -1260,7 +1258,6 @@ class Tests {
 
     // --- Concurrency: start multiple async ops before any get() ---
     {
-      // Create three independent temp buckets asynchronously.
       std::string b1 = RandBucketName();
       std::string b2 = RandBucketName();
       std::string b3 = RandBucketName();
@@ -1274,39 +1271,46 @@ class Tests {
       auto f2 = client_.MakeBucketAsync(std::move(a2));
       auto f3 = client_.MakeBucketAsync(std::move(a3));
 
-      // Now collect all results.
-      auto r1 = f1.get();
-      auto r2 = f2.get();
-      auto r3 = f3.get();
-
-      if (!r1 || !r2 || !r3) {
-        throw std::runtime_error("concurrent MakeBucketAsync(): one failed");
-      }
-
-      // Verify they all exist.
-      minio::s3::BucketExistsArgs be1, be2, be3;
-      be1.bucket = b1;
-      be2.bucket = b2;
-      be3.bucket = b3;
-      auto fe1 = client_.BucketExistsAsync(std::move(be1));
-      auto fe2 = client_.BucketExistsAsync(std::move(be2));
-      auto fe3 = client_.BucketExistsAsync(std::move(be3));
-      if (!fe1.get().exist || !fe2.get().exist || !fe3.get().exist) {
-        throw std::runtime_error(
-            "concurrent BucketExistsAsync(): expected true");
-      }
-
-      // Clean up.
-      auto clean = [this](const std::string& b) {
-        minio::s3::RemoveBucketArgs args;
-        args.bucket = b;
-        client_.RemoveBucket(args);
+      auto cleanup = [this](const std::string& b1, const std::string& b2,
+                            const std::string& b3) {
+        for (auto& b : {b1, b2, b3}) {
+          try {
+            minio::s3::RemoveBucketArgs args;
+            args.bucket = b;
+            client_.RemoveBucket(args);
+          } catch (...) {
+          }
+        }
       };
+
       try {
-        clean(b1);
-        clean(b2);
-        clean(b3);
+        auto r1 = f1.get();
+        auto r2 = f2.get();
+        auto r3 = f3.get();
+
+        if (!r1 || !r2 || !r3) {
+          cleanup(b1, b2, b3);
+          throw std::runtime_error(
+              "concurrent MakeBucketAsync(): one failed");
+        }
+
+        minio::s3::BucketExistsArgs be1, be2, be3;
+        be1.bucket = b1;
+        be2.bucket = b2;
+        be3.bucket = b3;
+        auto fe1 = client_.BucketExistsAsync(std::move(be1));
+        auto fe2 = client_.BucketExistsAsync(std::move(be2));
+        auto fe3 = client_.BucketExistsAsync(std::move(be3));
+        if (!fe1.get().exist || !fe2.get().exist || !fe3.get().exist) {
+          cleanup(b1, b2, b3);
+          throw std::runtime_error(
+              "concurrent BucketExistsAsync(): expected true");
+        }
+
+        cleanup(b1, b2, b3);
       } catch (...) {
+        cleanup(b1, b2, b3);
+        throw;
       }
     }
 
@@ -1322,15 +1326,17 @@ class Tests {
         }
       }
 
-      // SseConfig lives in caller's stack — async must own a copy.
-      minio::s3::SseConfig sse_config = minio::s3::SseConfig::S3();
-      minio::s3::SetBucketEncryptionArgs enc_args(sse_config);
-      enc_args.bucket = bucket_name;
+      std::future<minio::s3::SetBucketEncryptionResponse> enc_fut;
+      {
+        // SseConfig lives only in this scope; async must own a copy.
+        minio::s3::SseConfig sse_config = minio::s3::SseConfig::S3();
+        minio::s3::SetBucketEncryptionArgs enc_args(sse_config);
+        enc_args.bucket = bucket_name;
+        enc_fut = client_.SetBucketEncryptionAsync(std::move(enc_args));
+        // sse_config and enc_args go out of scope here.
+      }
 
-      auto enc_fut = client_.SetBucketEncryptionAsync(std::move(enc_args));
       minio::s3::SetBucketEncryptionResponse enc_resp = enc_fut.get();
-      // If the server supports encryption, this should succeed.
-      // Some test servers may not; treat any failure as non-fatal.
       if (!enc_resp) {
         std::cout << "  SetBucketEncryptionAsync skipped: "
                   << enc_resp.Error().String() << std::endl;
@@ -1355,11 +1361,15 @@ class Tests {
         }
       }
 
-      minio::s3::LifecycleConfig lc_config;
-      minio::s3::SetBucketLifecycleArgs lc_args(lc_config);
-      lc_args.bucket = bucket_name;
+      std::future<minio::s3::SetBucketLifecycleResponse> lc_fut;
+      {
+        minio::s3::LifecycleConfig lc_config;
+        minio::s3::SetBucketLifecycleArgs lc_args(lc_config);
+        lc_args.bucket = bucket_name;
+        lc_fut = client_.SetBucketLifecycleAsync(std::move(lc_args));
+        // lc_config and lc_args go out of scope here.
+      }
 
-      auto lc_fut = client_.SetBucketLifecycleAsync(std::move(lc_args));
       minio::s3::SetBucketLifecycleResponse lc_resp = lc_fut.get();
       if (!lc_resp) {
         std::cout << "  SetBucketLifecycleAsync skipped: "
@@ -1385,12 +1395,16 @@ class Tests {
         }
       }
 
-      minio::s3::NotificationConfig notif_config;
-      minio::s3::SetBucketNotificationArgs notif_args(notif_config);
-      notif_args.bucket = bucket_name;
+      std::future<minio::s3::SetBucketNotificationResponse> notif_fut;
+      {
+        minio::s3::NotificationConfig notif_config;
+        minio::s3::SetBucketNotificationArgs notif_args(notif_config);
+        notif_args.bucket = bucket_name;
+        notif_fut =
+            client_.SetBucketNotificationAsync(std::move(notif_args));
+        // notif_config and notif_args go out of scope here.
+      }
 
-      auto notif_fut =
-          client_.SetBucketNotificationAsync(std::move(notif_args));
       minio::s3::SetBucketNotificationResponse notif_resp = notif_fut.get();
       if (!notif_resp) {
         std::cout << "  SetBucketNotificationAsync skipped: "
@@ -1416,11 +1430,15 @@ class Tests {
         }
       }
 
-      minio::s3::ReplicationConfig repl_config;
-      minio::s3::SetBucketReplicationArgs repl_args(repl_config);
-      repl_args.bucket = bucket_name;
+      std::future<minio::s3::SetBucketReplicationResponse> repl_fut;
+      {
+        minio::s3::ReplicationConfig repl_config;
+        minio::s3::SetBucketReplicationArgs repl_args(repl_config);
+        repl_args.bucket = bucket_name;
+        repl_fut = client_.SetBucketReplicationAsync(std::move(repl_args));
+        // repl_config and repl_args go out of scope here.
+      }
 
-      auto repl_fut = client_.SetBucketReplicationAsync(std::move(repl_args));
       minio::s3::SetBucketReplicationResponse repl_resp = repl_fut.get();
       if (!repl_resp) {
         std::cout << "  SetBucketReplicationAsync skipped: "
@@ -1452,30 +1470,33 @@ class Tests {
         }
       }
 
-      std::string expression = "select * from S3Object";
-      minio::s3::CsvInputSerialization csv_input;
-      minio::s3::FileHeaderInfo file_header_info =
-          minio::s3::FileHeaderInfo::kUse;
-      csv_input.file_header_info = &file_header_info;
-      minio::s3::CsvOutputSerialization csv_output;
-      minio::s3::QuoteFields quote_fields = minio::s3::QuoteFields::kAsNeeded;
-      csv_output.quote_fields = &quote_fields;
-
-      // SelectRequest and serialization objects live in caller's stack.
-      // SelectObjectContentAsync must own copies to avoid dangling.
-      minio::s3::SelectRequest request(expression, &csv_input, &csv_output);
+      std::future<minio::s3::SelectObjectContentResponse> sel_fut;
       std::string records;
-      auto func = [&records](minio::s3::SelectResult result) -> bool {
-        if (result.err) return false;
-        records += result.records;
-        return true;
-      };
+      {
+        std::string expression = "select * from S3Object";
+        minio::s3::CsvInputSerialization csv_input;
+        minio::s3::FileHeaderInfo file_header_info =
+            minio::s3::FileHeaderInfo::kUse;
+        csv_input.file_header_info = &file_header_info;
+        minio::s3::CsvOutputSerialization csv_output;
+        minio::s3::QuoteFields quote_fields = minio::s3::QuoteFields::kAsNeeded;
+        csv_output.quote_fields = &quote_fields;
 
-      minio::s3::SelectObjectContentArgs sel_args(request, func);
-      sel_args.bucket = bucket_name_;
-      sel_args.object = object_name;
+        minio::s3::SelectRequest request(expression, &csv_input, &csv_output);
+        auto func = [&records](minio::s3::SelectResult result) -> bool {
+          if (result.err) return false;
+          records += result.records;
+          return true;
+        };
 
-      auto sel_fut = client_.SelectObjectContentAsync(std::move(sel_args));
+        minio::s3::SelectObjectContentArgs sel_args(request, func);
+        sel_args.bucket = bucket_name_;
+        sel_args.object = object_name;
+
+        sel_fut = client_.SelectObjectContentAsync(std::move(sel_args));
+        // csv_input, csv_output, request, etc. go out of scope here.
+      }
+
       minio::s3::SelectObjectContentResponse sel_resp = sel_fut.get();
       if (!sel_resp && sel_resp.code == "MethodNotAllowed") {
         std::cout << "  SelectObjectContentAsync skipped: server does not "

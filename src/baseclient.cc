@@ -1374,6 +1374,7 @@ MakeBucketResponse BaseClient::MakeBucket(MakeBucketArgs args) {
 
   Response resp = Execute(req);
   if (resp) {
+    std::unique_lock<std::shared_mutex> lock(region_map_mutex_);
     region_map_[args.bucket] = region;
   }
   return MakeBucketResponse(resp);
@@ -2365,14 +2366,84 @@ std::future<SelectObjectContentResponse> BaseClient::SelectObjectContentAsync(
     SelectObjectContentArgs args) {
   auto owned_request = std::make_shared<SelectRequest>(args.request);
   auto owned_func = std::move(args.resultfunc);
+
+  // Deep-copy serialization objects that SelectRequest points to.
+  auto owned_csv_input = owned_request->csv_input
+      ? std::make_shared<CsvInputSerialization>(*owned_request->csv_input)
+      : nullptr;
+  auto owned_json_input = owned_request->json_input
+      ? std::make_shared<JsonInputSerialization>(*owned_request->json_input)
+      : nullptr;
+  auto owned_parquet_input = owned_request->parquet_input
+      ? std::make_shared<ParquetInputSerialization>(
+            *owned_request->parquet_input)
+      : nullptr;
+  auto owned_csv_output = owned_request->csv_output
+      ? std::make_shared<CsvOutputSerialization>(*owned_request->csv_output)
+      : nullptr;
+  auto owned_json_output = owned_request->json_output
+      ? std::make_shared<JsonOutputSerialization>(*owned_request->json_output)
+      : nullptr;
+
+  // Deep-copy inner pointees within serialization objects.
+  auto owned_file_header_info =
+      owned_csv_input && owned_csv_input->file_header_info
+          ? std::make_shared<FileHeaderInfo>(
+                *owned_csv_input->file_header_info)
+          : nullptr;
+  auto owned_csv_compression =
+      owned_csv_input && owned_csv_input->compression_type
+          ? std::make_shared<CompressionType>(
+                *owned_csv_input->compression_type)
+          : nullptr;
+  auto owned_quote_fields = owned_csv_output && owned_csv_output->quote_fields
+      ? std::make_shared<QuoteFields>(*owned_csv_output->quote_fields)
+      : nullptr;
+  auto owned_json_type = owned_json_input && owned_json_input->json_type
+      ? std::make_shared<JsonType>(*owned_json_input->json_type)
+      : nullptr;
+  auto owned_json_compression =
+      owned_json_input && owned_json_input->compression_type
+          ? std::make_shared<CompressionType>(
+                *owned_json_input->compression_type)
+          : nullptr;
+
   return std::async(
       std::launch::async,
-      [this, owned_request, owned_func = std::move(owned_func),
+      [this, owned_request, owned_func = std::move(owned_func), owned_csv_input,
+       owned_json_input, owned_parquet_input, owned_csv_output,
+       owned_json_output, owned_file_header_info, owned_csv_compression,
+       owned_quote_fields, owned_json_type, owned_json_compression,
        bucket = std::move(args.bucket), region = std::move(args.region),
        object = std::move(args.object), version_id = std::move(args.version_id),
        ssec = args.ssec, extra_headers = std::move(args.extra_headers),
        extra_query_params = std::move(args.extra_query_params)]() mutable {
-        SelectObjectContentArgs new_args(*owned_request, std::move(owned_func));
+        // Patch serialization pointers to owned copies.
+        if (owned_csv_input)
+          owned_request->csv_input = owned_csv_input.get();
+        if (owned_json_input)
+          owned_request->json_input = owned_json_input.get();
+        if (owned_parquet_input)
+          owned_request->parquet_input = owned_parquet_input.get();
+        if (owned_csv_output)
+          owned_request->csv_output = owned_csv_output.get();
+        if (owned_json_output)
+          owned_request->json_output = owned_json_output.get();
+
+        // Patch inner pointers within serialization objects.
+        if (owned_file_header_info && owned_csv_input)
+          owned_csv_input->file_header_info = owned_file_header_info.get();
+        if (owned_csv_compression && owned_csv_input)
+          owned_csv_input->compression_type = owned_csv_compression.get();
+        if (owned_quote_fields && owned_csv_output)
+          owned_csv_output->quote_fields = owned_quote_fields.get();
+        if (owned_json_type && owned_json_input)
+          owned_json_input->json_type = owned_json_type.get();
+        if (owned_json_compression && owned_json_input)
+          owned_json_input->compression_type = owned_json_compression.get();
+
+        SelectObjectContentArgs new_args(*owned_request,
+                                         std::move(owned_func));
         new_args.bucket = std::move(bucket);
         new_args.region = std::move(region);
         new_args.object = std::move(object);
