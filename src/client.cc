@@ -1433,47 +1433,54 @@ RemoveObjectsResult Client::RemoveObjects(RemoveObjectsArgs args) {
 
 std::future<ComposeObjectResponse> Client::ComposeObjectAsync(
     ComposeObjectArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return ComposeObject(std::move(args));
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return ComposeObject(std::move(args));
+                    });
 }
 
 std::future<CopyObjectResponse> Client::CopyObjectAsync(CopyObjectArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return CopyObject(std::move(args));
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return CopyObject(std::move(args));
+                    });
 }
 
 std::future<DownloadObjectResponse> Client::DownloadObjectAsync(
     DownloadObjectArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return DownloadObject(std::move(args));
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return DownloadObject(std::move(args));
+                    });
 }
 
 std::future<GetObjectResponse> Client::GetObjectAsync(GetObjectArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return Client::GetObject(std::move(args));
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return Client::GetObject(std::move(args));
+                    });
 }
 
 std::future<ListObjectsResult> Client::ListObjectsAsync(ListObjectsArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return ListObjects(std::move(args));
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return ListObjects(std::move(args));
+                    });
 }
 
 std::future<PutObjectResponse> Client::PutObjectAsync(PutObjectArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return PutObject(std::move(args));
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return PutObject(std::move(args));
+                    });
 }
 
 std::future<UploadObjectResponse> Client::UploadObjectAsync(
     UploadObjectArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return UploadObject(std::move(args));
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return UploadObject(std::move(args));
+                    });
 }
 
 }  // namespace minio::s3

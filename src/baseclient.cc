@@ -2054,183 +2054,209 @@ UploadPartCopyResponse BaseClient::UploadPartCopy(UploadPartCopyArgs args) {
 
 std::future<AbortMultipartUploadResponse> BaseClient::AbortMultipartUploadAsync(
     AbortMultipartUploadArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return AbortMultipartUpload(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return AbortMultipartUpload(std::move(args));
+                    });
 }
 
 std::future<BucketExistsResponse> BaseClient::BucketExistsAsync(
     BucketExistsArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return BucketExists(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return BucketExists(std::move(args));
+                    });
 }
 
 std::future<CompleteMultipartUploadResponse>
 BaseClient::CompleteMultipartUploadAsync(CompleteMultipartUploadArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return CompleteMultipartUpload(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return CompleteMultipartUpload(std::move(args));
+                    });
 }
 
 std::future<CreateMultipartUploadResponse>
 BaseClient::CreateMultipartUploadAsync(CreateMultipartUploadArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return CreateMultipartUpload(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return CreateMultipartUpload(std::move(args));
+                    });
 }
 
 std::future<DeleteBucketEncryptionResponse>
 BaseClient::DeleteBucketEncryptionAsync(DeleteBucketEncryptionArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return DeleteBucketEncryption(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return DeleteBucketEncryption(std::move(args));
+                    });
 }
 
 std::future<DeleteBucketLifecycleResponse>
 BaseClient::DeleteBucketLifecycleAsync(DeleteBucketLifecycleArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return DeleteBucketLifecycle(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return DeleteBucketLifecycle(std::move(args));
+                    });
 }
 
 std::future<DeleteBucketNotificationResponse>
 BaseClient::DeleteBucketNotificationAsync(DeleteBucketNotificationArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return DeleteBucketNotification(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return DeleteBucketNotification(std::move(args));
+                    });
 }
 
 std::future<DeleteBucketPolicyResponse> BaseClient::DeleteBucketPolicyAsync(
     DeleteBucketPolicyArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return DeleteBucketPolicy(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return DeleteBucketPolicy(std::move(args));
+                    });
 }
 
 std::future<DeleteBucketReplicationResponse>
 BaseClient::DeleteBucketReplicationAsync(DeleteBucketReplicationArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return DeleteBucketReplication(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return DeleteBucketReplication(std::move(args));
+                    });
 }
 
 std::future<DeleteBucketTagsResponse> BaseClient::DeleteBucketTagsAsync(
     DeleteBucketTagsArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return DeleteBucketTags(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return DeleteBucketTags(std::move(args));
+                    });
 }
 
 std::future<DeleteObjectLockConfigResponse>
 BaseClient::DeleteObjectLockConfigAsync(DeleteObjectLockConfigArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return DeleteObjectLockConfig(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return DeleteObjectLockConfig(std::move(args));
+                    });
 }
 
 std::future<DeleteObjectTagsResponse> BaseClient::DeleteObjectTagsAsync(
     DeleteObjectTagsArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return DeleteObjectTags(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return DeleteObjectTags(std::move(args));
+                    });
 }
 
 std::future<DisableObjectLegalHoldResponse>
 BaseClient::DisableObjectLegalHoldAsync(DisableObjectLegalHoldArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return DisableObjectLegalHold(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return DisableObjectLegalHold(std::move(args));
+                    });
 }
 
 std::future<EnableObjectLegalHoldResponse>
 BaseClient::EnableObjectLegalHoldAsync(EnableObjectLegalHoldArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return EnableObjectLegalHold(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return EnableObjectLegalHold(std::move(args));
+                    });
 }
 
 std::future<GetBucketEncryptionResponse> BaseClient::GetBucketEncryptionAsync(
     GetBucketEncryptionArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return GetBucketEncryption(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return GetBucketEncryption(std::move(args));
+                    });
 }
 
 std::future<GetBucketLifecycleResponse> BaseClient::GetBucketLifecycleAsync(
     GetBucketLifecycleArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return GetBucketLifecycle(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return GetBucketLifecycle(std::move(args));
+                    });
 }
 
 std::future<GetBucketNotificationResponse>
 BaseClient::GetBucketNotificationAsync(GetBucketNotificationArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return GetBucketNotification(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return GetBucketNotification(std::move(args));
+                    });
 }
 
 std::future<GetBucketPolicyResponse> BaseClient::GetBucketPolicyAsync(
     GetBucketPolicyArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return GetBucketPolicy(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return GetBucketPolicy(std::move(args));
+                    });
 }
 
 std::future<GetBucketReplicationResponse> BaseClient::GetBucketReplicationAsync(
     GetBucketReplicationArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return GetBucketReplication(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return GetBucketReplication(std::move(args));
+                    });
 }
 
 std::future<GetBucketTagsResponse> BaseClient::GetBucketTagsAsync(
     GetBucketTagsArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return GetBucketTags(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return GetBucketTags(std::move(args));
+                    });
 }
 
 std::future<GetBucketVersioningResponse> BaseClient::GetBucketVersioningAsync(
     GetBucketVersioningArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return GetBucketVersioning(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return GetBucketVersioning(std::move(args));
+                    });
 }
 
 std::future<GetObjectResponse> BaseClient::GetObjectAsync(GetObjectArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return GetObject(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return GetObject(std::move(args));
+                    });
 }
 
 std::future<GetObjectLockConfigResponse> BaseClient::GetObjectLockConfigAsync(
     GetObjectLockConfigArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return GetObjectLockConfig(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return GetObjectLockConfig(std::move(args));
+                    });
 }
 
 std::future<GetObjectRetentionResponse> BaseClient::GetObjectRetentionAsync(
     GetObjectRetentionArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return GetObjectRetention(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return GetObjectRetention(std::move(args));
+                    });
 }
 
 std::future<GetObjectTagsResponse> BaseClient::GetObjectTagsAsync(
     GetObjectTagsArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return GetObjectTags(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return GetObjectTags(std::move(args));
+                    });
 }
 
 std::future<GetPresignedObjectUrlResponse>
 BaseClient::GetPresignedObjectUrlAsync(GetPresignedObjectUrlArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return GetPresignedObjectUrl(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return GetPresignedObjectUrl(std::move(args));
+                    });
 }
 
 std::future<GetPresignedPostFormDataResponse>
@@ -2243,16 +2269,18 @@ BaseClient::GetPresignedPostFormDataAsync(PostPolicy policy) {
 
 std::future<IsObjectLegalHoldEnabledResponse>
 BaseClient::IsObjectLegalHoldEnabledAsync(IsObjectLegalHoldEnabledArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return IsObjectLegalHoldEnabled(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return IsObjectLegalHoldEnabled(std::move(args));
+                    });
 }
 
 std::future<ListBucketsResponse> BaseClient::ListBucketsAsync(
     ListBucketsArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return ListBuckets(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return ListBuckets(std::move(args));
+                    });
 }
 
 std::future<ListBucketsResponse> BaseClient::ListBucketsAsync() {
@@ -2261,163 +2289,249 @@ std::future<ListBucketsResponse> BaseClient::ListBucketsAsync() {
 
 std::future<ListenBucketNotificationResponse>
 BaseClient::ListenBucketNotificationAsync(ListenBucketNotificationArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return ListenBucketNotification(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return ListenBucketNotification(std::move(args));
+                    });
 }
 
 std::future<ListObjectsResponse> BaseClient::ListObjectsV1Async(
     ListObjectsV1Args args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return ListObjectsV1(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return ListObjectsV1(std::move(args));
+                    });
 }
 
 std::future<ListObjectsResponse> BaseClient::ListObjectsV2Async(
     ListObjectsV2Args args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return ListObjectsV2(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return ListObjectsV2(std::move(args));
+                    });
 }
 
 std::future<ListObjectsResponse> BaseClient::ListObjectVersionsAsync(
     ListObjectVersionsArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return ListObjectVersions(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return ListObjectVersions(std::move(args));
+                    });
 }
 
 std::future<MakeBucketResponse> BaseClient::MakeBucketAsync(
     MakeBucketArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return MakeBucket(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return MakeBucket(std::move(args));
+                    });
 }
 
 std::future<PutObjectResponse> BaseClient::PutObjectAsync(
     PutObjectApiArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return BaseClient::PutObject(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return BaseClient::PutObject(std::move(args));
+                    });
 }
 
 std::future<RemoveBucketResponse> BaseClient::RemoveBucketAsync(
     RemoveBucketArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return RemoveBucket(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return RemoveBucket(std::move(args));
+                    });
 }
 
 std::future<RemoveObjectResponse> BaseClient::RemoveObjectAsync(
     RemoveObjectArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return RemoveObject(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return RemoveObject(std::move(args));
+                    });
 }
 
 std::future<RemoveObjectsResponse> BaseClient::RemoveObjectsAsync(
     RemoveObjectsApiArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return BaseClient::RemoveObjects(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return BaseClient::RemoveObjects(std::move(args));
+                    });
 }
 
+// Reference-holding arg: SelectObjectContentArgs has SelectRequest& request.
+// Capture owned copy of the request so the async lambda doesn't dangle.
 std::future<SelectObjectContentResponse> BaseClient::SelectObjectContentAsync(
     SelectObjectContentArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return SelectObjectContent(args);
-  });
+  auto owned_request = std::make_shared<SelectRequest>(args.request);
+  auto owned_func = std::move(args.resultfunc);
+  return std::async(
+      std::launch::async,
+      [this, owned_request, owned_func = std::move(owned_func),
+       bucket = std::move(args.bucket), region = std::move(args.region),
+       object = std::move(args.object), version_id = std::move(args.version_id),
+       ssec = args.ssec, extra_headers = std::move(args.extra_headers),
+       extra_query_params = std::move(args.extra_query_params)]() mutable {
+        SelectObjectContentArgs new_args(*owned_request, std::move(owned_func));
+        new_args.bucket = std::move(bucket);
+        new_args.region = std::move(region);
+        new_args.object = std::move(object);
+        new_args.version_id = std::move(version_id);
+        new_args.ssec = ssec;
+        new_args.extra_headers = std::move(extra_headers);
+        new_args.extra_query_params = std::move(extra_query_params);
+        return SelectObjectContent(std::move(new_args));
+      });
 }
 
+// Reference-holding arg: SetBucketEncryptionArgs has SseConfig& config.
 std::future<SetBucketEncryptionResponse> BaseClient::SetBucketEncryptionAsync(
     SetBucketEncryptionArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return SetBucketEncryption(args);
-  });
+  auto owned_config = std::make_shared<SseConfig>(args.config);
+  return std::async(
+      std::launch::async,
+      [this, owned_config, bucket = std::move(args.bucket),
+       region = std::move(args.region),
+       extra_headers = std::move(args.extra_headers),
+       extra_query_params = std::move(args.extra_query_params)]() mutable {
+        SetBucketEncryptionArgs new_args(*owned_config);
+        new_args.bucket = std::move(bucket);
+        new_args.region = std::move(region);
+        new_args.extra_headers = std::move(extra_headers);
+        new_args.extra_query_params = std::move(extra_query_params);
+        return SetBucketEncryption(std::move(new_args));
+      });
 }
 
+// Reference-holding arg: SetBucketLifecycleArgs has LifecycleConfig& config.
 std::future<SetBucketLifecycleResponse> BaseClient::SetBucketLifecycleAsync(
     SetBucketLifecycleArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return SetBucketLifecycle(args);
-  });
+  auto owned_config = std::make_shared<LifecycleConfig>(args.config);
+  return std::async(
+      std::launch::async,
+      [this, owned_config, bucket = std::move(args.bucket),
+       region = std::move(args.region),
+       extra_headers = std::move(args.extra_headers),
+       extra_query_params = std::move(args.extra_query_params)]() mutable {
+        SetBucketLifecycleArgs new_args(*owned_config);
+        new_args.bucket = std::move(bucket);
+        new_args.region = std::move(region);
+        new_args.extra_headers = std::move(extra_headers);
+        new_args.extra_query_params = std::move(extra_query_params);
+        return SetBucketLifecycle(std::move(new_args));
+      });
 }
 
+// Reference-holding arg: SetBucketNotificationArgs has NotificationConfig&
+// config.
 std::future<SetBucketNotificationResponse>
 BaseClient::SetBucketNotificationAsync(SetBucketNotificationArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return SetBucketNotification(args);
-  });
+  auto owned_config = std::make_shared<NotificationConfig>(args.config);
+  return std::async(
+      std::launch::async,
+      [this, owned_config, bucket = std::move(args.bucket),
+       region = std::move(args.region),
+       extra_headers = std::move(args.extra_headers),
+       extra_query_params = std::move(args.extra_query_params)]() mutable {
+        SetBucketNotificationArgs new_args(*owned_config);
+        new_args.bucket = std::move(bucket);
+        new_args.region = std::move(region);
+        new_args.extra_headers = std::move(extra_headers);
+        new_args.extra_query_params = std::move(extra_query_params);
+        return SetBucketNotification(std::move(new_args));
+      });
+}
+
+// Reference-holding arg: SetBucketReplicationArgs has ReplicationConfig&
+// config.
+std::future<SetBucketReplicationResponse> BaseClient::SetBucketReplicationAsync(
+    SetBucketReplicationArgs args) {
+  auto owned_config = std::make_shared<ReplicationConfig>(args.config);
+  return std::async(
+      std::launch::async,
+      [this, owned_config, bucket = std::move(args.bucket),
+       region = std::move(args.region),
+       extra_headers = std::move(args.extra_headers),
+       extra_query_params = std::move(args.extra_query_params)]() mutable {
+        SetBucketReplicationArgs new_args(*owned_config);
+        new_args.bucket = std::move(bucket);
+        new_args.region = std::move(region);
+        new_args.extra_headers = std::move(extra_headers);
+        new_args.extra_query_params = std::move(extra_query_params);
+        return SetBucketReplication(std::move(new_args));
+      });
 }
 
 std::future<SetBucketPolicyResponse> BaseClient::SetBucketPolicyAsync(
     SetBucketPolicyArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return SetBucketPolicy(args);
-  });
-}
-
-std::future<SetBucketReplicationResponse> BaseClient::SetBucketReplicationAsync(
-    SetBucketReplicationArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return SetBucketReplication(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return SetBucketPolicy(std::move(args));
+                    });
 }
 
 std::future<SetBucketTagsResponse> BaseClient::SetBucketTagsAsync(
     SetBucketTagsArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return SetBucketTags(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return SetBucketTags(std::move(args));
+                    });
 }
 
 std::future<SetBucketVersioningResponse> BaseClient::SetBucketVersioningAsync(
     SetBucketVersioningArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return SetBucketVersioning(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return SetBucketVersioning(std::move(args));
+                    });
 }
 
 std::future<SetObjectLockConfigResponse> BaseClient::SetObjectLockConfigAsync(
     SetObjectLockConfigArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return SetObjectLockConfig(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return SetObjectLockConfig(std::move(args));
+                    });
 }
 
 std::future<SetObjectRetentionResponse> BaseClient::SetObjectRetentionAsync(
     SetObjectRetentionArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return SetObjectRetention(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return SetObjectRetention(std::move(args));
+                    });
 }
 
 std::future<SetObjectTagsResponse> BaseClient::SetObjectTagsAsync(
     SetObjectTagsArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return SetObjectTags(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return SetObjectTags(std::move(args));
+                    });
 }
 
 std::future<StatObjectResponse> BaseClient::StatObjectAsync(
     StatObjectArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return StatObject(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return StatObject(std::move(args));
+                    });
 }
 
 std::future<UploadPartResponse> BaseClient::UploadPartAsync(
     UploadPartArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return UploadPart(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return UploadPart(std::move(args));
+                    });
 }
 
 std::future<UploadPartCopyResponse> BaseClient::UploadPartCopyAsync(
     UploadPartCopyArgs args) {
-  return std::async(std::launch::async, [this, args = std::move(args)]() {
-    return UploadPartCopy(args);
-  });
+  return std::async(std::launch::async,
+                    [this, args = std::move(args)]() mutable {
+                      return UploadPartCopy(std::move(args));
+                    });
 }
 
 }  // namespace minio::s3
