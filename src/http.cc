@@ -19,24 +19,24 @@
 
 #include <curl/curl.h>
 
+#include <chrono>
 #include <curlpp/Easy.hpp>
 #include <curlpp/Exception.hpp>
 #include <curlpp/Infos.hpp>
 #include <curlpp/Multi.hpp>
 #include <curlpp/Options.hpp>
 #include <curlpp/cURLpp.hpp>
-#include <chrono>
 #include <exception>
 #include <functional>
 #include <iosfwd>
 #include <iostream>
 #include <list>
 #include <mutex>
-#include <thread>
 #include <ostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <type_traits>
 
 #include "miniocpp/error.h"
@@ -58,7 +58,6 @@ namespace {
 // Abort a transfer that makes no progress for this long. Guards against a
 // connection that drops mid-transfer without a clean close (TCP never RSTs),
 // which would otherwise keep the request alive indefinitely.
-// ponytail: fixed default; promote to a Request field if callers need it tunable.
 constexpr long kStallTimeoutSecs = 60;
 
 // curl_global_init() is documented as not thread-safe and is expensive
@@ -412,7 +411,8 @@ Response Request::execute() {
   curl_easy_setopt(raw_handle, CURLOPT_TCP_KEEPALIVE, 1L);
 
   // Fail a stalled transfer instead of hanging forever. Skipped when the caller
-  // set an explicit total timeout (RDMA control plane) — that already bounds it.
+  // set an explicit total timeout (RDMA control plane) — that already bounds
+  // it.
   if (timeout_secs <= 0) {
     curl_easy_setopt(raw_handle, CURLOPT_LOW_SPEED_LIMIT, 1L);
     curl_easy_setopt(raw_handle, CURLOPT_LOW_SPEED_TIME, kStallTimeoutSecs);
@@ -532,8 +532,8 @@ Response Request::execute() {
     // poll lets libcurl enforce its own timeouts (e.g. the low-speed limit set
     // above) and abort the dead transfer.
     if (maxfd < 0) {
-      // libcurl has no fd to wait on yet; select() with empty sets errors out on
-      // Windows, so just poll again shortly.
+      // libcurl has no fd to wait on yet; select() with empty sets errors out
+      // on Windows, so just poll again shortly.
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     } else {
       timeval timeout{};
