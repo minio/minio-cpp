@@ -599,10 +599,12 @@ class Tests {
     minio::s3::CsvInputSerialization csv_input;
     minio::s3::FileHeaderInfo file_header_info =
         minio::s3::FileHeaderInfo::kUse;
-    csv_input.file_header_info = &file_header_info;
+    csv_input.file_header_info =
+        std::make_shared<minio::s3::FileHeaderInfo>(file_header_info);
     minio::s3::CsvOutputSerialization csv_output;
     minio::s3::QuoteFields quote_fields = minio::s3::QuoteFields::kAsNeeded;
-    csv_output.quote_fields = &quote_fields;
+    csv_output.quote_fields =
+        std::make_shared<minio::s3::QuoteFields>(quote_fields);
     minio::s3::SelectRequest request(expression, &csv_input, &csv_output);
 
     try {
@@ -1475,10 +1477,12 @@ class Tests {
         minio::s3::CsvInputSerialization csv_input;
         minio::s3::FileHeaderInfo file_header_info =
             minio::s3::FileHeaderInfo::kUse;
-        csv_input.file_header_info = &file_header_info;
+        csv_input.file_header_info =
+            std::make_shared<minio::s3::FileHeaderInfo>(file_header_info);
         minio::s3::CsvOutputSerialization csv_output;
         minio::s3::QuoteFields quote_fields = minio::s3::QuoteFields::kAsNeeded;
-        csv_output.quote_fields = &quote_fields;
+        csv_output.quote_fields =
+            std::make_shared<minio::s3::QuoteFields>(quote_fields);
 
         minio::s3::SelectRequest request(expression, &csv_input, &csv_output);
         auto func = [&records](minio::s3::SelectResult result) -> bool {
