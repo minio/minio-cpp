@@ -130,6 +130,12 @@ struct Request {
   // defaults. Used by the RDMA control plane to fail fast on a dead NIC so
   // the caller can retry (and pick up the failover NIC on the next attempt)
   // instead of blocking on TCP's default ~75s SYN timeout.
+  //
+  // Note: leaving timeout_secs == 0 still installs a low-speed stall guard
+  // (abort if throughput stays below 1 byte/s for 60s) so a dropped/stalled
+  // connection can't hang the transfer forever. It does not bound a healthy
+  // transfer's total duration. Set timeout_secs > 0 for a hard total timeout
+  // (which replaces the stall guard).
   long connect_timeout_secs = 0;
   long timeout_secs = 0;
 
