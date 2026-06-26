@@ -19,6 +19,7 @@
 
 #include <curl/curl.h>
 
+#include <cerrno>
 #include <chrono>
 #include <curlpp/Easy.hpp>
 #include <curlpp/Exception.hpp>
@@ -540,6 +541,9 @@ Response Request::execute() {
       timeout.tv_sec = 1;
       timeout.tv_usec = 0;
       if (select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &timeout) < 0) {
+#ifndef _WIN32
+        if (errno == EINTR) continue;  // interrupted by a signal; retry
+#endif
         std::cerr << "select() failed; this should not happen" << std::endl;
         std::terminate();
       }
