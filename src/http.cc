@@ -552,6 +552,17 @@ Response Request::execute() {
     }
   }
 
+  // The loop exits once libcurl has no running transfers left. If the transfer
+  // aborted before delivering a single byte (e.g. the low-speed limit or
+  // connect timeout fired on a dropped/stalled connection), the write callback
+  // never ran, so neither status_code nor error was set. Surface a diagnostic
+  // instead of returning a silently-empty failure.
+  if (response.error.empty() && response.status_code == 0) {
+    response.error =
+        "transfer ended without a response (connection dropped, timed out, or "
+        "was aborted before any data was received)";
+  }
+
   if (progressfunc != nullptr) {
     ProgressFunctionArgs args;
     args.userdata = progress_userdata;
