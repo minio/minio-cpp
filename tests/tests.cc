@@ -791,41 +791,55 @@ class Tests {
     {
       std::string bucket_name = RandBucketName();
 
-      {
-        minio::s3::MakeBucketArgs args;
-        args.bucket = bucket_name;
-        auto make_fut = client_.MakeBucketAsync(args);
-        minio::s3::MakeBucketResponse make_resp = make_fut.get();
-        if (!make_resp) {
-          throw std::runtime_error("MakeBucketAsync(): " +
-                                   make_resp.Error().String());
+      auto remove_bucket_best_effort = [this](const std::string& b) {
+        try {
+          minio::s3::RemoveBucketArgs args;
+          args.bucket = b;
+          client_.RemoveBucket(args);
+        } catch (...) {
         }
-      }
+      };
 
-      {
-        minio::s3::BucketExistsArgs args;
-        args.bucket = bucket_name;
-        auto exists_fut = client_.BucketExistsAsync(args);
-        minio::s3::BucketExistsResponse exists_resp = exists_fut.get();
-        if (!exists_resp) {
-          throw std::runtime_error("BucketExistsAsync(): " +
-                                   exists_resp.Error().String());
+      try {
+        {
+          minio::s3::MakeBucketArgs args;
+          args.bucket = bucket_name;
+          auto make_fut = client_.MakeBucketAsync(args);
+          minio::s3::MakeBucketResponse make_resp = make_fut.get();
+          if (!make_resp) {
+            throw std::runtime_error("MakeBucketAsync(): " +
+                                     make_resp.Error().String());
+          }
         }
-        if (!exists_resp.exist) {
-          throw std::runtime_error(
-              "BucketExistsAsync(): expected bucket to exist");
-        }
-      }
 
-      {
-        minio::s3::RemoveBucketArgs args;
-        args.bucket = bucket_name;
-        auto rm_fut = client_.RemoveBucketAsync(args);
-        minio::s3::RemoveBucketResponse rm_resp = rm_fut.get();
-        if (!rm_resp) {
-          throw std::runtime_error("RemoveBucketAsync(): " +
-                                   rm_resp.Error().String());
+        {
+          minio::s3::BucketExistsArgs args;
+          args.bucket = bucket_name;
+          auto exists_fut = client_.BucketExistsAsync(args);
+          minio::s3::BucketExistsResponse exists_resp = exists_fut.get();
+          if (!exists_resp) {
+            throw std::runtime_error("BucketExistsAsync(): " +
+                                     exists_resp.Error().String());
+          }
+          if (!exists_resp.exist) {
+            throw std::runtime_error(
+                "BucketExistsAsync(): expected bucket to exist");
+          }
         }
+
+        {
+          minio::s3::RemoveBucketArgs args;
+          args.bucket = bucket_name;
+          auto rm_fut = client_.RemoveBucketAsync(args);
+          minio::s3::RemoveBucketResponse rm_resp = rm_fut.get();
+          if (!rm_resp) {
+            throw std::runtime_error("RemoveBucketAsync(): " +
+                                     rm_resp.Error().String());
+          }
+        }
+      } catch (...) {
+        remove_bucket_best_effort(bucket_name);
+        throw;
       }
     }
 
