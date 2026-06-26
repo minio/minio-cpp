@@ -18,6 +18,7 @@
 #ifndef MINIO_CPP_CLIENT_H_INCLUDED
 #define MINIO_CPP_CLIENT_H_INCLUDED
 
+#include <future>
 #include <list>
 #include <string>
 
@@ -138,6 +139,20 @@ class Client : public BaseClient {
   GetObjectResponse GetObject(GetObjectArgs args);
   UploadObjectResponse UploadObject(UploadObjectArgs args);
   RemoveObjectsResult RemoveObjects(RemoveObjectsArgs args);
+
+  // Async overloads — return std::future<T> backed by std::async.
+  //
+  // Lifetime note for PutObjectAsync: the caller must ensure
+  // args.stream (if set) outlives the returned std::future<T>,
+  // exactly as it must for the synchronous PutObject call.
+  std::future<ComposeObjectResponse> ComposeObjectAsync(ComposeObjectArgs args);
+  std::future<CopyObjectResponse> CopyObjectAsync(CopyObjectArgs args);
+  std::future<DownloadObjectResponse> DownloadObjectAsync(
+      DownloadObjectArgs args);
+  std::future<GetObjectResponse> GetObjectAsync(GetObjectArgs args);
+  std::future<ListObjectsResult> ListObjectsAsync(ListObjectsArgs args);
+  std::future<PutObjectResponse> PutObjectAsync(PutObjectArgs args);
+  std::future<UploadObjectResponse> UploadObjectAsync(UploadObjectArgs args);
 };  // class Client
 
 }  // namespace minio::s3

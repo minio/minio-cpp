@@ -337,6 +337,9 @@ struct PutObjectArgs : public PutObjectBaseArgs {
   // Exactly one of (stream, buf) must be set; Validate() enforces.
   // When buf is set, the call attempts RDMA and falls back to a
   // streaming HTTP upload from the same buffer on RDMA decline.
+  //
+  // For async callers (PutObjectAsync): *stream must outlive the
+  // returned std::future, exactly as it must for sync PutObject.
   std::istream* stream = nullptr;
   char* buf = nullptr;
   std::optional<size_t> size;
@@ -425,7 +428,7 @@ struct RemoveObjectsArgs : public BucketArgs {
 };  // struct RemoveObjectsArgs
 
 struct SelectObjectContentArgs : public ObjectReadArgs {
-  SelectRequest& request;
+  SelectRequest request;
   SelectResultFunction resultfunc = nullptr;
 
   SelectObjectContentArgs(SelectRequest& req, SelectResultFunction func)
@@ -466,7 +469,7 @@ using DeleteBucketNotificationArgs = BucketArgs;
 using GetBucketNotificationArgs = BucketArgs;
 
 struct SetBucketNotificationArgs : public BucketArgs {
-  NotificationConfig& config;
+  NotificationConfig config;
 
   explicit SetBucketNotificationArgs(NotificationConfig& configvalue)
       : config(configvalue) {}
@@ -479,7 +482,7 @@ using DeleteBucketEncryptionArgs = BucketArgs;
 using GetBucketEncryptionArgs = BucketArgs;
 
 struct SetBucketEncryptionArgs : public BucketArgs {
-  SseConfig& config;
+  SseConfig config;
 
   explicit SetBucketEncryptionArgs(SseConfig& sseconfig) : config(sseconfig) {}
 
@@ -505,7 +508,7 @@ using DeleteBucketReplicationArgs = BucketArgs;
 using GetBucketReplicationArgs = BucketArgs;
 
 struct SetBucketReplicationArgs : public BucketArgs {
-  ReplicationConfig& config;
+  ReplicationConfig config;
 
   explicit SetBucketReplicationArgs(ReplicationConfig& value) : config(value) {}
 
@@ -517,7 +520,7 @@ using DeleteBucketLifecycleArgs = BucketArgs;
 using GetBucketLifecycleArgs = BucketArgs;
 
 struct SetBucketLifecycleArgs : public BucketArgs {
-  LifecycleConfig& config;
+  LifecycleConfig config;
 
   explicit SetBucketLifecycleArgs(LifecycleConfig& value) : config(value) {}
 

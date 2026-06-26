@@ -466,8 +466,8 @@ error::Error SelectObjectContentArgs::Validate() const {
     return error::Error("SQL expression must not be empty");
   }
 
-  if (!((request.csv_input != nullptr) ^ (request.json_input != nullptr) ^
-        (request.parquet_input != nullptr))) {
+  if (((request.csv_input != nullptr) + (request.json_input != nullptr) +
+       (request.parquet_input != nullptr)) != 1) {
     return error::Error(
         "One of CSV, JSON or Parquet input serialization must be set");
   }

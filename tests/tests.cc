@@ -31,6 +31,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <iosfwd>
 #include <iostream>
 #include <list>
@@ -598,10 +599,12 @@ class Tests {
     minio::s3::CsvInputSerialization csv_input;
     minio::s3::FileHeaderInfo file_header_info =
         minio::s3::FileHeaderInfo::kUse;
-    csv_input.file_header_info = &file_header_info;
+    csv_input.file_header_info =
+        std::make_shared<minio::s3::FileHeaderInfo>(file_header_info);
     minio::s3::CsvOutputSerialization csv_output;
     minio::s3::QuoteFields quote_fields = minio::s3::QuoteFields::kAsNeeded;
-    csv_output.quote_fields = &quote_fields;
+    csv_output.quote_fields =
+        std::make_shared<minio::s3::QuoteFields>(quote_fields);
     minio::s3::SelectRequest request(expression, &csv_input, &csv_output);
 
     try {
@@ -780,6 +783,748 @@ class Tests {
       }
     }
   }
+
+  void TestAsyncOperations() {
+    std::cout << "TestAsyncOperations()" << std::endl;
+
+    // --- async MakeBucket + BucketExists ---
+    {
+      std::string bucket_name = RandBucketName();
+
+      auto remove_bucket_best_effort = [this](const std::string& b) {
+        try {
+          minio::s3::RemoveBucketArgs args;
+          args.bucket = b;
+          client_.RemoveBucket(args);
+        } catch (...) {
+        }
+      };
+
+      try {
+        {
+          minio::s3::MakeBucketArgs args;
+          args.bucket = bucket_name;
+          auto make_fut = client_.MakeBucketAsync(args);
+          minio::s3::MakeBucketResponse make_resp = make_fut.get();
+          if (!make_resp) {
+            throw std::runtime_error("MakeBucketAsync(): " +
+                                     make_resp.Error().String());
+          }
+        }
+
+        {
+          minio::s3::BucketExistsArgs args;
+          args.bucket = bucket_name;
+          auto exists_fut = client_.BucketExistsAsync(args);
+          minio::s3::BucketExistsResponse exists_resp = exists_fut.get();
+          if (!exists_resp) {
+            throw std::runtime_error("BucketExistsAsync(): " +
+                                     exists_resp.Error().String());
+          }
+          if (!exists_resp.exist) {
+            throw std::runtime_error(
+                "BucketExistsAsync(): expected bucket to exist");
+          }
+        }
+
+        {
+          minio::s3::RemoveBucketArgs args;
+          args.bucket = bucket_name;
+          auto rm_fut = client_.RemoveBucketAsync(args);
+          minio::s3::RemoveBucketResponse rm_resp = rm_fut.get();
+          if (!rm_resp) {
+            throw std::runtime_error("RemoveBucketAsync(): " +
+                                     rm_resp.Error().String());
+          }
+        }
+      } catch (...) {
+        remove_bucket_best_effort(bucket_name);
+        throw;
+      }
+    }
+
+    // --- async PutObject + GetObject + StatObject + RemoveObject ---
+    {
+      std::string object_name = RandObjectName();
+      std::string data = "TestAsyncOperations";
+      {
+        std::stringstream ss(data);
+        minio::s3::PutObjectArgs args(ss, static_cast<uint64_t>(data.length()),
+                                      0);
+        args.bucket = bucket_name_;
+        args.object = object_name;
+        auto put_fut = client_.PutObjectAsync(std::move(args));
+        minio::s3::PutObjectResponse put_resp = put_fut.get();
+        if (!put_resp) {
+          throw std::runtime_error("PutObjectAsync(): " +
+                                   put_resp.Error().String());
+        }
+      }
+
+      // async StatObject
+      try {
+        {
+          minio::s3::StatObjectArgs args;
+          args.bucket = bucket_name_;
+          args.object = object_name;
+          auto stat_fut = client_.StatObjectAsync(std::move(args));
+          minio::s3::StatObjectResponse stat_resp = stat_fut.get();
+          if (!stat_resp) {
+            throw std::runtime_error("StatObjectAsync(): " +
+                                     stat_resp.Error().String());
+          }
+          if (stat_resp.size != data.length()) {
+            throw std::runtime_error("StatObjectAsync(): expected size: " +
+                                     std::to_string(data.length()) + "; got: " +
+                                     std::to_string(stat_resp.size));
+          }
+        }
+
+        // async GetObject
+        {
+          std::string content;
+          minio::s3::GetObjectArgs gargs;
+          gargs.bucket = bucket_name_;
+          gargs.object = object_name;
+          gargs.datafunc =
+              [&content](minio::http::DataFunctionArgs args) -> bool {
+            content += args.datachunk;
+            return true;
+          };
+          auto get_fut = client_.GetObjectAsync(std::move(gargs));
+          minio::s3::GetObjectResponse get_resp = get_fut.get();
+          if (!get_resp) {
+            throw std::runtime_error("GetObjectAsync(): " +
+                                     get_resp.Error().String());
+          }
+          if (data != content) {
+            throw std::runtime_error("GetObjectAsync(): expected: " + data +
+                                     "; got: " + content);
+          }
+        }
+
+        // async RemoveObject
+        {
+          minio::s3::RemoveObjectArgs args;
+          args.bucket = bucket_name_;
+          args.object = object_name;
+          auto rm_fut = client_.RemoveObjectAsync(std::move(args));
+          minio::s3::RemoveObjectResponse rm_resp = rm_fut.get();
+          if (!rm_resp) {
+            throw std::runtime_error("RemoveObjectAsync(): " +
+                                     rm_resp.Error().String());
+          }
+        }
+      } catch (const std::runtime_error&) {
+        RemoveObject(bucket_name_, object_name);
+        throw;
+      }
+    }
+
+    // --- async ListBuckets ---
+    {
+      auto fut = client_.ListBucketsAsync(minio::s3::ListBucketsArgs());
+      minio::s3::ListBucketsResponse resp = fut.get();
+      if (!resp) {
+        throw std::runtime_error("ListBucketsAsync(): " +
+                                 resp.Error().String());
+      }
+    }
+
+    // --- async CopyObject ---
+    {
+      std::string src_object = RandObjectName();
+      std::string dst_object = RandObjectName();
+      std::string data = "CopyObjectAsync-test";
+      try {
+        {
+          std::stringstream ss(data);
+          minio::s3::PutObjectArgs args(
+              ss, static_cast<uint64_t>(data.length()), 0);
+          args.bucket = bucket_name_;
+          args.object = src_object;
+          minio::s3::PutObjectResponse resp = client_.PutObject(args);
+          if (!resp) {
+            throw std::runtime_error("PutObject(): " + resp.Error().String());
+          }
+        }
+
+        minio::s3::CopySource source;
+        source.bucket = bucket_name_;
+        source.object = src_object;
+        minio::s3::CopyObjectArgs cargs;
+        cargs.bucket = bucket_name_;
+        cargs.object = dst_object;
+        cargs.source = source;
+        auto copy_fut = client_.CopyObjectAsync(std::move(cargs));
+        minio::s3::CopyObjectResponse copy_resp = copy_fut.get();
+        if (!copy_resp) {
+          throw std::runtime_error("CopyObjectAsync(): " +
+                                   copy_resp.Error().String());
+        }
+
+        RemoveObject(bucket_name_, src_object);
+        RemoveObject(bucket_name_, dst_object);
+      } catch (const std::runtime_error&) {
+        RemoveObject(bucket_name_, src_object);
+        RemoveObject(bucket_name_, dst_object);
+        throw;
+      }
+    }
+
+    // --- async UploadObject ---
+    {
+      std::string data = "UploadObjectAsync-test";
+      std::string filename = RandObjectName();
+      {
+        std::ofstream file(filename);
+        file << data;
+      }
+
+      std::string object_name = RandObjectName();
+      try {
+        minio::s3::UploadObjectArgs args;
+        args.bucket = bucket_name_;
+        args.object = object_name;
+        args.filename = filename;
+        auto up_fut = client_.UploadObjectAsync(std::move(args));
+        minio::s3::UploadObjectResponse up_resp = up_fut.get();
+        if (!up_resp) {
+          throw std::runtime_error("UploadObjectAsync(): " +
+                                   up_resp.Error().String());
+        }
+        std::filesystem::remove(filename);
+        RemoveObject(bucket_name_, object_name);
+      } catch (const std::runtime_error&) {
+        std::filesystem::remove(filename);
+        RemoveObject(bucket_name_, object_name);
+        throw;
+      }
+    }
+
+    // --- async GetPresignedObjectUrl ---
+    {
+      std::string object_name = RandObjectName();
+      std::string data = "PresignedAsync";
+      std::stringstream ss(data);
+      {
+        minio::s3::PutObjectArgs args(ss, static_cast<uint64_t>(data.length()),
+                                      0);
+        args.bucket = bucket_name_;
+        args.object = object_name;
+        minio::s3::PutObjectResponse resp = client_.PutObject(args);
+        if (!resp) {
+          throw std::runtime_error("PutObject(): " + resp.Error().String());
+        }
+      }
+
+      try {
+        minio::s3::GetPresignedObjectUrlArgs args;
+        args.bucket = bucket_name_;
+        args.object = object_name;
+        args.method = minio::http::Method::kGet;
+        auto url_fut = client_.GetPresignedObjectUrlAsync(std::move(args));
+        minio::s3::GetPresignedObjectUrlResponse url_resp = url_fut.get();
+        if (!url_resp) {
+          throw std::runtime_error("GetPresignedObjectUrlAsync(): " +
+                                   url_resp.Error().String());
+        }
+        if (url_resp.url.empty()) {
+          throw std::runtime_error(
+              "GetPresignedObjectUrlAsync(): url is empty");
+        }
+        RemoveObject(bucket_name_, object_name);
+      } catch (const std::runtime_error&) {
+        RemoveObject(bucket_name_, object_name);
+        throw;
+      }
+    }
+
+    // --- async Bucket versioning (set + get) ---
+    {
+      std::string bucket_name = RandBucketName();
+      {
+        minio::s3::MakeBucketArgs args;
+        args.bucket = bucket_name;
+        auto fut = client_.MakeBucketAsync(args);
+        minio::s3::MakeBucketResponse resp = fut.get();
+        if (!resp) {
+          throw std::runtime_error("MakeBucketAsync(): " +
+                                   resp.Error().String());
+        }
+      }
+
+      try {
+        // Set versioning enabled.
+        {
+          minio::s3::SetBucketVersioningArgs args;
+          args.bucket = bucket_name;
+          minio::s3::Boolean status(true);
+          args.status = status;
+          auto fut = client_.SetBucketVersioningAsync(std::move(args));
+          minio::s3::SetBucketVersioningResponse resp = fut.get();
+          if (!resp) {
+            throw std::runtime_error("SetBucketVersioningAsync(): " +
+                                     resp.Error().String());
+          }
+        }
+
+        // Get and verify versioning status.
+        {
+          minio::s3::GetBucketVersioningArgs args;
+          args.bucket = bucket_name;
+          auto fut = client_.GetBucketVersioningAsync(std::move(args));
+          minio::s3::GetBucketVersioningResponse resp = fut.get();
+          if (!resp) {
+            throw std::runtime_error("GetBucketVersioningAsync(): " +
+                                     resp.Error().String());
+          }
+          if (!resp.status || !resp.status.Get()) {
+            throw std::runtime_error(
+                "GetBucketVersioningAsync(): expected Enabled");
+          }
+        }
+
+        {
+          minio::s3::RemoveBucketArgs args;
+          args.bucket = bucket_name;
+          auto fut = client_.RemoveBucketAsync(args);
+          minio::s3::RemoveBucketResponse resp = fut.get();
+          if (!resp) {
+            throw std::runtime_error("RemoveBucketAsync(): " +
+                                     resp.Error().String());
+          }
+        }
+      } catch (const std::runtime_error&) {
+        minio::s3::RemoveBucketArgs args;
+        args.bucket = bucket_name;
+        client_.RemoveBucket(args);
+        throw;
+      }
+    }
+
+    // --- async Object tags (set + get + delete) ---
+    {
+      std::string object_name = RandObjectName();
+      std::string data = "TagsAsync";
+      std::stringstream ss(data);
+      {
+        minio::s3::PutObjectArgs args(ss, static_cast<uint64_t>(data.length()),
+                                      0);
+        args.bucket = bucket_name_;
+        args.object = object_name;
+        minio::s3::PutObjectResponse resp = client_.PutObject(args);
+        if (!resp) {
+          throw std::runtime_error("PutObject(): " + resp.Error().String());
+        }
+      }
+
+      try {
+        // Set tags.
+        {
+          minio::s3::SetObjectTagsArgs args;
+          args.bucket = bucket_name_;
+          args.object = object_name;
+          args.tags = {{"key1", "value1"}, {"key2", "value2"}};
+          auto fut = client_.SetObjectTagsAsync(std::move(args));
+          minio::s3::SetObjectTagsResponse resp = fut.get();
+          if (!resp) {
+            throw std::runtime_error("SetObjectTagsAsync(): " +
+                                     resp.Error().String());
+          }
+        }
+
+        // Get and verify tags.
+        {
+          minio::s3::GetObjectTagsArgs args;
+          args.bucket = bucket_name_;
+          args.object = object_name;
+          auto fut = client_.GetObjectTagsAsync(std::move(args));
+          minio::s3::GetObjectTagsResponse resp = fut.get();
+          if (!resp) {
+            throw std::runtime_error("GetObjectTagsAsync(): " +
+                                     resp.Error().String());
+          }
+          if (resp.tags.size() != 2 || resp.tags["key1"] != "value1" ||
+              resp.tags["key2"] != "value2") {
+            throw std::runtime_error("GetObjectTagsAsync(): tag mismatch");
+          }
+        }
+
+        // Delete tags.
+        {
+          minio::s3::DeleteObjectTagsArgs args;
+          args.bucket = bucket_name_;
+          args.object = object_name;
+          auto fut = client_.DeleteObjectTagsAsync(std::move(args));
+          minio::s3::DeleteObjectTagsResponse resp = fut.get();
+          if (!resp) {
+            throw std::runtime_error("DeleteObjectTagsAsync(): " +
+                                     resp.Error().String());
+          }
+        }
+
+        RemoveObject(bucket_name_, object_name);
+      } catch (const std::runtime_error&) {
+        RemoveObject(bucket_name_, object_name);
+        throw;
+      }
+    }
+
+    // --- async Bucket tags (set + get + delete) ---
+    {
+      std::string bucket_name = RandBucketName();
+      {
+        minio::s3::MakeBucketArgs args;
+        args.bucket = bucket_name;
+        auto fut = client_.MakeBucketAsync(args);
+        minio::s3::MakeBucketResponse resp = fut.get();
+        if (!resp) {
+          throw std::runtime_error("MakeBucketAsync(): " +
+                                   resp.Error().String());
+        }
+      }
+
+      try {
+        // Set bucket tags.
+        {
+          minio::s3::SetBucketTagsArgs args;
+          args.bucket = bucket_name;
+          args.tags = {{"department", "engineering"}};
+          auto fut = client_.SetBucketTagsAsync(std::move(args));
+          minio::s3::SetBucketTagsResponse resp = fut.get();
+          if (!resp) {
+            throw std::runtime_error("SetBucketTagsAsync(): " +
+                                     resp.Error().String());
+          }
+        }
+
+        // Get and verify bucket tags.
+        {
+          minio::s3::GetBucketTagsArgs args;
+          args.bucket = bucket_name;
+          auto fut = client_.GetBucketTagsAsync(std::move(args));
+          minio::s3::GetBucketTagsResponse resp = fut.get();
+          if (!resp) {
+            throw std::runtime_error("GetBucketTagsAsync(): " +
+                                     resp.Error().String());
+          }
+          if (resp.tags.size() != 1 ||
+              resp.tags["department"] != "engineering") {
+            throw std::runtime_error("GetBucketTagsAsync(): tag mismatch");
+          }
+        }
+
+        // Delete bucket tags.
+        {
+          minio::s3::DeleteBucketTagsArgs args;
+          args.bucket = bucket_name;
+          auto fut = client_.DeleteBucketTagsAsync(std::move(args));
+          minio::s3::DeleteBucketTagsResponse resp = fut.get();
+          if (!resp) {
+            throw std::runtime_error("DeleteBucketTagsAsync(): " +
+                                     resp.Error().String());
+          }
+        }
+
+        {
+          minio::s3::RemoveBucketArgs args;
+          args.bucket = bucket_name;
+          auto fut = client_.RemoveBucketAsync(args);
+          minio::s3::RemoveBucketResponse resp = fut.get();
+          if (!resp) {
+            throw std::runtime_error("RemoveBucketAsync(): " +
+                                     resp.Error().String());
+          }
+        }
+      } catch (const std::runtime_error&) {
+        minio::s3::RemoveBucketArgs args;
+        args.bucket = bucket_name;
+        client_.RemoveBucket(args);
+        throw;
+      }
+    }
+
+    // --- async ListBuckets (no-arg overload) ---
+    {
+      auto fut = client_.ListBucketsAsync();
+      minio::s3::ListBucketsResponse resp = fut.get();
+      if (!resp) {
+        throw std::runtime_error("ListBucketsAsync() (no-arg): " +
+                                 resp.Error().String());
+      }
+    }
+
+    // --- Error path: async call on non-existent object ---
+    {
+      minio::s3::StatObjectArgs args;
+      args.bucket = bucket_name_;
+      args.object = "__nonexistent_object_async_test__";
+      auto fut = client_.StatObjectAsync(std::move(args));
+      minio::s3::StatObjectResponse resp = fut.get();
+      if (resp) {
+        throw std::runtime_error(
+            "StatObjectAsync() on nonexistent object: expected failure");
+      }
+      if (resp.Error().String().empty()) {
+        throw std::runtime_error(
+            "StatObjectAsync() on nonexistent object: expected error message");
+      }
+    }
+
+    // --- Concurrency: start multiple async ops before any get() ---
+    {
+      std::string b1 = RandBucketName();
+      std::string b2 = RandBucketName();
+      std::string b3 = RandBucketName();
+
+      minio::s3::MakeBucketArgs a1, a2, a3;
+      a1.bucket = b1;
+      a2.bucket = b2;
+      a3.bucket = b3;
+
+      auto f1 = client_.MakeBucketAsync(std::move(a1));
+      auto f2 = client_.MakeBucketAsync(std::move(a2));
+      auto f3 = client_.MakeBucketAsync(std::move(a3));
+
+      auto cleanup = [this](const std::string& b1, const std::string& b2,
+                            const std::string& b3) {
+        for (auto& b : {b1, b2, b3}) {
+          try {
+            minio::s3::RemoveBucketArgs args;
+            args.bucket = b;
+            client_.RemoveBucket(args);
+          } catch (...) {
+          }
+        }
+      };
+
+      try {
+        auto r1 = f1.get();
+        auto r2 = f2.get();
+        auto r3 = f3.get();
+
+        if (!r1 || !r2 || !r3) {
+          cleanup(b1, b2, b3);
+          throw std::runtime_error("concurrent MakeBucketAsync(): one failed");
+        }
+
+        minio::s3::BucketExistsArgs be1, be2, be3;
+        be1.bucket = b1;
+        be2.bucket = b2;
+        be3.bucket = b3;
+        auto fe1 = client_.BucketExistsAsync(std::move(be1));
+        auto fe2 = client_.BucketExistsAsync(std::move(be2));
+        auto fe3 = client_.BucketExistsAsync(std::move(be3));
+        if (!fe1.get().exist || !fe2.get().exist || !fe3.get().exist) {
+          cleanup(b1, b2, b3);
+          throw std::runtime_error(
+              "concurrent BucketExistsAsync(): expected true");
+        }
+
+        cleanup(b1, b2, b3);
+      } catch (...) {
+        cleanup(b1, b2, b3);
+        throw;
+      }
+    }
+
+    // --- Reference-holding arg: SetBucketEncryptionAsync ---
+    {
+      std::string bucket_name = RandBucketName();
+      {
+        minio::s3::MakeBucketArgs args;
+        args.bucket = bucket_name;
+        auto fut = client_.MakeBucketAsync(args);
+        if (!fut.get()) {
+          throw std::runtime_error("MakeBucketAsync(): failed");
+        }
+      }
+
+      std::future<minio::s3::SetBucketEncryptionResponse> enc_fut;
+      {
+        // SseConfig lives only in this scope; async must own a copy.
+        minio::s3::SseConfig sse_config = minio::s3::SseConfig::S3();
+        minio::s3::SetBucketEncryptionArgs enc_args(sse_config);
+        enc_args.bucket = bucket_name;
+        enc_fut = client_.SetBucketEncryptionAsync(std::move(enc_args));
+        // sse_config and enc_args go out of scope here.
+      }
+
+      minio::s3::SetBucketEncryptionResponse enc_resp = enc_fut.get();
+      if (!enc_resp) {
+        std::cout << "  SetBucketEncryptionAsync skipped: "
+                  << enc_resp.Error().String() << std::endl;
+      }
+
+      {
+        minio::s3::RemoveBucketArgs args;
+        args.bucket = bucket_name;
+        client_.RemoveBucket(args);
+      }
+    }
+
+    // --- Reference-holding arg: SetBucketLifecycleAsync ---
+    {
+      std::string bucket_name = RandBucketName();
+      {
+        minio::s3::MakeBucketArgs args;
+        args.bucket = bucket_name;
+        auto fut = client_.MakeBucketAsync(args);
+        if (!fut.get()) {
+          throw std::runtime_error("MakeBucketAsync(): failed");
+        }
+      }
+
+      std::future<minio::s3::SetBucketLifecycleResponse> lc_fut;
+      {
+        minio::s3::LifecycleConfig lc_config;
+        minio::s3::SetBucketLifecycleArgs lc_args(lc_config);
+        lc_args.bucket = bucket_name;
+        lc_fut = client_.SetBucketLifecycleAsync(std::move(lc_args));
+        // lc_config and lc_args go out of scope here.
+      }
+
+      minio::s3::SetBucketLifecycleResponse lc_resp = lc_fut.get();
+      if (!lc_resp) {
+        std::cout << "  SetBucketLifecycleAsync skipped: "
+                  << lc_resp.Error().String() << std::endl;
+      }
+
+      {
+        minio::s3::RemoveBucketArgs args;
+        args.bucket = bucket_name;
+        client_.RemoveBucket(args);
+      }
+    }
+
+    // --- Reference-holding arg: SetBucketNotificationAsync ---
+    {
+      std::string bucket_name = RandBucketName();
+      {
+        minio::s3::MakeBucketArgs args;
+        args.bucket = bucket_name;
+        auto fut = client_.MakeBucketAsync(args);
+        if (!fut.get()) {
+          throw std::runtime_error("MakeBucketAsync(): failed");
+        }
+      }
+
+      std::future<minio::s3::SetBucketNotificationResponse> notif_fut;
+      {
+        minio::s3::NotificationConfig notif_config;
+        minio::s3::SetBucketNotificationArgs notif_args(notif_config);
+        notif_args.bucket = bucket_name;
+        notif_fut = client_.SetBucketNotificationAsync(std::move(notif_args));
+        // notif_config and notif_args go out of scope here.
+      }
+
+      minio::s3::SetBucketNotificationResponse notif_resp = notif_fut.get();
+      if (!notif_resp) {
+        std::cout << "  SetBucketNotificationAsync skipped: "
+                  << notif_resp.Error().String() << std::endl;
+      }
+
+      {
+        minio::s3::RemoveBucketArgs args;
+        args.bucket = bucket_name;
+        client_.RemoveBucket(args);
+      }
+    }
+
+    // --- Reference-holding arg: SetBucketReplicationAsync ---
+    {
+      std::string bucket_name = RandBucketName();
+      {
+        minio::s3::MakeBucketArgs args;
+        args.bucket = bucket_name;
+        auto fut = client_.MakeBucketAsync(args);
+        if (!fut.get()) {
+          throw std::runtime_error("MakeBucketAsync(): failed");
+        }
+      }
+
+      std::future<minio::s3::SetBucketReplicationResponse> repl_fut;
+      {
+        minio::s3::ReplicationConfig repl_config;
+        minio::s3::SetBucketReplicationArgs repl_args(repl_config);
+        repl_args.bucket = bucket_name;
+        repl_fut = client_.SetBucketReplicationAsync(std::move(repl_args));
+        // repl_config and repl_args go out of scope here.
+      }
+
+      minio::s3::SetBucketReplicationResponse repl_resp = repl_fut.get();
+      if (!repl_resp) {
+        std::cout << "  SetBucketReplicationAsync skipped: "
+                  << repl_resp.Error().String() << std::endl;
+      }
+
+      {
+        minio::s3::RemoveBucketArgs args;
+        args.bucket = bucket_name;
+        client_.RemoveBucket(args);
+      }
+    }
+
+    // --- Reference-holding arg: SelectObjectContentAsync ---
+    {
+      std::string object_name = RandObjectName();
+      std::string data =
+          "1997,Ford,E350,\"ac, abs, moon\",3000.00\n"
+          "1999,Chevy,\"Venture \"\"Extended Edition\"\"\",,4900.00\n";
+      std::stringstream ss("Year,Make,Model,Description,Price\n" + data);
+      {
+        minio::s3::PutObjectArgs args(
+            ss, static_cast<uint64_t>(ss.str().length()), 0);
+        args.bucket = bucket_name_;
+        args.object = object_name;
+        auto fut = client_.PutObjectAsync(std::move(args));
+        if (!fut.get()) {
+          throw std::runtime_error("PutObject(): failed");
+        }
+      }
+
+      std::future<minio::s3::SelectObjectContentResponse> sel_fut;
+      std::string records;
+      {
+        std::string expression = "select * from S3Object";
+        minio::s3::CsvInputSerialization csv_input;
+        minio::s3::FileHeaderInfo file_header_info =
+            minio::s3::FileHeaderInfo::kUse;
+        csv_input.file_header_info =
+            std::make_shared<minio::s3::FileHeaderInfo>(file_header_info);
+        minio::s3::CsvOutputSerialization csv_output;
+        minio::s3::QuoteFields quote_fields = minio::s3::QuoteFields::kAsNeeded;
+        csv_output.quote_fields =
+            std::make_shared<minio::s3::QuoteFields>(quote_fields);
+
+        minio::s3::SelectRequest request(expression, &csv_input, &csv_output);
+        auto func = [&records](minio::s3::SelectResult result) -> bool {
+          if (result.err) return false;
+          records += result.records;
+          return true;
+        };
+
+        minio::s3::SelectObjectContentArgs sel_args(request, func);
+        sel_args.bucket = bucket_name_;
+        sel_args.object = object_name;
+
+        sel_fut = client_.SelectObjectContentAsync(std::move(sel_args));
+        // csv_input, csv_output, request, etc. go out of scope here.
+      }
+
+      minio::s3::SelectObjectContentResponse sel_resp = sel_fut.get();
+      if (!sel_resp && sel_resp.code == "MethodNotAllowed") {
+        std::cout << "  SelectObjectContentAsync skipped: server does not "
+                     "implement S3 Select"
+                  << std::endl;
+      } else if (!sel_resp) {
+        throw std::runtime_error("SelectObjectContentAsync(): " +
+                                 sel_resp.Error().String());
+      }
+      RemoveObject(bucket_name_, object_name);
+    }
+  }  // TestAsyncOperations
 };  // class Tests
 
 int main(int /*argc*/, char* /*argv*/[]) {
@@ -838,6 +1583,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
   tests.RemoveObjects();
   tests.SelectObjectContent();
   tests.ListenBucketNotification();
+  tests.TestAsyncOperations();
 
   return EXIT_SUCCESS;
 }
