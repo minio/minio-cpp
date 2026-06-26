@@ -462,17 +462,17 @@ error::Error SelectObjectContentArgs::Validate() const {
   if (error::Error err = ObjectReadArgs::Validate()) {
     return err;
   }
-  if (!utils::CheckNonEmptyString(request.expr)) {
+  if (!utils::CheckNonEmptyString(request->expr)) {
     return error::Error("SQL expression must not be empty");
   }
 
-  if (!((request.csv_input != nullptr) ^ (request.json_input != nullptr) ^
-        (request.parquet_input != nullptr))) {
+  if (!((request->csv_input != nullptr) ^ (request->json_input != nullptr) ^
+        (request->parquet_input != nullptr))) {
     return error::Error(
         "One of CSV, JSON or Parquet input serialization must be set");
   }
 
-  if (!((request.csv_output != nullptr) ^ (request.json_output != nullptr))) {
+  if (!((request->csv_output != nullptr) ^ (request->json_output != nullptr))) {
     return error::Error("One of CSV or JSON output serialization must be set");
   }
 
@@ -507,7 +507,7 @@ error::Error SetBucketEncryptionArgs::Validate() const {
   if (error::Error err = BucketArgs::Validate()) {
     return err;
   }
-  if (!config) {
+  if (!config || !*config) {
     return error::Error("bucket encryption configuration cannot be empty");
   }
 

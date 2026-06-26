@@ -428,11 +428,11 @@ struct RemoveObjectsArgs : public BucketArgs {
 };  // struct RemoveObjectsArgs
 
 struct SelectObjectContentArgs : public ObjectReadArgs {
-  SelectRequest& request;
+  SelectRequest* request;
   SelectResultFunction resultfunc = nullptr;
 
   SelectObjectContentArgs(SelectRequest& req, SelectResultFunction func)
-      : request(req), resultfunc(func) {}
+      : request(&req), resultfunc(func) {}
 
   ~SelectObjectContentArgs() = default;
 
@@ -469,10 +469,10 @@ using DeleteBucketNotificationArgs = BucketArgs;
 using GetBucketNotificationArgs = BucketArgs;
 
 struct SetBucketNotificationArgs : public BucketArgs {
-  NotificationConfig& config;
+  NotificationConfig* config;
 
   explicit SetBucketNotificationArgs(NotificationConfig& configvalue)
-      : config(configvalue) {}
+      : config(&configvalue) {}
 
   ~SetBucketNotificationArgs() = default;
 };  // struct SetBucketNotification
@@ -482,9 +482,9 @@ using DeleteBucketEncryptionArgs = BucketArgs;
 using GetBucketEncryptionArgs = BucketArgs;
 
 struct SetBucketEncryptionArgs : public BucketArgs {
-  SseConfig& config;
+  SseConfig* config;
 
-  explicit SetBucketEncryptionArgs(SseConfig& sseconfig) : config(sseconfig) {}
+  explicit SetBucketEncryptionArgs(SseConfig& sseconfig) : config(&sseconfig) {}
 
   ~SetBucketEncryptionArgs() = default;
 
@@ -508,9 +508,10 @@ using DeleteBucketReplicationArgs = BucketArgs;
 using GetBucketReplicationArgs = BucketArgs;
 
 struct SetBucketReplicationArgs : public BucketArgs {
-  ReplicationConfig& config;
+  ReplicationConfig* config;
 
-  explicit SetBucketReplicationArgs(ReplicationConfig& value) : config(value) {}
+  explicit SetBucketReplicationArgs(ReplicationConfig& value)
+      : config(&value) {}
 
   ~SetBucketReplicationArgs() = default;
 };  // struct SetBucketReplication
@@ -520,9 +521,9 @@ using DeleteBucketLifecycleArgs = BucketArgs;
 using GetBucketLifecycleArgs = BucketArgs;
 
 struct SetBucketLifecycleArgs : public BucketArgs {
-  LifecycleConfig& config;
+  LifecycleConfig* config;
 
-  explicit SetBucketLifecycleArgs(LifecycleConfig& value) : config(value) {}
+  explicit SetBucketLifecycleArgs(LifecycleConfig& value) : config(&value) {}
 
   ~SetBucketLifecycleArgs() = default;
 };  // struct SetBucketLifecycle
