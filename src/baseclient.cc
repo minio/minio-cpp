@@ -1552,7 +1552,7 @@ SelectObjectContentResponse BaseClient::SelectObjectContent(
   req.object_name = args.object;
   req.query_params.Add("select", "");
   req.query_params.Add("select-type", "2");
-  std::string body = args.request->ToXML();
+  std::string body = args.request.ToXML();
   req.headers.Add("Content-MD5", utils::Md5sumHash(body));
   req.body = body;
 
@@ -1579,9 +1579,9 @@ SetBucketEncryptionResponse BaseClient::SetBucketEncryption(
   std::stringstream ss;
   ss << "<ServerSideEncryptionConfiguration>";
   ss << "<Rule><ApplyServerSideEncryptionByDefault>";
-  ss << "<SSEAlgorithm>" << args.config->sse_algorithm << "</SSEAlgorithm>";
-  if (!args.config->kms_master_key_id.empty()) {
-    ss << "<KMSMasterKeyID>" << args.config->kms_master_key_id
+  ss << "<SSEAlgorithm>" << args.config.sse_algorithm << "</SSEAlgorithm>";
+  if (!args.config.kms_master_key_id.empty()) {
+    ss << "<KMSMasterKeyID>" << args.config.kms_master_key_id
        << "</KMSMasterKeyID>";
   }
   ss << "</ApplyServerSideEncryptionByDefault></Rule>";
@@ -1611,7 +1611,7 @@ SetBucketLifecycleResponse BaseClient::SetBucketLifecycle(
     return SetBucketLifecycleResponse(resp);
   }
 
-  std::string body = args.config->ToXML();
+  std::string body = args.config.ToXML();
 
   Request req(http::Method::kPut, region, base_url_, args.extra_headers,
               args.extra_query_params);
@@ -1636,7 +1636,7 @@ SetBucketNotificationResponse BaseClient::SetBucketNotification(
     return SetBucketNotificationResponse(resp);
   }
 
-  std::string body = args.config->ToXML();
+  std::string body = args.config.ToXML();
 
   Request req(http::Method::kPut, region, base_url_, args.extra_headers,
               args.extra_query_params);
@@ -1683,7 +1683,7 @@ SetBucketReplicationResponse BaseClient::SetBucketReplication(
     return SetBucketReplicationResponse(resp);
   }
 
-  std::string body = args.config->ToXML();
+  std::string body = args.config.ToXML();
 
   Request req(http::Method::kPut, region, base_url_, args.extra_headers,
               args.extra_query_params);
@@ -2360,58 +2360,47 @@ std::future<RemoveObjectsResponse> BaseClient::RemoveObjectsAsync(
                     });
 }
 
-// Reference-holding arg: SelectObjectContentArgs has SelectRequest* request.
-// shared_ptr in SelectRequest now auto-deep-copies the pointer chain.
+// SelectObjectContentArgs owns request by value (deep-copied via
+// SelectRequest's shared_ptr chain). Direct move is safe.
 std::future<SelectObjectContentResponse> BaseClient::SelectObjectContentAsync(
     SelectObjectContentArgs args) {
-  auto owned_request = std::make_shared<SelectRequest>(*args.request);
   return std::async(std::launch::async,
-                    [this, owned_request, args = std::move(args)]() mutable {
-                      args.request = owned_request.get();
+                    [this, args = std::move(args)]() mutable {
                       return SelectObjectContent(std::move(args));
                     });
 }
 
-// Reference-holding arg: SetBucketEncryptionArgs has SseConfig& config.
+// SetBucketEncryptionArgs owns config by value.
 std::future<SetBucketEncryptionResponse> BaseClient::SetBucketEncryptionAsync(
     SetBucketEncryptionArgs args) {
-  auto owned_config = std::make_shared<SseConfig>(*args.config);
-  args.config = owned_config.get();
   return std::async(std::launch::async,
                     [this, args = std::move(args)]() mutable {
                       return SetBucketEncryption(std::move(args));
                     });
 }
 
-// Reference-holding arg: SetBucketLifecycleArgs has LifecycleConfig& config.
+// SetBucketLifecycleArgs owns config by value.
 std::future<SetBucketLifecycleResponse> BaseClient::SetBucketLifecycleAsync(
     SetBucketLifecycleArgs args) {
-  auto owned_config = std::make_shared<LifecycleConfig>(*args.config);
-  args.config = owned_config.get();
   return std::async(std::launch::async,
                     [this, args = std::move(args)]() mutable {
                       return SetBucketLifecycle(std::move(args));
                     });
 }
 
-// Reference-holding arg: SetBucketNotificationArgs has NotificationConfig&
+// SetBucketNotificationArgs owns config by value.
 // config.
 std::future<SetBucketNotificationResponse>
 BaseClient::SetBucketNotificationAsync(SetBucketNotificationArgs args) {
-  auto owned_config = std::make_shared<NotificationConfig>(*args.config);
-  args.config = owned_config.get();
   return std::async(std::launch::async,
                     [this, args = std::move(args)]() mutable {
                       return SetBucketNotification(std::move(args));
                     });
 }
 
-// Reference-holding arg: SetBucketReplicationArgs has ReplicationConfig&
-// config.
+// SetBucketReplicationArgs owns config by value.
 std::future<SetBucketReplicationResponse> BaseClient::SetBucketReplicationAsync(
     SetBucketReplicationArgs args) {
-  auto owned_config = std::make_shared<ReplicationConfig>(*args.config);
-  args.config = owned_config.get();
   return std::async(std::launch::async,
                     [this, args = std::move(args)]() mutable {
                       return SetBucketReplication(std::move(args));
