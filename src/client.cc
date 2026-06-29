@@ -134,31 +134,34 @@ struct ScopedRDMARegistration {
 }  // namespace
 
 ListObjectsResult::ListObjectsResult(error::Error err) : failed_(true) {
-  this->resp_.contents.push_back(Item(std::move(err)));
-  this->itr_ = resp_.contents.begin();
+  resp_ = std::make_shared<ListObjectsResponse>();
+  resp_->contents.push_back(Item(std::move(err)));
+  itr_ = resp_->contents.begin();
 }
 
 ListObjectsResult::ListObjectsResult(Client* const client,
                                      const ListObjectsArgs& args)
     : client_(client), args_(args) {
+  resp_ = std::make_shared<ListObjectsResponse>();
   StartPrefetch();
 }
 
 ListObjectsResult::ListObjectsResult(Client* const client,
                                      ListObjectsArgs&& args)
     : client_(client), args_(std::move(args)) {
+  resp_ = std::make_shared<ListObjectsResponse>();
   StartPrefetch();
 }
 
 void ListObjectsResult::UpdatePaginationArgs() {
   if (args_.include_versions) {
-    args_.key_marker = resp_.next_key_marker;
-    args_.version_id_marker = resp_.next_version_id_marker;
+    args_.key_marker = resp_->next_key_marker;
+    args_.version_id_marker = resp_->next_version_id_marker;
   } else if (args_.use_api_v1) {
-    args_.marker = resp_.next_marker;
+    args_.marker = resp_->next_marker;
   } else {
-    args_.start_after = resp_.start_after;
-    args_.continuation_token = resp_.next_continuation_token;
+    args_.start_after = resp_->start_after;
+    args_.continuation_token = resp_->next_continuation_token;
   }
 }
 
@@ -210,19 +213,19 @@ void ListObjectsResult::Populate() {
     return;
   }
   try {
-    resp_ = prefetch_future_->get();
+    resp_ = std::make_shared<ListObjectsResponse>(prefetch_future_->get());
   } catch (const std::exception& e) {
-    resp_ = ListObjectsResponse(
+    resp_ = std::make_shared<ListObjectsResponse>(
         error::Error(std::string("prefetch result failed: ") + e.what()));
   }
   prefetch_future_.reset();
-  if (!resp_) {
+  if (!*resp_) {
     failed_ = true;
-    resp_.contents.push_back(Item(resp_));
+    resp_->contents.push_back(Item(*resp_));
   }
-  itr_ = resp_.contents.begin();
+  itr_ = resp_->contents.begin();
 
-  if (resp_ && resp_.is_truncated) {
+  if (*resp_ && resp_->is_truncated) {
     UpdatePaginationArgs();
     StartPrefetch();
   }

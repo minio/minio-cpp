@@ -38,7 +38,7 @@ class ListObjectsResult {
   Client* client_ = nullptr;
   ListObjectsArgs args_;
   bool failed_ = false;
-  ListObjectsResponse resp_;
+  std::shared_ptr<ListObjectsResponse> resp_;
   std::list<Item>::iterator itr_;
   std::shared_ptr<std::future<ListObjectsResponse>> prefetch_future_;
 
@@ -51,27 +51,31 @@ class ListObjectsResult {
   ListObjectsResult(Client* const client, const ListObjectsArgs& args);
   ListObjectsResult(Client* const client, ListObjectsArgs&& args);
   ~ListObjectsResult() = default;
-  ListObjectsResult(const ListObjectsResult&) = delete;
-  ListObjectsResult& operator=(const ListObjectsResult&) = delete;
+  ListObjectsResult(const ListObjectsResult&) = default;
+  ListObjectsResult& operator=(const ListObjectsResult&) = default;
   ListObjectsResult(ListObjectsResult&&) = default;
   ListObjectsResult& operator=(ListObjectsResult&&) = default;
 
   Item& operator*() const { return *itr_; }
   explicit operator bool() {
-    if (prefetch_future_ && resp_.contents.empty()) Populate();
-    return itr_ != resp_.contents.end();
+    if (prefetch_future_ && (!resp_ || resp_->contents.empty())) Populate();
+    return itr_ != resp_->contents.end();
   }
-  explicit operator bool() const { return itr_ != resp_.contents.end(); }
+  explicit operator bool() const { return itr_ != resp_->contents.end(); }
 
   ListObjectsResult& operator++() {
     itr_++;
-    if (!failed_ && itr_ == resp_.contents.end() && resp_.is_truncated) {
+    if (!failed_ && itr_ == resp_->contents.end() && resp_->is_truncated) {
       Populate();
     }
     return *this;
   }
 
-  void operator++(int) { ++(*this); }
+  ListObjectsResult operator++(int) {
+    ListObjectsResult old = *this;
+    ++(*this);
+    return old;
+  }
 };  // class ListObjectsResult
 
 class RemoveObjectsResult {
