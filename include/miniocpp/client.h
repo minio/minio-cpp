@@ -40,7 +40,8 @@ class ListObjectsResult {
   bool failed_ = false;
   std::shared_ptr<ListObjectsResponse> resp_;
   std::list<Item>::iterator itr_;
-  std::shared_ptr<std::future<ListObjectsResponse>> prefetch_future_;
+  std::shared_ptr<std::shared_future<std::shared_ptr<ListObjectsResponse>>>
+      prefetch_future_;
 
   void Populate();
   void StartPrefetch();

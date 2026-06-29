@@ -143,6 +143,7 @@ ListObjectsResult::ListObjectsResult(Client* const client,
                                      const ListObjectsArgs& args)
     : client_(client), args_(args) {
   resp_ = std::make_shared<ListObjectsResponse>();
+  itr_ = resp_->contents.end();
   StartPrefetch();
 }
 
@@ -150,11 +151,12 @@ ListObjectsResult::ListObjectsResult(Client* const client,
                                      ListObjectsArgs&& args)
     : client_(client), args_(std::move(args)) {
   resp_ = std::make_shared<ListObjectsResponse>();
+  itr_ = resp_->contents.end();
   StartPrefetch();
 }
 
 void ListObjectsResult::UpdatePaginationArgs() {
-  if (args_.include_versions) {
+  if (args_.include_versions || !args_.version_id_marker.empty()) {
     args_.key_marker = resp_->next_key_marker;
     args_.version_id_marker = resp_->next_version_id_marker;
   } else if (args_.use_api_v1) {
@@ -168,43 +170,48 @@ void ListObjectsResult::UpdatePaginationArgs() {
 void ListObjectsResult::StartPrefetch() {
   ListObjectsArgs next_args = args_;
   try {
-    prefetch_future_ =
-        std::make_shared<std::future<ListObjectsResponse>>(std::async(
-            std::launch::async,
-            [client = client_, next_args = std::move(next_args)]() mutable {
-              try {
-                GetRegionResponse resp =
-                    client->GetRegion(next_args.bucket, next_args.region);
-                if (resp) {
-                  next_args.region = resp.region;
-                  if (next_args.recursive) {
-                    next_args.delimiter = "";
-                  } else if (next_args.delimiter.empty()) {
-                    next_args.delimiter = "/";
-                  }
-
-                  if (next_args.include_versions ||
-                      !next_args.version_id_marker.empty()) {
-                    return client->ListObjectVersions(
-                        ListObjectVersionsArgs(next_args));
-                  } else if (next_args.use_api_v1) {
-                    return client->ListObjectsV1(ListObjectsV1Args(next_args));
-                  } else {
-                    return client->ListObjectsV2(ListObjectsV2Args(next_args));
-                  }
-                }
-                return ListObjectsResponse(resp);
-              } catch (const std::exception& e) {
-                return ListObjectsResponse(
-                    error::Error(std::string("prefetch failed: ") + e.what()));
+    prefetch_future_ = std::make_shared<
+        std::shared_future<std::shared_ptr<ListObjectsResponse>>>(std::async(
+        std::launch::async,
+        [client = client_, next_args = std::move(next_args)]() mutable
+            -> std::shared_ptr<ListObjectsResponse> {
+          try {
+            GetRegionResponse resp =
+                client->GetRegion(next_args.bucket, next_args.region);
+            if (resp) {
+              next_args.region = resp.region;
+              if (next_args.recursive) {
+                next_args.delimiter = "";
+              } else if (next_args.delimiter.empty()) {
+                next_args.delimiter = "/";
               }
-            }));
+
+              if (next_args.include_versions ||
+                  !next_args.version_id_marker.empty()) {
+                return std::make_shared<ListObjectsResponse>(
+                    client->ListObjectVersions(
+                        ListObjectVersionsArgs(next_args)));
+              } else if (next_args.use_api_v1) {
+                return std::make_shared<ListObjectsResponse>(
+                    client->ListObjectsV1(ListObjectsV1Args(next_args)));
+              } else {
+                return std::make_shared<ListObjectsResponse>(
+                    client->ListObjectsV2(ListObjectsV2Args(next_args)));
+              }
+            }
+            return std::make_shared<ListObjectsResponse>(resp);
+          } catch (const std::exception& e) {
+            return std::make_shared<ListObjectsResponse>(
+                error::Error(std::string("prefetch failed: ") + e.what()));
+          }
+        }));
   } catch (const std::exception& e) {
-    std::promise<ListObjectsResponse> p;
-    p.set_value(ListObjectsResponse(
+    std::promise<std::shared_ptr<ListObjectsResponse>> p;
+    p.set_value(std::make_shared<ListObjectsResponse>(
         error::Error(std::string("failed to launch prefetch: ") + e.what())));
-    prefetch_future_ =
-        std::make_shared<std::future<ListObjectsResponse>>(p.get_future());
+    prefetch_future_ = std::make_shared<
+        std::shared_future<std::shared_ptr<ListObjectsResponse>>>(
+        p.get_future());
   }
 }
 
@@ -213,7 +220,7 @@ void ListObjectsResult::Populate() {
     return;
   }
   try {
-    resp_ = std::make_shared<ListObjectsResponse>(prefetch_future_->get());
+    resp_ = prefetch_future_->get();
   } catch (const std::exception& e) {
     resp_ = std::make_shared<ListObjectsResponse>(
         error::Error(std::string("prefetch result failed: ") + e.what()));
