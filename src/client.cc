@@ -141,16 +141,16 @@ ListObjectsResult::ListObjectsResult(error::Error err) : failed_(true) {
 ListObjectsResult::ListObjectsResult(Client* const client,
                                      const ListObjectsArgs& args)
     : client_(client), args_(args) {
-  Populate();
+  StartPrefetch();
 }
 
 ListObjectsResult::ListObjectsResult(Client* const client,
                                      ListObjectsArgs&& args)
     : client_(client), args_(std::move(args)) {
-  Populate();
+  StartPrefetch();
 }
 
-void ListObjectsResult::Populate() {
+void ListObjectsResult::UpdatePaginationArgs() {
   if (args_.include_versions) {
     args_.key_marker = resp_.next_key_marker;
     args_.version_id_marker = resp_.next_version_id_marker;
@@ -160,34 +160,57 @@ void ListObjectsResult::Populate() {
     args_.start_after = resp_.start_after;
     args_.continuation_token = resp_.next_continuation_token;
   }
+}
 
-  std::string region;
-  if (GetRegionResponse resp = client_->GetRegion(args_.bucket, args_.region)) {
-    region = resp.region;
-    if (args_.recursive) {
-      args_.delimiter = "";
-    } else if (args_.delimiter.empty()) {
-      args_.delimiter = "/";
-    }
+void ListObjectsResult::StartPrefetch() {
+  ListObjectsArgs next_args = args_;
+  prefetch_future_ =
+      std::make_shared<std::future<ListObjectsResponse>>(std::async(
+          std::launch::async,
+          [this, next_args = std::move(next_args)]() mutable {
+            std::string region;
+            if (GetRegionResponse resp =
+                    client_->GetRegion(next_args.bucket, next_args.region)) {
+              region = resp.region;
+              if (next_args.recursive) {
+                next_args.delimiter = "";
+              } else if (next_args.delimiter.empty()) {
+                next_args.delimiter = "/";
+              }
 
-    if (args_.include_versions || !args_.version_id_marker.empty()) {
-      resp_ = client_->ListObjectVersions(ListObjectVersionsArgs(args_));
-    } else if (args_.use_api_v1) {
-      resp_ = client_->ListObjectsV1(ListObjectsV1Args(args_));
-    } else {
-      resp_ = client_->ListObjectsV2(ListObjectsV2Args(args_));
-    }
+              if (next_args.include_versions ||
+                  !next_args.version_id_marker.empty()) {
+                return client_->ListObjectVersions(
+                    ListObjectVersionsArgs(next_args));
+              } else if (next_args.use_api_v1) {
+                return client_->ListObjectsV1(ListObjectsV1Args(next_args));
+              } else {
+                return client_->ListObjectsV2(ListObjectsV2Args(next_args));
+              }
+            }
+            return ListObjectsResponse(
+                error::make<ListObjectsResponse>("unable to get region"));
+          }));
+}
 
-    if (!resp_) {
-      failed_ = true;
-      resp_.contents.push_back(Item(resp_));
-    }
-  } else {
-    failed_ = true;
-    resp_.contents.push_back(Item(resp));
+void ListObjectsResult::Populate() {
+  // Always consume from the prefetch future.
+  if (!prefetch_future_ || !prefetch_future_->valid()) {
+    return;
   }
-
+  resp_ = prefetch_future_->get();
+  prefetch_future_.reset();
+  if (!resp_) {
+    failed_ = true;
+    resp_.contents.push_back(Item(resp_));
+  }
   itr_ = resp_.contents.begin();
+
+  // Start next prefetch if there are more pages.
+  if (resp_ && resp_.is_truncated) {
+    UpdatePaginationArgs();
+    StartPrefetch();
+  }
 }
 
 RemoveObjectsResult::RemoveObjectsResult(error::Error err) {

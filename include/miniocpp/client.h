@@ -40,17 +40,27 @@ class ListObjectsResult {
   bool failed_ = false;
   ListObjectsResponse resp_;
   std::list<Item>::iterator itr_;
+  std::shared_ptr<std::future<ListObjectsResponse>> prefetch_future_;
 
   void Populate();
+  void StartPrefetch();
+  void UpdatePaginationArgs();
 
  public:
   explicit ListObjectsResult(error::Error err);
   ListObjectsResult(Client* const client, const ListObjectsArgs& args);
   ListObjectsResult(Client* const client, ListObjectsArgs&& args);
   ~ListObjectsResult() = default;
+  ListObjectsResult(const ListObjectsResult&) = default;
+  ListObjectsResult& operator=(const ListObjectsResult&) = default;
+  ListObjectsResult(ListObjectsResult&&) = default;
+  ListObjectsResult& operator=(ListObjectsResult&&) = default;
 
   Item& operator*() const { return *itr_; }
-  explicit operator bool() const { return itr_ != resp_.contents.end(); }
+  explicit operator bool() {
+    if (prefetch_future_ && resp_.contents.empty()) Populate();
+    return itr_ != resp_.contents.end();
+  }
 
   ListObjectsResult& operator++() {
     itr_++;
