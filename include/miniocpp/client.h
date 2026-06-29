@@ -72,9 +72,9 @@ class ListObjectsResult {
   }
 
   ListObjectsResult operator++(int) {
-    ListObjectsResult old = *this;
+    ListObjectsResult curr = *this;
     ++(*this);
-    return old;
+    return curr;
   }
 };  // class ListObjectsResult
 
