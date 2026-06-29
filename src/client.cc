@@ -145,6 +145,7 @@ ListObjectsResult::ListObjectsResult(Client* const client,
   resp_ = std::make_shared<ListObjectsResponse>();
   itr_ = resp_->contents.end();
   StartPrefetch();
+  Populate();
 }
 
 ListObjectsResult::ListObjectsResult(Client* const client,
@@ -153,6 +154,7 @@ ListObjectsResult::ListObjectsResult(Client* const client,
   resp_ = std::make_shared<ListObjectsResponse>();
   itr_ = resp_->contents.end();
   StartPrefetch();
+  Populate();
 }
 
 void ListObjectsResult::UpdatePaginationArgs() {
