@@ -61,6 +61,7 @@ class ListObjectsResult {
     if (prefetch_future_ && resp_.contents.empty()) Populate();
     return itr_ != resp_.contents.end();
   }
+  explicit operator bool() const { return itr_ != resp_.contents.end(); }
 
   ListObjectsResult& operator++() {
     itr_++;
