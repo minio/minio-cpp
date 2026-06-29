@@ -167,11 +167,11 @@ void ListObjectsResult::StartPrefetch() {
   prefetch_future_ =
       std::make_shared<std::future<ListObjectsResponse>>(std::async(
           std::launch::async,
-          [this, next_args = std::move(next_args)]() mutable {
+          [client = client_, next_args = std::move(next_args)]() mutable {
             std::string region;
             if (GetRegionResponse resp =
-                    client_->GetRegion(next_args.bucket, next_args.region)) {
-              region = resp.region;
+                    client->GetRegion(next_args.bucket, next_args.region)) {
+              next_args.region = resp.region;
               if (next_args.recursive) {
                 next_args.delimiter = "";
               } else if (next_args.delimiter.empty()) {
@@ -180,12 +180,12 @@ void ListObjectsResult::StartPrefetch() {
 
               if (next_args.include_versions ||
                   !next_args.version_id_marker.empty()) {
-                return client_->ListObjectVersions(
+                return client->ListObjectVersions(
                     ListObjectVersionsArgs(next_args));
               } else if (next_args.use_api_v1) {
-                return client_->ListObjectsV1(ListObjectsV1Args(next_args));
+                return client->ListObjectsV1(ListObjectsV1Args(next_args));
               } else {
-                return client_->ListObjectsV2(ListObjectsV2Args(next_args));
+                return client->ListObjectsV2(ListObjectsV2Args(next_args));
               }
             }
             return ListObjectsResponse(
@@ -194,7 +194,6 @@ void ListObjectsResult::StartPrefetch() {
 }
 
 void ListObjectsResult::Populate() {
-  // Always consume from the prefetch future.
   if (!prefetch_future_ || !prefetch_future_->valid()) {
     return;
   }
@@ -206,7 +205,6 @@ void ListObjectsResult::Populate() {
   }
   itr_ = resp_.contents.begin();
 
-  // Start next prefetch if there are more pages.
   if (resp_ && resp_.is_truncated) {
     UpdatePaginationArgs();
     StartPrefetch();

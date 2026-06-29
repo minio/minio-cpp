@@ -51,8 +51,8 @@ class ListObjectsResult {
   ListObjectsResult(Client* const client, const ListObjectsArgs& args);
   ListObjectsResult(Client* const client, ListObjectsArgs&& args);
   ~ListObjectsResult() = default;
-  ListObjectsResult(const ListObjectsResult&) = default;
-  ListObjectsResult& operator=(const ListObjectsResult&) = default;
+  ListObjectsResult(const ListObjectsResult&) = delete;
+  ListObjectsResult& operator=(const ListObjectsResult&) = delete;
   ListObjectsResult(ListObjectsResult&&) = default;
   ListObjectsResult& operator=(ListObjectsResult&&) = default;
 
@@ -70,11 +70,7 @@ class ListObjectsResult {
     return *this;
   }
 
-  ListObjectsResult operator++(int) {
-    ListObjectsResult curr = *this;
-    ++(*this);
-    return curr;
-  }
+  void operator++(int) { ++(*this); }
 };  // class ListObjectsResult
 
 class RemoveObjectsResult {
