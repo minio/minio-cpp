@@ -298,6 +298,10 @@ struct ListObjectsResponse : public Response {
   std::string_view next_version_id_marker;
 
   ListObjectsResponse() = default;
+  ListObjectsResponse(const ListObjectsResponse&) = delete;
+  ListObjectsResponse& operator=(const ListObjectsResponse&) = delete;
+  ListObjectsResponse(ListObjectsResponse&&) = default;
+  ListObjectsResponse& operator=(ListObjectsResponse&&) = default;
 
   explicit ListObjectsResponse(error::Error err) : Response(std::move(err)) {}
 

@@ -134,60 +134,110 @@ struct ScopedRDMARegistration {
 }  // namespace
 
 ListObjectsResult::ListObjectsResult(error::Error err) : failed_(true) {
-  this->resp_.contents.push_back(Item(std::move(err)));
-  this->itr_ = resp_.contents.begin();
+  resp_ = std::make_shared<ListObjectsResponse>();
+  resp_->contents.push_back(Item(std::move(err)));
+  itr_ = resp_->contents.begin();
 }
 
 ListObjectsResult::ListObjectsResult(Client* const client,
                                      const ListObjectsArgs& args)
     : client_(client), args_(args) {
+  resp_ = std::make_shared<ListObjectsResponse>();
+  itr_ = resp_->contents.end();
+  StartPrefetch();
   Populate();
 }
 
 ListObjectsResult::ListObjectsResult(Client* const client,
                                      ListObjectsArgs&& args)
     : client_(client), args_(std::move(args)) {
+  resp_ = std::make_shared<ListObjectsResponse>();
+  itr_ = resp_->contents.end();
+  StartPrefetch();
   Populate();
 }
 
-void ListObjectsResult::Populate() {
-  if (args_.include_versions) {
-    args_.key_marker = resp_.next_key_marker;
-    args_.version_id_marker = resp_.next_version_id_marker;
+void ListObjectsResult::UpdatePaginationArgs() {
+  if (args_.include_versions || !args_.version_id_marker.empty()) {
+    args_.key_marker = resp_->next_key_marker;
+    args_.version_id_marker = resp_->next_version_id_marker;
   } else if (args_.use_api_v1) {
-    args_.marker = resp_.next_marker;
+    args_.marker = resp_->next_marker;
   } else {
-    args_.start_after = resp_.start_after;
-    args_.continuation_token = resp_.next_continuation_token;
+    args_.start_after = resp_->start_after;
+    args_.continuation_token = resp_->next_continuation_token;
   }
+}
 
-  std::string region;
-  if (GetRegionResponse resp = client_->GetRegion(args_.bucket, args_.region)) {
-    region = resp.region;
-    if (args_.recursive) {
-      args_.delimiter = "";
-    } else if (args_.delimiter.empty()) {
-      args_.delimiter = "/";
-    }
+void ListObjectsResult::StartPrefetch() {
+  ListObjectsArgs next_args = args_;
+  try {
+    prefetch_future_ = std::make_shared<
+        std::shared_future<std::shared_ptr<ListObjectsResponse>>>(std::async(
+        std::launch::async,
+        [client = client_, next_args = std::move(next_args)]() mutable
+            -> std::shared_ptr<ListObjectsResponse> {
+          try {
+            GetRegionResponse resp =
+                client->GetRegion(next_args.bucket, next_args.region);
+            if (resp) {
+              next_args.region = resp.region;
+              if (next_args.recursive) {
+                next_args.delimiter = "";
+              } else if (next_args.delimiter.empty()) {
+                next_args.delimiter = "/";
+              }
 
-    if (args_.include_versions || !args_.version_id_marker.empty()) {
-      resp_ = client_->ListObjectVersions(ListObjectVersionsArgs(args_));
-    } else if (args_.use_api_v1) {
-      resp_ = client_->ListObjectsV1(ListObjectsV1Args(args_));
-    } else {
-      resp_ = client_->ListObjectsV2(ListObjectsV2Args(args_));
-    }
+              if (next_args.include_versions ||
+                  !next_args.version_id_marker.empty()) {
+                return std::make_shared<ListObjectsResponse>(
+                    client->ListObjectVersions(
+                        ListObjectVersionsArgs(next_args)));
+              } else if (next_args.use_api_v1) {
+                return std::make_shared<ListObjectsResponse>(
+                    client->ListObjectsV1(ListObjectsV1Args(next_args)));
+              } else {
+                return std::make_shared<ListObjectsResponse>(
+                    client->ListObjectsV2(ListObjectsV2Args(next_args)));
+              }
+            }
+            return std::make_shared<ListObjectsResponse>(resp);
+          } catch (const std::exception& e) {
+            return std::make_shared<ListObjectsResponse>(
+                error::Error(std::string("prefetch failed: ") + e.what()));
+          }
+        }));
+  } catch (const std::exception& e) {
+    std::promise<std::shared_ptr<ListObjectsResponse>> p;
+    p.set_value(std::make_shared<ListObjectsResponse>(
+        error::Error(std::string("failed to launch prefetch: ") + e.what())));
+    prefetch_future_ = std::make_shared<
+        std::shared_future<std::shared_ptr<ListObjectsResponse>>>(
+        p.get_future());
+  }
+}
 
-    if (!resp_) {
-      failed_ = true;
-      resp_.contents.push_back(Item(resp_));
-    }
-  } else {
+void ListObjectsResult::Populate() {
+  if (!prefetch_future_ || !prefetch_future_->valid()) {
+    return;
+  }
+  try {
+    resp_ = prefetch_future_->get();
+  } catch (const std::exception& e) {
+    resp_ = std::make_shared<ListObjectsResponse>(
+        error::Error(std::string("prefetch result failed: ") + e.what()));
+  }
+  prefetch_future_.reset();
+  if (!*resp_) {
     failed_ = true;
-    resp_.contents.push_back(Item(resp));
+    resp_->contents.push_back(Item(*resp_));
   }
+  itr_ = resp_->contents.begin();
 
-  itr_ = resp_.contents.begin();
+  if (*resp_ && resp_->is_truncated) {
+    UpdatePaginationArgs();
+    StartPrefetch();
+  }
 }
 
 RemoveObjectsResult::RemoveObjectsResult(error::Error err) {
