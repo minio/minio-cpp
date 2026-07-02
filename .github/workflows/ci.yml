@@ -27,7 +27,17 @@ jobs:
             arch: "amd64",
             build_type: "Release",
             cc: "gcc",
-            cxx: "g++"
+            cxx: "g++",
+            cpp_std: "17"
+          }
+        - {
+            name: "Ubuntu_Latest_GCC_CXX20",
+            os: ubuntu-latest,
+            arch: "amd64",
+            build_type: "Release",
+            cc: "gcc",
+            cxx: "g++",
+            cpp_std: "20"
           }
         - {
             name: "Ubuntu_Latest_GCC_arm64",
@@ -35,21 +45,49 @@ jobs:
             arch: "arm64",
             build_type: "Release",
             cc: "gcc",
-            cxx: "g++"
+            cxx: "g++",
+            cpp_std: "17"
+          }
+        - {
+            name: "Ubuntu_Latest_GCC_arm64_CXX20",
+            os: ubuntu-24.04-arm,
+            arch: "arm64",
+            build_type: "Release",
+            cc: "gcc",
+            cxx: "g++",
+            cpp_std: "20"
           }
         - {
             name: "macOS Latest Clang",
             os: macos-latest,
             build_type: "Release",
             cc: "clang",
-            cxx: "clang++"
+            cxx: "clang++",
+            cpp_std: "17"
+          }
+        - {
+            name: "macOS Latest Clang CXX20",
+            os: macos-latest,
+            build_type: "Release",
+            cc: "clang",
+            cxx: "clang++",
+            cpp_std: "20"
           }
         - {
             name: "Windows Latest MSVC",
             os: windows-latest,
             build_type: "Release",
             cc: "cl",
-            cxx: "cl"
+            cxx: "cl",
+            cpp_std: "17"
+          }
+        - {
+            name: "Windows Latest MSVC CXX20",
+            os: windows-latest,
+            build_type: "Release",
+            cc: "cl",
+            cxx: "cl",
+            cpp_std: "20"
           }
 
     name: ${{ matrix.config.name }}
@@ -104,7 +142,7 @@ jobs:
         ./vcpkg/bootstrap-vcpkg.sh
         cd minio-cpp
         ../vcpkg/vcpkg install
-        cmake . -B ./build -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} -DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake -DMINIO_CPP_TEST:BOOL=ON
+        cmake . -B ./build -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} -DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake -DMINIO_CPP_TEST:BOOL=ON -DMINIO_CPP_STD=${{matrix.config.cpp_std}}
         cmake --build ./build --config ${{matrix.config.build_type}} -j 4
 
     - name: Start MinIO server if Ubuntu

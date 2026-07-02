@@ -356,6 +356,8 @@ struct DeleteObject {
   std::string version_id = {};
 
   DeleteObject() = default;
+  explicit DeleteObject(std::string object_name)
+      : name(std::move(object_name)) {}
   ~DeleteObject() = default;
 };  // struct DeleteObject
 
