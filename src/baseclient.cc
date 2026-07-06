@@ -792,7 +792,7 @@ Result<GetBucketNotificationResponse> BaseClient::GetBucketNotification(
   if (resp) {
     return GetBucketNotificationResponse::ParseXML(resp->data);
   }
-  return GetBucketNotificationResponse(std::move(*resp));
+  return tl::make_unexpected(resp.error());
 }
 
 Result<GetBucketPolicyResponse> BaseClient::GetBucketPolicy(
@@ -818,7 +818,7 @@ Result<GetBucketPolicyResponse> BaseClient::GetBucketPolicy(
   if (resp) {
     return GetBucketPolicyResponse(resp->data);
   }
-  return GetBucketPolicyResponse(std::move(*resp));
+  return tl::make_unexpected(resp.error());
 }
 
 Result<GetBucketReplicationResponse> BaseClient::GetBucketReplication(
@@ -844,7 +844,7 @@ Result<GetBucketReplicationResponse> BaseClient::GetBucketReplication(
   if (resp) {
     return GetBucketReplicationResponse::ParseXML(resp->data);
   }
-  return GetBucketReplicationResponse(std::move(*resp));
+  return tl::make_unexpected(resp.error());
 }
 
 Result<GetBucketTagsResponse> BaseClient::GetBucketTags(
@@ -870,7 +870,7 @@ Result<GetBucketTagsResponse> BaseClient::GetBucketTags(
   if (resp) {
     return GetBucketTagsResponse::ParseXML(resp->data);
   }
-  return GetBucketTagsResponse(std::move(*resp));
+  return tl::make_unexpected(resp.error());
 }
 
 Result<GetBucketVersioningResponse> BaseClient::GetBucketVersioning(
@@ -1041,7 +1041,7 @@ Result<GetObjectRetentionResponse> BaseClient::GetObjectRetention(
         std::string::npos) {
       return response;
     }
-    return GetObjectRetentionResponse(std::move(*resp));
+    return tl::make_unexpected(resp.error());
   }
 
   pugi::xml_document xdoc;
@@ -1427,8 +1427,9 @@ Result<MakeBucketResponse> BaseClient::MakeBucket(MakeBucketArgs args) {
   if (resp) {
     std::unique_lock<std::shared_mutex> lock(region_map_mutex_);
     region_map_[args.bucket] = region;
+    return MakeBucketResponse(std::move(*resp));
   }
-  return MakeBucketResponse(std::move(*resp));
+  return tl::make_unexpected(resp.error());
 }
 
 Result<PutObjectResponse> BaseClient::PutObject(PutObjectApiArgs args) {

@@ -33,23 +33,22 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call get object lock config.
-  minio::s3::GetObjectLockConfigResponse resp =
-      client.GetObjectLockConfig(args);
+  auto resp = client.GetObjectLockConfig(args);
 
   // Handle response.
   if (resp) {
     std::cout << "Object Lock Configuration:" << std::endl;
-    if (minio::s3::IsRetentionModeValid(resp.config.retention_mode)) {
+    if (minio::s3::IsRetentionModeValid(resp->config.retention_mode)) {
       std::cout << "Retention Mode: "
-                << minio::s3::RetentionModeToString(resp.config.retention_mode)
+                << minio::s3::RetentionModeToString(resp->config.retention_mode)
                 << std::endl;
-      if (resp.config.retention_duration_days) {
-        std::cout << "Retention Days: " << resp.config.retention_duration_days
+      if (resp->config.retention_duration_days) {
+        std::cout << "Retention Days: " << resp->config.retention_duration_days
                   << std::endl;
       }
-      if (resp.config.retention_duration_years) {
-        std::cout << "Retention Years: " << resp.config.retention_duration_years
-                  << std::endl;
+      if (resp->config.retention_duration_years) {
+        std::cout << "Retention Years: "
+                  << resp->config.retention_duration_years << std::endl;
       }
     }
   } else {

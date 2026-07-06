@@ -33,8 +33,7 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call delete bucket encryption.
-  minio::s3::DeleteBucketEncryptionResponse resp =
-      client.DeleteBucketEncryption(args);
+  auto resp = client.DeleteBucketEncryption(args);
 
   // Handle response.
   if (resp) {

@@ -34,8 +34,7 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call set bucket encryption.
-  minio::s3::SetBucketEncryptionResponse resp =
-      client.SetBucketEncryption(args);
+  auto resp = client.SetBucketEncryption(args);
 
   // Handle response.
   if (resp) {

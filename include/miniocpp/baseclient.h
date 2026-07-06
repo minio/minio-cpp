@@ -188,8 +188,8 @@ class BaseClient {
   Result<UploadPartResponse> UploadPart(UploadPartArgs args);
   Result<UploadPartCopyResponse> UploadPartCopy(UploadPartCopyArgs args);
 
-  // Async overloads — return std::future<T> backed by std::async.
-  // These are additive and non-breaking; sync methods remain unchanged.
+  // Async overloads — return std::future<Result<T>> backed by std::async.
+  // All sync methods now also return Result<T>.
   std::future<Result<AbortMultipartUploadResponse>> AbortMultipartUploadAsync(
       AbortMultipartUploadArgs args);
   std::future<Result<BucketExistsResponse>> BucketExistsAsync(
@@ -299,11 +299,11 @@ class BaseClient {
   // didn't. This fixes the issue by providing both functions `GetObject()` can
   // expand to as inline wrappers.
 #if defined(_WIN32)
-  inline GetObjectResponse GetObjectA(const GetObjectArgs& args) {
+  inline Result<GetObjectResponse> GetObjectA(const GetObjectArgs& args) {
     return GetObject(args);
   }
 
-  inline GetObjectResponse GetObjectW(const GetObjectArgs& args) {
+  inline Result<GetObjectResponse> GetObjectW(const GetObjectArgs& args) {
     return GetObject(args);
   }
 #endif  // _WIN32

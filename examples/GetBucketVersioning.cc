@@ -33,13 +33,12 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call get bucket versioning.
-  minio::s3::GetBucketVersioningResponse resp =
-      client.GetBucketVersioning(args);
+  auto resp = client.GetBucketVersioning(args);
 
   // Handle response.
   if (resp) {
-    std::cout << "Status: " << resp.Status() << std::endl;
-    std::cout << "MFA Delete: " << resp.MfaDelete() << std::endl;
+    std::cout << "Status: " << resp->Status() << std::endl;
+    std::cout << "MFA Delete: " << resp->MfaDelete() << std::endl;
   } else {
     std::cout << "unable to get bucket versioning; " << resp.error().String()
               << std::endl;

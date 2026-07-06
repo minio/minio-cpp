@@ -259,10 +259,12 @@ Credentials AssumeRoleProvider::Fetch() {
   if (!resp) {
     creds_ = Credentials{resp.Error()};
   } else {
-    creds_ = Credentials::ParseXML(resp.body, "AssumeRoleResult")
-                 .value_or(Credentials{});
-    if (!creds_)
-      creds_ = Credentials{error::Error("failed to parse AssumeRoleResult")};
+    auto parse_res = Credentials::ParseXML(resp.body, "AssumeRoleResult");
+    if (parse_res) {
+      creds_ = std::move(*parse_res);
+    } else {
+      creds_ = Credentials{parse_res.error()};
+    }
   }
 
   return creds_;
@@ -326,13 +328,14 @@ Credentials WebIdentityClientGrantsProvider::Fetch() {
   if (!resp) {
     creds_ = Credentials{resp.Error()};
   } else {
-    creds_ =
-        Credentials::ParseXML(
-            resp.body, IsWebIdentity() ? "AssumeRoleWithWebIdentityResult"
-                                       : "AssumeRoleWithClientGrantsResult")
-            .value_or(Credentials{});
-    if (!creds_)
-      creds_ = Credentials{error::Error("failed to parse STS result")};
+    auto parse_res = Credentials::ParseXML(
+        resp.body, IsWebIdentity() ? "AssumeRoleWithWebIdentityResult"
+                                   : "AssumeRoleWithClientGrantsResult");
+    if (parse_res) {
+      creds_ = std::move(*parse_res);
+    } else {
+      creds_ = Credentials{parse_res.error()};
+    }
   }
   return creds_;
 }

@@ -37,7 +37,7 @@ int main() {
 
   // Handle response.
   if (resp) {
-    std::cout << "Bucket policy: " << resp.policy << std::endl;
+    std::cout << "Bucket policy: " << resp->policy << std::endl;
   } else {
     std::cout << "unable to get bucket policy; " << resp.error().String()
               << std::endl;

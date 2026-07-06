@@ -34,8 +34,7 @@ int main() {
   args.object = "my-object";
 
   // Call enable object legal hold.
-  minio::s3::EnableObjectLegalHoldResponse resp =
-      client.EnableObjectLegalHold(args);
+  auto resp = client.EnableObjectLegalHold(args);
 
   // Handle response.
   if (resp) {

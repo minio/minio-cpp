@@ -53,8 +53,7 @@ int main() {
   minio::s3::SelectObjectContentArgs args(request, func);
   args.bucket = "my-bucket";
   args.object = "my-object.csv";
-  minio::s3::SelectObjectContentResponse resp =
-      client.SelectObjectContent(args);
+  auto resp = client.SelectObjectContent(args);
   if (resp) {
     std::cout << "records retrieved" << std::endl;
     std::cout << records << std::endl;

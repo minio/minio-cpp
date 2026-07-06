@@ -34,12 +34,11 @@ int main() {
   args.object = "my-object";
 
   // Call is object legal hold enabled.
-  minio::s3::IsObjectLegalHoldEnabledResponse resp =
-      client.IsObjectLegalHoldEnabled(args);
+  auto resp = client.IsObjectLegalHoldEnabled(args);
 
   // Handle response.
   if (resp) {
-    std::cout << "legal hold: " << (resp.enabled ? "ON" : "OFF") << std::endl;
+    std::cout << "legal hold: " << (resp->enabled ? "ON" : "OFF") << std::endl;
   } else {
     std::cout << "unable to do is object legal hold enabled; "
               << resp.error().String() << std::endl;

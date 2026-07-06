@@ -41,8 +41,7 @@ int main() {
   };
 
   // Call listen bucket notification.
-  minio::s3::ListenBucketNotificationResponse resp =
-      client.ListenBucketNotification(args);
+  auto resp = client.ListenBucketNotification(args);
 
   // Handle response.
   if (!resp) {

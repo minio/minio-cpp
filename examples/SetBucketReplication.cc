@@ -47,8 +47,7 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call set bucket replication.
-  minio::s3::SetBucketReplicationResponse resp =
-      client.SetBucketReplication(args);
+  auto resp = client.SetBucketReplication(args);
 
   // Handle response.
   if (resp) {

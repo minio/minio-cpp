@@ -1319,7 +1319,15 @@ class Tests {
         auto fe1 = client_.BucketExistsAsync(std::move(be1));
         auto fe2 = client_.BucketExistsAsync(std::move(be2));
         auto fe3 = client_.BucketExistsAsync(std::move(be3));
-        if (!fe1.get()->exist || !fe2.get()->exist || !fe3.get()->exist) {
+        auto fe1_resp = fe1.get();
+        auto fe2_resp = fe2.get();
+        auto fe3_resp = fe3.get();
+        if (!fe1_resp || !fe2_resp || !fe3_resp) {
+          cleanup(b1, b2, b3);
+          throw std::runtime_error(
+              "concurrent BucketExistsAsync(): one failed");
+        }
+        if (!fe1_resp->exist || !fe2_resp->exist || !fe3_resp->exist) {
           cleanup(b1, b2, b3);
           throw std::runtime_error(
               "concurrent BucketExistsAsync(): expected true");

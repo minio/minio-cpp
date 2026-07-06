@@ -33,8 +33,7 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call delete bucket lifecycle.
-  minio::s3::DeleteBucketLifecycleResponse resp =
-      client.DeleteBucketLifecycle(args);
+  auto resp = client.DeleteBucketLifecycle(args);
 
   // Handle response.
   if (resp) {

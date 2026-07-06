@@ -39,10 +39,10 @@ int main() {
   // Handle response.
   if (resp) {
     std::cout << "Retention Mode: "
-              << minio::s3::RetentionModeToString(resp.retention_mode)
+              << minio::s3::RetentionModeToString(resp->retention_mode)
               << std::endl;
     std::cout << "Retain Until Date: "
-              << resp.retain_until_date.ToHttpHeaderValue() << std::endl;
+              << resp->retain_until_date.ToHttpHeaderValue() << std::endl;
   } else {
     std::cout << "unable to get object retention; " << resp.error().String()
               << std::endl;

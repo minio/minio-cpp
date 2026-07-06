@@ -213,9 +213,6 @@ void ListObjectsResult::StartPrefetch() {
                 return std::make_shared<ListObjectsResponse>();
               }
             }
-            if (resp) {
-              return std::make_shared<ListObjectsResponse>();
-            }
             return std::make_shared<ListObjectsResponse>();
           } catch (const std::exception& e) {
             return std::make_shared<ListObjectsResponse>();
@@ -811,7 +808,10 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args,
   cmu_args.upload_id = upload_id;
   cmu_args.parts = parts;
   auto resp = CompleteMultipartUpload(cmu_args);
-  if (resp && args.progressfunc != nullptr) {
+  if (!resp) {
+    return tl::make_unexpected(resp.error());
+  }
+  if (args.progressfunc != nullptr) {
     http::ProgressFunctionArgs actual_args;
     actual_args.upload_speed = upload_speed.value_or(-1.0);
     actual_args.userdata = args.progress_userdata;
@@ -1389,6 +1389,9 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
       amu_args.object = std::move(args.object);
       amu_args.upload_id = upload_id;
       AbortMultipartUpload(amu_args);
+    }
+    if (!cmu_resp) {
+      return tl::make_unexpected(cmu_resp.error());
     }
     return PutObjectResponse(std::move(*cmu_resp));
   }

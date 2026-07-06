@@ -37,7 +37,7 @@ int main() {
 
   // Handle response.
   if (resp) {
-    std::cout << "Lifecycle configuration: " << resp.config.ToXML()
+    std::cout << "Lifecycle configuration: " << resp->config.ToXML()
               << std::endl;
   } else {
     std::cout << "unable to get bucket lifecycle; " << resp.error().String()

@@ -33,12 +33,11 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call get bucket notification.
-  minio::s3::GetBucketNotificationResponse resp =
-      client.GetBucketNotification(args);
+  auto resp = client.GetBucketNotification(args);
 
   // Handle response.
   if (resp) {
-    std::cout << "Bucket notification: " << resp.config.ToXML() << std::endl;
+    std::cout << "Bucket notification: " << resp->config.ToXML() << std::endl;
   } else {
     std::cout << "unable to get bucket notification; " << resp.error().String()
               << std::endl;

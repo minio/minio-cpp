@@ -35,8 +35,7 @@ int main() {
   args.config.retention_duration_days = minio::s3::Integer(30);
 
   // Call set object lock config.
-  minio::s3::SetObjectLockConfigResponse resp =
-      client.SetObjectLockConfig(args);
+  auto resp = client.SetObjectLockConfig(args);
 
   // Handle response.
   if (resp) {

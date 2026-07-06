@@ -34,8 +34,7 @@ int main() {
   args.status = true;
 
   // Call set bucket versioning.
-  minio::s3::SetBucketVersioningResponse resp =
-      client.SetBucketVersioning(args);
+  auto resp = client.SetBucketVersioning(args);
 
   // Handle response.
   if (resp) {

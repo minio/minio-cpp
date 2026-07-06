@@ -33,8 +33,7 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call delete bucket notification.
-  minio::s3::DeleteBucketNotificationResponse resp =
-      client.DeleteBucketNotification(args);
+  auto resp = client.DeleteBucketNotification(args);
 
   // Handle response.
   if (resp) {

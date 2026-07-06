@@ -36,8 +36,7 @@ int main() {
   args.expiry_seconds = 60 * 60 * 24;  // 1 day.
 
   // Call get presigned object url.
-  minio::s3::GetPresignedObjectUrlResponse resp =
-      client.GetPresignedObjectUrl(args);
+  auto resp = client.GetPresignedObjectUrl(args);
 
   // Handle response.
   if (resp) {

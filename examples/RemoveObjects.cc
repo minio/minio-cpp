@@ -50,9 +50,9 @@ int main() {
   auto result = client.RemoveObjects(args);
   for (; result; result++) {
     auto err = *result;
-    if (!err) {
-      std::cout << "unable to do remove objects; " << err.Error().String()
-                << std::endl;
+    if (!err.code.empty() || !err.message.empty()) {
+      std::cout << "unable to do remove objects; " << err.code << ": "
+                << err.message << std::endl;
       break;
     }
 
