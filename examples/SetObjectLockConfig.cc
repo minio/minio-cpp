@@ -43,7 +43,7 @@ int main() {
     std::cout << "Object lock configuration is set successfully" << std::endl;
   } else {
     std::cout << "unable to do object lock configuration; "
-              << resp.Error().String() << std::endl;
+              << resp.error().String() << std::endl;
   }
 
   return 0;

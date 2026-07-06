@@ -36,13 +36,13 @@ int main() {
   args.tags["User"] = "jsmith";
 
   // Call set object tags.
-  minio::s3::SetObjectTagsResponse resp = client.SetObjectTags(args);
+  auto resp = client.SetObjectTags(args);
 
   // Handle response.
   if (resp) {
     std::cout << "Object tags are set successfully" << std::endl;
   } else {
-    std::cout << "unable to set object tags; " << resp.Error().String()
+    std::cout << "unable to set object tags; " << resp.error().String()
               << std::endl;
   }
 

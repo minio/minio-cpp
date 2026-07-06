@@ -54,7 +54,7 @@ int main() {
   if (resp) {
     std::cout << "Bucket replication is set successfully" << std::endl;
   } else {
-    std::cout << "unable to set bucket replication; " << resp.Error().String()
+    std::cout << "unable to set bucket replication; " << resp.error().String()
               << std::endl;
   }
 

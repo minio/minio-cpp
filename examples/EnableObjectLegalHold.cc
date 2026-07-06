@@ -41,7 +41,7 @@ int main() {
   if (resp) {
     std::cout << "legal hold on my-object is enabled successfully" << std::endl;
   } else {
-    std::cout << "unable to enable object legal hold; " << resp.Error().String()
+    std::cout << "unable to enable object legal hold; " << resp.error().String()
               << std::endl;
   }
 

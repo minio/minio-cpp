@@ -40,7 +40,7 @@ int main() {
   if (resp) {
     std::cout << "Bucket notification: " << resp.config.ToXML() << std::endl;
   } else {
-    std::cout << "unable to get bucket notification; " << resp.Error().String()
+    std::cout << "unable to get bucket notification; " << resp.error().String()
               << std::endl;
   }
 

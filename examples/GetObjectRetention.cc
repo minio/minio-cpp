@@ -34,7 +34,7 @@ int main() {
   args.object = "my-object";
 
   // Call get object retention.
-  minio::s3::GetObjectRetentionResponse resp = client.GetObjectRetention(args);
+  auto resp = client.GetObjectRetention(args);
 
   // Handle response.
   if (resp) {
@@ -44,7 +44,7 @@ int main() {
     std::cout << "Retain Until Date: "
               << resp.retain_until_date.ToHttpHeaderValue() << std::endl;
   } else {
-    std::cout << "unable to get object retention; " << resp.Error().String()
+    std::cout << "unable to get object retention; " << resp.error().String()
               << std::endl;
   }
 

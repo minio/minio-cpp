@@ -33,13 +33,13 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call remove bucket.
-  minio::s3::RemoveBucketResponse resp = client.RemoveBucket(args);
+  auto resp = client.RemoveBucket(args);
 
   // Handle response.
   if (resp) {
     std::cout << "my-bucket is removed successfully" << std::endl;
   } else {
-    std::cout << "unable to remove bucket; " << resp.Error().String()
+    std::cout << "unable to remove bucket; " << resp.error().String()
               << std::endl;
   }
 

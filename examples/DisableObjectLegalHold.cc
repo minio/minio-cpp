@@ -43,7 +43,7 @@ int main() {
               << std::endl;
   } else {
     std::cout << "unable to disable object legal hold; "
-              << resp.Error().String() << std::endl;
+              << resp.error().String() << std::endl;
   }
 
   return 0;

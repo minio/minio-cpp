@@ -41,7 +41,7 @@ int main() {
     std::cout << "bucket lifecycle of my-bucket is deleted successfully"
               << std::endl;
   } else {
-    std::cout << "unable to delete bucket lifecycle; " << resp.Error().String()
+    std::cout << "unable to delete bucket lifecycle; " << resp.error().String()
               << std::endl;
   }
 

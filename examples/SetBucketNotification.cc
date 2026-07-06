@@ -48,7 +48,7 @@ int main() {
   if (resp) {
     std::cout << "Bucket notification is set successfully" << std::endl;
   } else {
-    std::cout << "unable to set bucket notification; " << resp.Error().String()
+    std::cout << "unable to set bucket notification; " << resp.error().String()
               << std::endl;
   }
 

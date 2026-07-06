@@ -35,14 +35,14 @@ int main() {
   args.filename = "my-object.csv";
 
   // Call download object.
-  minio::s3::DownloadObjectResponse resp = client.DownloadObject(args);
+  auto resp = client.DownloadObject(args);
 
   // Handle response.
   if (resp) {
     std::cout << "my-object is successfully downloaded to my-object.csv"
               << std::endl;
   } else {
-    std::cout << "unable to download object; " << resp.Error().String()
+    std::cout << "unable to download object; " << resp.error().String()
               << std::endl;
   }
 

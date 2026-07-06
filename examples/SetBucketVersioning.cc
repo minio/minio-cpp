@@ -41,7 +41,7 @@ int main() {
   if (resp) {
     std::cout << "Bucket versioning is enabled successfully" << std::endl;
   } else {
-    std::cout << "unable to set bucket versioning; " << resp.Error().String()
+    std::cout << "unable to set bucket versioning; " << resp.error().String()
               << std::endl;
   }
 

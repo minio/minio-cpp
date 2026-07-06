@@ -54,7 +54,7 @@ int main() {
     }
   } else {
     std::cout << "unable to get object lock configuration; "
-              << resp.Error().String() << std::endl;
+              << resp.error().String() << std::endl;
   }
 
   return 0;

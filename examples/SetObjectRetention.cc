@@ -38,13 +38,13 @@ int main() {
   args.retain_until_date = tomorrow;
 
   // Call set object retention.
-  minio::s3::SetObjectRetentionResponse resp = client.SetObjectRetention(args);
+  auto resp = client.SetObjectRetention(args);
 
   // Handle response.
   if (resp) {
     std::cout << "Object retention are set successfully" << std::endl;
   } else {
-    std::cout << "unable to set object retention; " << resp.Error().String()
+    std::cout << "unable to set object retention; " << resp.error().String()
               << std::endl;
   }
 

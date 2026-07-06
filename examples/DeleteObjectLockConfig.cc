@@ -42,7 +42,7 @@ int main() {
               << std::endl;
   } else {
     std::cout << "unable to delete object lock configuration; "
-              << resp.Error().String() << std::endl;
+              << resp.error().String() << std::endl;
   }
 
   return 0;

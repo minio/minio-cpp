@@ -33,9 +33,9 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call list objects.
-  minio::s3::ListObjectsResult result = client.ListObjects(args);
+  auto result = client.ListObjects(args);
   for (; result; result++) {
-    minio::s3::Item item = *result;
+    auto item = *result;
     if (item) {
       std::cout << "Name: " << item.name << std::endl;
       std::cout << "Version ID: " << item.version_id << std::endl;

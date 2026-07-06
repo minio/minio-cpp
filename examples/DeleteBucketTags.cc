@@ -33,14 +33,14 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call delete bucket tags.
-  minio::s3::DeleteBucketTagsResponse resp = client.DeleteBucketTags(args);
+  auto resp = client.DeleteBucketTags(args);
 
   // Handle response.
   if (resp) {
     std::cout << "bucket tags of my-bucket is deleted successfully"
               << std::endl;
   } else {
-    std::cout << "unable to delete bucket tags; " << resp.Error().String()
+    std::cout << "unable to delete bucket tags; " << resp.error().String()
               << std::endl;
   }
 

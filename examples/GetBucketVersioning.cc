@@ -41,7 +41,7 @@ int main() {
     std::cout << "Status: " << resp.Status() << std::endl;
     std::cout << "MFA Delete: " << resp.MfaDelete() << std::endl;
   } else {
-    std::cout << "unable to get bucket versioning; " << resp.Error().String()
+    std::cout << "unable to get bucket versioning; " << resp.error().String()
               << std::endl;
   }
 

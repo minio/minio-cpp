@@ -39,14 +39,14 @@ int main() {
   args.source = source;
 
   // Call copy object.
-  minio::s3::CopyObjectResponse resp = client.CopyObject(args);
+  auto resp = client.CopyObject(args);
 
   // Handle response.
   if (resp) {
     std::cout << "my-object is successfully created from "
               << "my-src-bucket/my-src-object" << std::endl;
   } else {
-    std::cout << "unable to do copy object; " << resp.Error().String()
+    std::cout << "unable to do copy object; " << resp.error().String()
               << std::endl;
   }
 

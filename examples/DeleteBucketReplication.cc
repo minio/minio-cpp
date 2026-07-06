@@ -41,7 +41,7 @@ int main() {
     std::cout << "bucket encryption of my-bucket is deleted successfully"
               << std::endl;
   } else {
-    std::cout << "unable to delete bucket encryption; " << resp.Error().String()
+    std::cout << "unable to delete bucket encryption; " << resp.error().String()
               << std::endl;
   }
 

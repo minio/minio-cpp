@@ -47,7 +47,7 @@ int main() {
   // Handle response.
   if (!resp) {
     std::cout << "unable to do listen bucket notification; "
-              << resp.Error().String() << std::endl;
+              << resp.error().String() << std::endl;
   }
 
   return 0;

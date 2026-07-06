@@ -172,12 +172,12 @@ int main(int argc, char *argv[]) {
   pargs.bucket = "my-bucket";
   pargs.object = "my-object";
 
-  minio::s3::PutObjectResponse presp = client.PutObject(pargs);
+  auto presp = client.PutObject(pargs);
   if (presp) {
     std::cout << std::endl
-              << "data uploaded successfully " << presp.etag << std::endl;
+              << "data uploaded successfully " << presp->etag << std::endl;
   } else {
-    std::cout << "unable to get object; " << presp.Error().String()
+    std::cout << "unable to get object; " << presp.error().String()
               << std::endl;
   }
 
@@ -191,12 +191,12 @@ int main(int argc, char *argv[]) {
   args.bucket = "my-bucket";
   args.object = "my-object";
 
-  minio::s3::GetObjectResponse resp = client.GetObject(args);
+  auto resp = client.GetObject(args);
   if (resp) {
     std::cout << std::endl
               << "data of my-object is received successfully" << std::endl;
   } else {
-    std::cout << "unable to get object; " << resp.Error().String() << std::endl;
+    std::cout << "unable to get object; " << resp.error().String() << std::endl;
   }
 
   char *hostptr = (char *)malloc(bufsize);

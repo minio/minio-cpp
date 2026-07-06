@@ -34,16 +34,16 @@ int main() {
   args.object = "my-object";
 
   // Call get object tags.
-  minio::s3::GetObjectTagsResponse resp = client.GetObjectTags(args);
+  auto resp = client.GetObjectTags(args);
 
   // Handle response.
   if (resp) {
     std::cout << "Object tags: " << std::endl;
-    for (auto& [key, value] : resp.tags) {
+    for (auto& [key, value] : resp->tags) {
       std::cout << "Key: " << key << ", " << "Value: " << value << std::endl;
     }
   } else {
-    std::cout << "unable to get object tags; " << resp.Error().String()
+    std::cout << "unable to get object tags; " << resp.error().String()
               << std::endl;
   }
 

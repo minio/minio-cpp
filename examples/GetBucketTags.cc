@@ -33,16 +33,16 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call get bucket tags.
-  minio::s3::GetBucketTagsResponse resp = client.GetBucketTags(args);
+  auto resp = client.GetBucketTags(args);
 
   // Handle response.
   if (resp) {
     std::cout << "Bucket tags: " << std::endl;
-    for (auto& [key, value] : resp.tags) {
+    for (auto& [key, value] : resp->tags) {
       std::cout << "Key: " << key << ", " << "Value: " << value << std::endl;
     }
   } else {
-    std::cout << "unable to get bucket tags; " << resp.Error().String()
+    std::cout << "unable to get bucket tags; " << resp.error().String()
               << std::endl;
   }
 

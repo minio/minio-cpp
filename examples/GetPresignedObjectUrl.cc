@@ -41,9 +41,9 @@ int main() {
 
   // Handle response.
   if (resp) {
-    std::cout << "presigned URL to get object: " << resp.url << std::endl;
+    std::cout << "presigned URL to get object: " << resp->url << std::endl;
   } else {
-    std::cout << "unable to get presigned object url; " << resp.Error().String()
+    std::cout << "unable to get presigned object url; " << resp.error().String()
               << std::endl;
   }
 

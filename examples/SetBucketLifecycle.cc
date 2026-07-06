@@ -52,13 +52,13 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call set bucket lifecycle.
-  minio::s3::SetBucketLifecycleResponse resp = client.SetBucketLifecycle(args);
+  auto resp = client.SetBucketLifecycle(args);
 
   // Handle response.
   if (resp) {
     std::cout << "Bucket lifecycle is set successfully" << std::endl;
   } else {
-    std::cout << "unable to set bucket lifecycle; " << resp.Error().String()
+    std::cout << "unable to set bucket lifecycle; " << resp.error().String()
               << std::endl;
   }
 

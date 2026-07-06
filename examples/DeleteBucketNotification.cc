@@ -42,7 +42,7 @@ int main() {
               << std::endl;
   } else {
     std::cout << "unable to delete bucket notification; "
-              << resp.Error().String() << std::endl;
+              << resp.error().String() << std::endl;
   }
 
   return 0;

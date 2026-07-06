@@ -34,14 +34,14 @@ int main() {
   args.object = "my-object";
 
   // Call delete object tags.
-  minio::s3::DeleteObjectTagsResponse resp = client.DeleteObjectTags(args);
+  auto resp = client.DeleteObjectTags(args);
 
   // Handle response.
   if (resp) {
     std::cout << "object tags of my-object is deleted successfully"
               << std::endl;
   } else {
-    std::cout << "unable to delete object tags; " << resp.Error().String()
+    std::cout << "unable to delete object tags; " << resp.error().String()
               << std::endl;
   }
 

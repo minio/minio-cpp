@@ -49,13 +49,13 @@ int main() {
       "}";
 
   // Call set bucket policy.
-  minio::s3::SetBucketPolicyResponse resp = client.SetBucketPolicy(args);
+  auto resp = client.SetBucketPolicy(args);
 
   // Handle response.
   if (resp) {
     std::cout << "Bucket policy is set successfully" << std::endl;
   } else {
-    std::cout << "unable to set bucket policy; " << resp.Error().String()
+    std::cout << "unable to set bucket policy; " << resp.error().String()
               << std::endl;
   }
 

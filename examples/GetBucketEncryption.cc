@@ -42,7 +42,7 @@ int main() {
     std::cout << "KMS Master Key ID: " << resp.config.kms_master_key_id
               << std::endl;
   } else {
-    std::cout << "unable to get bucket encryption; " << resp.Error().String()
+    std::cout << "unable to get bucket encryption; " << resp.error().String()
               << std::endl;
   }
 
