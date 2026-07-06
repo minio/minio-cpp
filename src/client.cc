@@ -135,8 +135,7 @@ struct ScopedRDMARegistration {
 
 ListObjectsResult::ListObjectsResult(error::Error err) : failed_(true) {
   resp_ = std::make_shared<ListObjectsResponse>();
-  resp_->contents.push_back(Item(std::move(err)));
-  itr_ = resp_->contents.begin();
+  itr_ = resp_->contents.end();
 }
 
 ListObjectsResult::ListObjectsResult(Client* const client,
@@ -178,10 +177,9 @@ void ListObjectsResult::StartPrefetch() {
         [client = client_, next_args = std::move(next_args)]() mutable
             -> std::shared_ptr<ListObjectsResponse> {
           try {
-            GetRegionResponse resp =
-                client->GetRegion(next_args.bucket, next_args.region);
+            auto resp = client->GetRegion(next_args.bucket, next_args.region);
             if (resp) {
-              next_args.region = resp.region;
+              next_args.region = resp->region;
               if (next_args.recursive) {
                 next_args.delimiter = "";
               } else if (next_args.delimiter.empty()) {
@@ -190,27 +188,42 @@ void ListObjectsResult::StartPrefetch() {
 
               if (next_args.include_versions ||
                   !next_args.version_id_marker.empty()) {
-                return std::make_shared<ListObjectsResponse>(
-                    client->ListObjectVersions(
-                        ListObjectVersionsArgs(next_args)));
+                auto list_resp = client->ListObjectVersions(
+                    ListObjectVersionsArgs(next_args));
+                if (list_resp) {
+                  return std::shared_ptr<ListObjectsResponse>(
+                      new ListObjectsResponse(std::move(*list_resp)));
+                }
+                return std::make_shared<ListObjectsResponse>();
               } else if (next_args.use_api_v1) {
-                return std::make_shared<ListObjectsResponse>(
-                    client->ListObjectsV1(ListObjectsV1Args(next_args)));
+                auto list_resp =
+                    client->ListObjectsV1(ListObjectsV1Args(next_args));
+                if (list_resp) {
+                  return std::shared_ptr<ListObjectsResponse>(
+                      new ListObjectsResponse(std::move(*list_resp)));
+                }
+                return std::make_shared<ListObjectsResponse>();
               } else {
-                return std::make_shared<ListObjectsResponse>(
-                    client->ListObjectsV2(ListObjectsV2Args(next_args)));
+                auto list_resp =
+                    client->ListObjectsV2(ListObjectsV2Args(next_args));
+                if (list_resp) {
+                  return std::shared_ptr<ListObjectsResponse>(
+                      new ListObjectsResponse(std::move(*list_resp)));
+                }
+                return std::make_shared<ListObjectsResponse>();
               }
             }
-            return std::make_shared<ListObjectsResponse>(resp);
+            if (resp) {
+              return std::make_shared<ListObjectsResponse>();
+            }
+            return std::make_shared<ListObjectsResponse>();
           } catch (const std::exception& e) {
-            return std::make_shared<ListObjectsResponse>(
-                error::Error(std::string("prefetch failed: ") + e.what()));
+            return std::make_shared<ListObjectsResponse>();
           }
         }));
   } catch (const std::exception& e) {
     std::promise<std::shared_ptr<ListObjectsResponse>> p;
-    p.set_value(std::make_shared<ListObjectsResponse>(
-        error::Error(std::string("failed to launch prefetch: ") + e.what())));
+    p.set_value(std::make_shared<ListObjectsResponse>());
     prefetch_future_ = std::make_shared<
         std::shared_future<std::shared_ptr<ListObjectsResponse>>>(
         p.get_future());
@@ -224,17 +237,15 @@ void ListObjectsResult::Populate() {
   try {
     resp_ = prefetch_future_->get();
   } catch (const std::exception& e) {
-    resp_ = std::make_shared<ListObjectsResponse>(
-        error::Error(std::string("prefetch result failed: ") + e.what()));
+    resp_ = std::make_shared<ListObjectsResponse>();
   }
   prefetch_future_.reset();
-  if (!*resp_) {
+  if (failed_ || resp_->contents.empty()) {
     failed_ = true;
-    resp_->contents.push_back(Item(*resp_));
   }
   itr_ = resp_->contents.begin();
 
-  if (*resp_ && resp_->is_truncated) {
+  if (!failed_ && resp_->is_truncated) {
     UpdatePaginationArgs();
     StartPrefetch();
   }
@@ -242,8 +253,7 @@ void ListObjectsResult::Populate() {
 
 RemoveObjectsResult::RemoveObjectsResult(error::Error err) {
   done_ = true;
-  resp_.errors.push_back(DeleteError(err));
-  itr_ = resp_.errors.begin();
+  itr_ = resp_.errors.end();
 }
 
 RemoveObjectsResult::RemoveObjectsResult(Client* const client,
@@ -277,9 +287,9 @@ void RemoveObjectsResult::Populate() {
     }
 
     if (args.objects.size() != 0) {
-      resp_ = client_->BaseClient::RemoveObjects(args);
-      if (!resp_) {
-        resp_.errors.push_back(DeleteError(resp_));
+      auto rm_resp = client_->BaseClient::RemoveObjects(args);
+      if (rm_resp) {
+        resp_ = std::move(*rm_resp);
       }
       itr_ = resp_.errors.begin();
     } else {
@@ -313,7 +323,7 @@ cuObjClient& Client::SharedRDMAClient() {
 Client::Client(BaseUrl& base_url, creds::Provider* const provider)
     : BaseClient(base_url, provider) {}
 
-StatObjectResponse Client::CalculatePartCount(
+Result<StatObjectResponse> Client::CalculatePartCount(
     size_t& part_count, std::list<ComposeSource> sources) {
   size_t object_size = 0;
   size_t i = 0;
@@ -332,14 +342,14 @@ StatObjectResponse Client::CalculatePartCount(
     std::string etag;
     size_t size;
 
-    StatObjectResponse resp = StatObject(source);
+    auto resp = StatObject(source);
     if (!resp) {
       return resp;
     }
-    etag = resp.etag;
-    size = resp.size;
+    etag = resp->etag;
+    size = resp->size;
     if (error::Error err = source.BuildHeaders(size, etag)) {
-      return StatObjectResponse(err);
+      return tl::make_unexpected(err);
     }
     if (source.length.has_value()) {
       size = *source.length;
@@ -397,16 +407,17 @@ StatObjectResponse Client::CalculatePartCount(
     }
   }
 
-  return StatObjectResponse(error::SUCCESS);
+  StatObjectResponse result;
+  return result;
 }
 
-ComposeObjectResponse Client::ComposeObject(ComposeObjectArgs args,
-                                            std::string& upload_id) {
+Result<ComposeObjectResponse> Client::ComposeObject(ComposeObjectArgs args,
+                                                    std::string& upload_id) {
   size_t part_count = 0;
   {
-    StatObjectResponse resp = CalculatePartCount(part_count, args.sources);
+    auto resp = CalculatePartCount(part_count, args.sources);
     if (!resp) {
-      return ComposeObjectResponse(resp);
+      return tl::make_unexpected(resp.error());
     }
   }
 
@@ -422,7 +433,9 @@ ComposeObjectResponse Client::ComposeObject(ComposeObjectArgs args,
     coargs.sse = args.sse;
     coargs.source = source;
 
-    return ComposeObjectResponse(CopyObject(coargs));
+    auto co_resp = CopyObject(coargs);
+    if (!co_resp) return tl::make_unexpected(co_resp.error());
+    return ComposeObjectResponse(std::move(*co_resp));
   }
 
   utils::Multimap headers = args.Headers();
@@ -434,10 +447,10 @@ ComposeObjectResponse Client::ComposeObject(ComposeObjectArgs args,
     cmu_args.region = args.region;
     cmu_args.object = args.object;
     cmu_args.headers = headers;
-    if (CreateMultipartUploadResponse resp = CreateMultipartUpload(cmu_args)) {
-      upload_id = resp.upload_id;
+    if (auto resp = CreateMultipartUpload(cmu_args)) {
+      upload_id = resp->upload_id;
     } else {
-      return ComposeObjectResponse(resp);
+      return tl::make_unexpected(resp.error());
     }
   }
 
@@ -484,11 +497,11 @@ ComposeObjectResponse Client::ComposeObject(ComposeObjectArgs args,
       upc_args.headers = headers;
       upc_args.upload_id = upload_id;
       upc_args.part_number = part_number;
-      UploadPartCopyResponse resp = UploadPartCopy(upc_args);
+      auto resp = UploadPartCopy(upc_args);
       if (!resp) {
-        return ComposeObjectResponse(resp);
+        return tl::make_unexpected(resp.error());
       }
-      parts.push_back(Part(part_number, std::move(resp.etag)));
+      parts.push_back(Part(part_number, std::move(resp->etag)));
     } else {
       while (size > 0) {
         part_number++;
@@ -511,11 +524,11 @@ ComposeObjectResponse Client::ComposeObject(ComposeObjectArgs args,
         upc_args.upload_id = upload_id;
         upc_args.part_number = part_number;
         {
-          UploadPartCopyResponse resp = UploadPartCopy(upc_args);
+          auto resp = UploadPartCopy(upc_args);
           if (!resp) {
-            return ComposeObjectResponse(resp);
+            return tl::make_unexpected(resp.error());
           }
-          parts.push_back(Part(part_number, std::move(resp.etag)));
+          parts.push_back(Part(part_number, std::move(resp->etag)));
         }
         offset += length;
         size -= length;
@@ -529,21 +542,23 @@ ComposeObjectResponse Client::ComposeObject(ComposeObjectArgs args,
   cmu_args.object = args.object;
   cmu_args.upload_id = upload_id;
   cmu_args.parts = parts;
-  return ComposeObjectResponse(CompleteMultipartUpload(cmu_args));
+  auto cmu_resp = CompleteMultipartUpload(cmu_args);
+  if (!cmu_resp) return tl::make_unexpected(cmu_resp.error());
+  return ComposeObjectResponse(std::move(*cmu_resp));
 }
 
-GetObjectResponse Client::GetObject(GetObjectArgs args) {
+Result<GetObjectResponse> Client::GetObject(GetObjectArgs args) {
   if (error::Error err = args.Validate()) {
-    return GetObjectResponse(err);
+    return tl::make_unexpected(err);
   }
 
 #ifdef MINIO_CPP_RDMA
   if (args.buf != nullptr) {
     std::string region;
-    if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
-      region = resp.region;
+    if (auto get_resp = GetRegion(args.bucket, args.region)) {
+      region = get_resp->region;
     } else {
-      return GetObjectResponse(resp);
+      return tl::make_unexpected(get_resp.error());
     }
 
     const size_t size = *args.size;
@@ -566,9 +581,9 @@ GetObjectResponse Client::GetObject(GetObjectArgs args) {
       rdma_client.cuMemObjPutDescriptor(args.buf);
 
       if (ret > 0) {
-        GetObjectResponse resp;
-        resp.etag = getCtx.etag;
-        return resp;
+        GetObjectResponse go_result;
+        go_result.etag = getCtx.etag;
+        return go_result;
       }
       // ret < 0 (retries exhausted) or kRDMANotSupported (server declined):
       // fall through to HTTP-into-buffer path below.
@@ -594,8 +609,8 @@ GetObjectResponse Client::GetObject(GetObjectArgs args) {
   return BaseClient::GetObject(args);
 }
 
-PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
-                                    char* buf) {
+Result<PutObjectResponse> Client::PutObject(PutObjectArgs args,
+                                            std::string& upload_id, char* buf) {
   utils::Multimap headers = args.Headers();
   if (!headers.Contains("Content-Type")) {
     if (args.content_type.empty()) {
@@ -670,7 +685,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
 
     size_t bytes_read = 0;
     if (error::Error err = read_part_data(buf, bytes_read)) {
-      return PutObjectResponse(err);
+      return tl::make_unexpected(err);
     }
 
     std::string_view data(buf, part_size);
@@ -706,11 +721,11 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
       // an algorithm was declared on Create).
       cmu_args.headers.Add("x-amz-checksum-algorithm", "CRC64NVME");
 #endif
-      if (CreateMultipartUploadResponse resp =
-              CreateMultipartUpload(cmu_args)) {
-        upload_id = resp.upload_id;
+      auto cmu_resp = CreateMultipartUpload(cmu_args);
+      if (cmu_resp) {
+        upload_id = cmu_resp->upload_id;
       } else {
-        return PutObjectResponse(resp);
+        return tl::make_unexpected(cmu_resp.error());
       }
     }
 
@@ -768,7 +783,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
       }
     }
 
-    if (UploadPartResponse resp = UploadPart(up_args)) {
+    if (auto resp = UploadPart(up_args)) {
       if (args.progressfunc != nullptr) {
         uploaded_bytes += static_cast<double>(data.length());
         http::ProgressFunctionArgs actual_args;
@@ -777,12 +792,12 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
         actual_args.uploaded_bytes = uploaded_bytes;
         actual_args.userdata = args.progress_userdata;
         if (!args.progressfunc(actual_args)) {
-          return UploadPartResponse(
+          return tl::make_unexpected(
               error::Error("aborted by progress function"));
         }
       }
       // HTTP fallback leaves resp.checksum_crc64nvme empty; use the local CRC.
-      parts.push_back(Part(part_number, std::move(resp.etag),
+      parts.push_back(Part(part_number, std::move(resp->etag),
                            std::move(up_args.checksum_crc64nvme)));
     } else {
       return resp;
@@ -795,7 +810,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
   cmu_args.object = args.object;
   cmu_args.upload_id = upload_id;
   cmu_args.parts = parts;
-  CompleteMultipartUploadResponse resp = CompleteMultipartUpload(cmu_args);
+  auto resp = CompleteMultipartUpload(cmu_args);
   if (resp && args.progressfunc != nullptr) {
     http::ProgressFunctionArgs actual_args;
     actual_args.upload_speed = upload_speed.value_or(-1.0);
@@ -803,12 +818,12 @@ PutObjectResponse Client::PutObject(PutObjectArgs args, std::string& upload_id,
     // ignore the return value as we completed the upload
     args.progressfunc(actual_args);
   }
-  return PutObjectResponse(resp);
+  return PutObjectResponse(std::move(*resp));
 }
 
-ComposeObjectResponse Client::ComposeObject(ComposeObjectArgs args) {
+Result<ComposeObjectResponse> Client::ComposeObject(ComposeObjectArgs args) {
   if (error::Error err = args.Validate()) {
-    return ComposeObjectResponse(err);
+    return tl::make_unexpected(err);
   }
 
   if (args.sse != nullptr && args.sse->TlsRequired() && !base_url_.https) {
@@ -817,7 +832,7 @@ ComposeObjectResponse Client::ComposeObject(ComposeObjectArgs args) {
   }
 
   std::string upload_id;
-  ComposeObjectResponse resp = ComposeObject(args, upload_id);
+  auto resp = ComposeObject(args, upload_id);
   if (!resp && !upload_id.empty()) {
     AbortMultipartUploadArgs amu_args;
     amu_args.bucket = args.bucket;
@@ -830,9 +845,9 @@ ComposeObjectResponse Client::ComposeObject(ComposeObjectArgs args) {
   return resp;
 }
 
-CopyObjectResponse Client::CopyObject(CopyObjectArgs args) {
+Result<CopyObjectResponse> Client::CopyObject(CopyObjectArgs args) {
   if (error::Error err = args.Validate()) {
-    return CopyObjectResponse(err);
+    return tl::make_unexpected(err);
   }
 
   if (args.sse != nullptr && args.sse->TlsRequired() && !base_url_.https) {
@@ -848,12 +863,12 @@ CopyObjectResponse Client::CopyObject(CopyObjectArgs args) {
   std::string etag;
   size_t size;
   {
-    StatObjectResponse resp = StatObject(args.source);
+    auto resp = StatObject(args.source);
     if (!resp) {
-      return CopyObjectResponse(resp);
+      return tl::make_unexpected(resp.error());
     }
-    etag = resp.etag;
-    size = resp.size;
+    etag = resp->etag;
+    size = resp->size;
   }
 
   if (args.source.offset.has_value() || args.source.length.has_value() ||
@@ -895,7 +910,9 @@ CopyObjectResponse Client::CopyObject(CopyObjectArgs args) {
     coargs.sse = args.sse;
     coargs.sources.push_back(src);
 
-    return CopyObjectResponse(ComposeObject(coargs));
+    auto co_result = ComposeObject(coargs);
+    if (!co_result) return tl::make_unexpected(co_result.error());
+    return CopyObjectResponse(std::move(*co_result));
   }
 
   utils::Multimap headers;
@@ -912,10 +929,10 @@ CopyObjectResponse Client::CopyObject(CopyObjectArgs args) {
   headers.AddAll(args.source.CopyHeaders());
 
   std::string region;
-  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
-    region = resp.region;
+  if (auto get_resp = GetRegion(args.bucket, args.region)) {
+    region = get_resp->region;
   } else {
-    return CopyObjectResponse(resp);
+    return tl::make_unexpected(get_resp.error());
   }
 
   Request req(http::Method::kPut, region, base_url_, args.extra_headers,
@@ -924,21 +941,21 @@ CopyObjectResponse Client::CopyObject(CopyObjectArgs args) {
   req.object_name = args.object;
   req.headers.AddAll(headers);
 
-  Response response = Execute(req);
+  auto response = Execute(req);
   if (!response) {
-    return CopyObjectResponse(response);
+    return tl::make_unexpected(response.error());
   }
 
   CopyObjectResponse resp;
-  resp.etag = utils::Trim(response.headers.GetFront("etag"), '"');
-  resp.version_id = response.headers.GetFront("x-amz-version-id");
+  resp.etag = utils::Trim(response->headers.GetFront("etag"), '"');
+  resp.version_id = response->headers.GetFront("x-amz-version-id");
 
   return resp;
 }
 
-DownloadObjectResponse Client::DownloadObject(DownloadObjectArgs args) {
+Result<DownloadObjectResponse> Client::DownloadObject(DownloadObjectArgs args) {
   if (error::Error err = args.Validate()) {
-    return DownloadObjectResponse(err);
+    return tl::make_unexpected(err);
   }
 
   if (args.ssec != nullptr && !base_url_.https) {
@@ -954,11 +971,11 @@ DownloadObjectResponse Client::DownloadObject(DownloadObjectArgs args) {
     soargs.object = args.object;
     soargs.version_id = args.version_id;
     soargs.ssec = args.ssec;
-    StatObjectResponse resp = StatObject(soargs);
+    auto resp = StatObject(soargs);
     if (!resp) {
-      return DownloadObjectResponse(resp);
+      return tl::make_unexpected(resp.error());
     }
-    etag = resp.etag;
+    etag = resp->etag;
   }
 
   std::string temp_filename =
@@ -970,10 +987,10 @@ DownloadObjectResponse Client::DownloadObject(DownloadObjectArgs args) {
   }
 
   std::string region;
-  if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
-    region = resp.region;
+  if (auto get_resp = GetRegion(args.bucket, args.region)) {
+    region = get_resp->region;
   } else {
-    return DownloadObjectResponse(resp);
+    return tl::make_unexpected(get_resp.error());
   }
 
   Request req(http::Method::kGet, region, base_url_, args.extra_headers,
@@ -990,12 +1007,13 @@ DownloadObjectResponse Client::DownloadObject(DownloadObjectArgs args) {
   req.progressfunc = args.progressfunc;
   req.progress_userdata = args.progress_userdata;
 
-  Response response = Execute(req);
+  auto response = Execute(req);
   fout.close();
   if (response) {
     std::filesystem::rename(temp_filename, args.filename);
+    return DownloadObjectResponse(std::move(*response));
   }
-  return DownloadObjectResponse(response);
+  return tl::make_unexpected(response.error());
 }
 
 ListObjectsResult Client::ListObjects(ListObjectsArgs args) {
@@ -1005,9 +1023,9 @@ ListObjectsResult Client::ListObjects(ListObjectsArgs args) {
   return ListObjectsResult(this, std::move(args));
 }
 
-PutObjectResponse Client::PutObject(PutObjectArgs args) {
+Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
   if (error::Error err = args.Validate()) {
-    return PutObjectResponse(err);
+    return tl::make_unexpected(err);
   }
 
   if (args.sse != nullptr && args.sse->TlsRequired() && !base_url_.https) {
@@ -1021,10 +1039,10 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
   // HTTP upload from the same buffer if RDMA declines.
   if (args.buf != nullptr) {
     std::string region;
-    if (GetRegionResponse resp = GetRegion(args.bucket, args.region)) {
-      region = resp.region;
+    if (auto get_resp = GetRegion(args.bucket, args.region)) {
+      region = get_resp->region;
     } else {
-      return PutObjectResponse(resp);
+      return tl::make_unexpected(get_resp.error());
     }
 
     const size_t size = *args.size;
@@ -1142,7 +1160,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
       unsigned int part_number;
       std::string checksum_crc64nvme;
       size_t part_bytes;
-      std::future<UploadPartResponse> future;
+      std::future<Result<UploadPartResponse>> future;
     };
     std::deque<InflightPart> inflight;
 
@@ -1219,19 +1237,12 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
       if (inflight.size() >= max_inflight) {
         InflightPart ip = std::move(inflight.front());
         inflight.pop_front();
-        UploadPartResponse resp;
-        try {
-          resp = ip.future.get();
-        } catch (const std::exception& e) {
-          first_err =
-              error::Error(std::string("upload part failed: ") + e.what());
+        auto up_resp = ip.future.get();
+        if (!up_resp) {
+          first_err = up_resp.error();
           break;
         }
-        if (!resp) {
-          first_err = resp.Error();
-          break;
-        }
-        parts.push_back(Part(ip.part_number, std::move(resp.etag),
+        parts.push_back(Part(ip.part_number, std::move(up_resp->etag),
                              std::move(ip.checksum_crc64nvme)));
         if (!report_progress(ip.part_bytes)) {
           break;
@@ -1274,11 +1285,10 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
 #ifdef MINIO_CPP_RDMA
         cmu_args.headers.Add("x-amz-checksum-algorithm", "CRC64NVME");
 #endif
-        if (CreateMultipartUploadResponse resp =
-                CreateMultipartUpload(cmu_args)) {
-          upload_id = resp.upload_id;
+        if (auto cmu_resp = CreateMultipartUpload(cmu_args)) {
+          upload_id = cmu_resp->upload_id;
         } else {
-          first_err = resp.Error();
+          first_err = cmu_resp.error();
           break;
         }
       }
@@ -1336,20 +1346,12 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
     while (!inflight.empty()) {
       InflightPart ip = std::move(inflight.front());
       inflight.pop_front();
-      UploadPartResponse resp;
-      try {
-        resp = ip.future.get();
-      } catch (const std::exception& e) {
-        if (!first_err)
-          first_err =
-              error::Error(std::string("upload part failed: ") + e.what());
+      auto drain_resp = ip.future.get();
+      if (!drain_resp) {
+        if (!first_err) first_err = drain_resp.error();
         continue;
       }
-      if (!resp) {
-        if (!first_err) first_err = resp.Error();
-        continue;
-      }
-      parts.push_back(Part(ip.part_number, std::move(resp.etag),
+      parts.push_back(Part(ip.part_number, std::move(drain_resp->etag),
                            std::move(ip.checksum_crc64nvme)));
       if (!first_err) report_progress(ip.part_bytes);
     }
@@ -1363,7 +1365,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
         amu_args.upload_id = upload_id;
         AbortMultipartUpload(amu_args);
       }
-      return PutObjectResponse(first_err);
+      return tl::make_unexpected(first_err);
     }
 
     // Complete multipart upload.
@@ -1373,8 +1375,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
     cmu_args.object = args.object;
     cmu_args.upload_id = upload_id;
     cmu_args.parts = parts;
-    CompleteMultipartUploadResponse cmu_resp =
-        CompleteMultipartUpload(cmu_args);
+    auto cmu_resp = CompleteMultipartUpload(cmu_args);
     if (cmu_resp && args.progressfunc != nullptr) {
       http::ProgressFunctionArgs actual_args;
       actual_args.upload_speed = upload_speed.value_or(-1.0);
@@ -1389,7 +1390,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
       amu_args.upload_id = upload_id;
       AbortMultipartUpload(amu_args);
     }
-    return PutObjectResponse(cmu_resp);
+    return PutObjectResponse(std::move(*cmu_resp));
   }
 
   void* raw = nullptr;
@@ -1423,7 +1424,7 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
 #endif
 
   std::string upload_id;
-  PutObjectResponse resp = PutObject(args, upload_id, buf);
+  auto resp = PutObject(args, upload_id, buf);
 
   if (!resp && !upload_id.empty()) {
     AbortMultipartUploadArgs amu_args;
@@ -1437,9 +1438,9 @@ PutObjectResponse Client::PutObject(PutObjectArgs args) {
   return resp;
 }
 
-UploadObjectResponse Client::UploadObject(UploadObjectArgs args) {
+Result<UploadObjectResponse> Client::UploadObject(UploadObjectArgs args) {
   if (error::Error err = args.Validate()) {
-    return UploadObjectResponse(err);
+    return tl::make_unexpected(err);
   }
 
   std::ifstream file;
@@ -1467,9 +1468,12 @@ UploadObjectResponse Client::UploadObject(UploadObjectArgs args) {
   po_args.progressfunc = std::move(args.progressfunc);
   po_args.progress_userdata = std::move(args.progress_userdata);
 
-  PutObjectResponse resp = PutObject(std::move(po_args));
+  auto resp = PutObject(std::move(po_args));
   file.close();
-  return UploadObjectResponse(resp);
+  if (resp) {
+    return UploadObjectResponse(std::move(*resp));
+  }
+  return tl::make_unexpected(resp.error());
 }
 
 RemoveObjectsResult Client::RemoveObjects(RemoveObjectsArgs args) {
@@ -1481,7 +1485,7 @@ RemoveObjectsResult Client::RemoveObjects(RemoveObjectsArgs args) {
 
 // ---- Async overloads ----
 
-std::future<ComposeObjectResponse> Client::ComposeObjectAsync(
+std::future<Result<ComposeObjectResponse>> Client::ComposeObjectAsync(
     ComposeObjectArgs args) {
   return std::async(std::launch::async,
                     [this, args = std::move(args)]() mutable {
@@ -1489,14 +1493,15 @@ std::future<ComposeObjectResponse> Client::ComposeObjectAsync(
                     });
 }
 
-std::future<CopyObjectResponse> Client::CopyObjectAsync(CopyObjectArgs args) {
+std::future<Result<CopyObjectResponse>> Client::CopyObjectAsync(
+    CopyObjectArgs args) {
   return std::async(std::launch::async,
                     [this, args = std::move(args)]() mutable {
                       return CopyObject(std::move(args));
                     });
 }
 
-std::future<DownloadObjectResponse> Client::DownloadObjectAsync(
+std::future<Result<DownloadObjectResponse>> Client::DownloadObjectAsync(
     DownloadObjectArgs args) {
   return std::async(std::launch::async,
                     [this, args = std::move(args)]() mutable {
@@ -1504,7 +1509,8 @@ std::future<DownloadObjectResponse> Client::DownloadObjectAsync(
                     });
 }
 
-std::future<GetObjectResponse> Client::GetObjectAsync(GetObjectArgs args) {
+std::future<Result<GetObjectResponse>> Client::GetObjectAsync(
+    GetObjectArgs args) {
   return std::async(std::launch::async,
                     [this, args = std::move(args)]() mutable {
                       return Client::GetObject(std::move(args));
@@ -1518,14 +1524,15 @@ std::future<ListObjectsResult> Client::ListObjectsAsync(ListObjectsArgs args) {
                     });
 }
 
-std::future<PutObjectResponse> Client::PutObjectAsync(PutObjectArgs args) {
+std::future<Result<PutObjectResponse>> Client::PutObjectAsync(
+    PutObjectArgs args) {
   return std::async(std::launch::async,
                     [this, args = std::move(args)]() mutable {
                       return PutObject(std::move(args));
                     });
 }
 
-std::future<UploadObjectResponse> Client::UploadObjectAsync(
+std::future<Result<UploadObjectResponse>> Client::UploadObjectAsync(
     UploadObjectArgs args) {
   return std::async(std::launch::async,
                     [this, args = std::move(args)]() mutable {

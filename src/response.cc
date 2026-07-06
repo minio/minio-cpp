@@ -35,20 +35,8 @@ Response::Response() {}
 
 Response::~Response() {}
 
-error::Error Response::Error() const {
-  if (err_) return err_;
-  if (!code.empty()) {
-    return error::Error(code + ": " + message);
-  }
-  if (status_code && (status_code < 200 || status_code > 299)) {
-    return error::Error("failed with HTTP status code " +
-                        std::to_string(status_code));
-  }
-  return error::SUCCESS;
-}
-
-Response Response::ParseXML(std::string_view data, int status_code,
-                            utils::Multimap headers) {
+Result<Response> Response::ParseXML(std::string_view data, int status_code,
+                                    utils::Multimap headers) {
   Response resp;
   resp.status_code = status_code;
   resp.headers = headers;
@@ -56,8 +44,7 @@ Response Response::ParseXML(std::string_view data, int status_code,
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_buffer(data.data(), data.size());
   if (!result) {
-    resp.err_ = error::Error("unable to parse XML; " + std::string(data));
-    return resp;
+    return error::make<Response>("unable to parse XML; " + std::string(data));
   }
 
   auto root = xdoc.select_node("/Error");
@@ -87,7 +74,8 @@ Response Response::ParseXML(std::string_view data, int status_code,
   return resp;
 }
 
-ListBucketsResponse ListBucketsResponse::ParseXML(std::string_view data) {
+Result<ListBucketsResponse> ListBucketsResponse::ParseXML(
+    std::string_view data) {
   std::list<Bucket> buckets;
 
   pugi::xml_document xdoc;
@@ -114,8 +102,9 @@ ListBucketsResponse ListBucketsResponse::ParseXML(std::string_view data) {
   return ListBucketsResponse(buckets);
 }
 
-CompleteMultipartUploadResponse CompleteMultipartUploadResponse::ParseXML(
-    std::string_view data, std::string version_id) {
+Result<CompleteMultipartUploadResponse>
+CompleteMultipartUploadResponse::ParseXML(std::string_view data,
+                                          std::string version_id) {
   CompleteMultipartUploadResponse resp;
 
   pugi::xml_document xdoc;
@@ -156,8 +145,8 @@ CompleteMultipartUploadResponse CompleteMultipartUploadResponse::ParseXML(
   return resp;
 }
 
-ListObjectsResponse ListObjectsResponse::ParseXML(std::string_view data,
-                                                  bool version) {
+Result<ListObjectsResponse> ListObjectsResponse::ParseXML(std::string_view data,
+                                                          bool version) {
   ListObjectsResponse resp;
 
   auto xdoc = std::make_shared<pugi::xml_document>();
@@ -344,7 +333,8 @@ ListObjectsResponse ListObjectsResponse::ParseXML(std::string_view data,
   return resp;
 }
 
-RemoveObjectsResponse RemoveObjectsResponse::ParseXML(std::string_view data) {
+Result<RemoveObjectsResponse> RemoveObjectsResponse::ParseXML(
+    std::string_view data) {
   RemoveObjectsResponse resp;
 
   pugi::xml_document xdoc;
@@ -400,7 +390,7 @@ RemoveObjectsResponse RemoveObjectsResponse::ParseXML(std::string_view data) {
   return resp;
 }
 
-GetBucketNotificationResponse GetBucketNotificationResponse::ParseXML(
+Result<GetBucketNotificationResponse> GetBucketNotificationResponse::ParseXML(
     std::string_view data) {
   NotificationConfig config;
 
@@ -495,7 +485,7 @@ GetBucketNotificationResponse GetBucketNotificationResponse::ParseXML(
   return GetBucketNotificationResponse(config);
 }
 
-GetBucketEncryptionResponse GetBucketEncryptionResponse::ParseXML(
+Result<GetBucketEncryptionResponse> GetBucketEncryptionResponse::ParseXML(
     std::string_view data) {
   SseConfig config;
 
@@ -517,7 +507,7 @@ GetBucketEncryptionResponse GetBucketEncryptionResponse::ParseXML(
   return GetBucketEncryptionResponse(config);
 }
 
-GetBucketReplicationResponse GetBucketReplicationResponse::ParseXML(
+Result<GetBucketReplicationResponse> GetBucketReplicationResponse::ParseXML(
     std::string_view data) {
   ReplicationConfig config;
 
@@ -683,7 +673,7 @@ GetBucketReplicationResponse GetBucketReplicationResponse::ParseXML(
   return GetBucketReplicationResponse(config);
 }
 
-GetBucketLifecycleResponse GetBucketLifecycleResponse::ParseXML(
+Result<GetBucketLifecycleResponse> GetBucketLifecycleResponse::ParseXML(
     std::string_view data) {
   LifecycleConfig config;
 
@@ -811,7 +801,8 @@ GetBucketLifecycleResponse GetBucketLifecycleResponse::ParseXML(
   return GetBucketLifecycleResponse(config);
 }
 
-GetBucketTagsResponse GetBucketTagsResponse::ParseXML(std::string_view data) {
+Result<GetBucketTagsResponse> GetBucketTagsResponse::ParseXML(
+    std::string_view data) {
   std::map<std::string, std::string> map;
 
   pugi::xml_document xdoc;
@@ -836,7 +827,8 @@ GetBucketTagsResponse GetBucketTagsResponse::ParseXML(std::string_view data) {
   return map;
 }
 
-GetObjectTagsResponse GetObjectTagsResponse::ParseXML(std::string_view data) {
+Result<GetObjectTagsResponse> GetObjectTagsResponse::ParseXML(
+    std::string_view data) {
   std::map<std::string, std::string> map;
 
   pugi::xml_document xdoc;

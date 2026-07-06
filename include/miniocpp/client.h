@@ -28,6 +28,7 @@
 #include "providers.h"
 #include "request.h"
 #include "response.h"
+#include "result.h"
 
 namespace minio::s3 {
 
@@ -117,12 +118,12 @@ class RemoveObjectsResult {
  */
 class Client : public BaseClient {
  protected:
-  StatObjectResponse CalculatePartCount(size_t& part_count,
-                                        std::list<ComposeSource> sources);
-  ComposeObjectResponse ComposeObject(ComposeObjectArgs args,
-                                      std::string& upload_id);
-  PutObjectResponse PutObject(PutObjectArgs args, std::string& upload_id,
-                              char* buf);
+  Result<StatObjectResponse> CalculatePartCount(
+      size_t& part_count, std::list<ComposeSource> sources);
+  Result<ComposeObjectResponse> ComposeObject(ComposeObjectArgs args,
+                                              std::string& upload_id);
+  Result<PutObjectResponse> PutObject(PutObjectArgs args,
+                                      std::string& upload_id, char* buf);
 
 #ifdef MINIO_CPP_RDMA
   // Process-wide RDMA client, one instance for the whole process, lazily
@@ -143,13 +144,13 @@ class Client : public BaseClient {
   explicit Client(BaseUrl& base_url, creds::Provider* const provider = nullptr);
   ~Client() = default;
 
-  ComposeObjectResponse ComposeObject(ComposeObjectArgs args);
-  CopyObjectResponse CopyObject(CopyObjectArgs args);
-  DownloadObjectResponse DownloadObject(DownloadObjectArgs args);
+  Result<ComposeObjectResponse> ComposeObject(ComposeObjectArgs args);
+  Result<CopyObjectResponse> CopyObject(CopyObjectArgs args);
+  Result<DownloadObjectResponse> DownloadObject(DownloadObjectArgs args);
   ListObjectsResult ListObjects(ListObjectsArgs args);
-  PutObjectResponse PutObject(PutObjectArgs args);
-  GetObjectResponse GetObject(GetObjectArgs args);
-  UploadObjectResponse UploadObject(UploadObjectArgs args);
+  Result<PutObjectResponse> PutObject(PutObjectArgs args);
+  Result<GetObjectResponse> GetObject(GetObjectArgs args);
+  Result<UploadObjectResponse> UploadObject(UploadObjectArgs args);
   RemoveObjectsResult RemoveObjects(RemoveObjectsArgs args);
 
   // Async overloads — return std::future<T> backed by std::async.
@@ -157,14 +158,16 @@ class Client : public BaseClient {
   // Lifetime note for PutObjectAsync: the caller must ensure
   // args.stream (if set) outlives the returned std::future<T>,
   // exactly as it must for the synchronous PutObject call.
-  std::future<ComposeObjectResponse> ComposeObjectAsync(ComposeObjectArgs args);
-  std::future<CopyObjectResponse> CopyObjectAsync(CopyObjectArgs args);
-  std::future<DownloadObjectResponse> DownloadObjectAsync(
+  std::future<Result<ComposeObjectResponse>> ComposeObjectAsync(
+      ComposeObjectArgs args);
+  std::future<Result<CopyObjectResponse>> CopyObjectAsync(CopyObjectArgs args);
+  std::future<Result<DownloadObjectResponse>> DownloadObjectAsync(
       DownloadObjectArgs args);
-  std::future<GetObjectResponse> GetObjectAsync(GetObjectArgs args);
+  std::future<Result<GetObjectResponse>> GetObjectAsync(GetObjectArgs args);
   std::future<ListObjectsResult> ListObjectsAsync(ListObjectsArgs args);
-  std::future<PutObjectResponse> PutObjectAsync(PutObjectArgs args);
-  std::future<UploadObjectResponse> UploadObjectAsync(UploadObjectArgs args);
+  std::future<Result<PutObjectResponse>> PutObjectAsync(PutObjectArgs args);
+  std::future<Result<UploadObjectResponse>> UploadObjectAsync(
+      UploadObjectArgs args);
 };  // class Client
 
 }  // namespace minio::s3
