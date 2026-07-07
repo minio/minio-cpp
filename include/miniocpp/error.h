@@ -22,6 +22,8 @@
 #include <string>
 #include <type_traits>
 
+#include "tl/expected.hpp"
+
 namespace minio::error {
 
 class Error {
@@ -52,8 +54,8 @@ class Error {
 extern const Error SUCCESS;
 
 template <typename T_RESULT, typename... TA>
-inline T_RESULT make(TA&&... args) {
-  return T_RESULT{Error(std::forward<TA>(args)...)};
+inline tl::expected<T_RESULT, Error> make(TA&&... args) {
+  return tl::make_unexpected(Error(std::forward<TA>(args)...));
 }
 
 }  // namespace minio::error

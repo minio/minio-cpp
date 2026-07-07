@@ -129,17 +129,17 @@ ssize_t miniocpp_put_object(miniocpp_client* c, const char* bucket,
     args.part_size = 16 * 1024 * 1024L;
   }
 
-  minio::s3::PutObjectResponse resp = holder->client->PutObject(args);
+  auto resp = holder->client->PutObject(args);
   if (!resp) {
-    SetLastError(resp.Error().String());
+    SetLastError(resp.error().String());
     return MINIOCPP_ERR_GENERIC;
   }
   if (etag_out != nullptr) {
-    std::strncpy(etag_out, resp.etag.c_str(), 63);
+    std::strncpy(etag_out, resp->etag.c_str(), 63);
     etag_out[63] = '\0';
   }
   if (checksum_out != nullptr) {
-    std::strncpy(checksum_out, resp.checksum_crc64nvme.c_str(), 63);
+    std::strncpy(checksum_out, resp->checksum_crc64nvme.c_str(), 63);
     checksum_out[63] = '\0';
   }
   return static_cast<ssize_t>(size);
@@ -178,9 +178,9 @@ ssize_t miniocpp_get_object(miniocpp_client* c, const char* bucket,
     };
   }
 
-  minio::s3::GetObjectResponse resp = holder->client->GetObject(args);
+  auto resp = holder->client->GetObject(args);
   if (!resp) {
-    SetLastError(resp.Error().String());
+    SetLastError(resp.error().String());
     return MINIOCPP_ERR_GENERIC;
   }
   return buf != nullptr ? static_cast<ssize_t>(size) : bytes_seen;

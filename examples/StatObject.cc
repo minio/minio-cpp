@@ -34,44 +34,44 @@ int main() {
   args.object = "my-object";
 
   // Call stat object.
-  minio::s3::StatObjectResponse resp = client.StatObject(args);
+  auto resp = client.StatObject(args);
 
   // Handle response.
   if (resp) {
-    std::cout << "Version ID: " << resp.version_id << std::endl;
-    std::cout << "ETag: " << resp.etag << std::endl;
-    std::cout << "Size: " << resp.size << std::endl;
-    std::cout << "Last Modified: " << resp.last_modified << std::endl;
+    std::cout << "Version ID: " << resp->version_id << std::endl;
+    std::cout << "ETag: " << resp->etag << std::endl;
+    std::cout << "Size: " << resp->size << std::endl;
+    std::cout << "Last Modified: " << resp->last_modified << std::endl;
     std::cout << "Retention Mode: ";
-    if (minio::s3::IsRetentionModeValid(resp.retention_mode)) {
-      std::cout << minio::s3::RetentionModeToString(resp.retention_mode)
+    if (minio::s3::IsRetentionModeValid(resp->retention_mode)) {
+      std::cout << minio::s3::RetentionModeToString(resp->retention_mode)
                 << std::endl;
     } else {
       std::cout << "-" << std::endl;
     }
     std::cout << "Retention Retain Until Date: ";
-    if (resp.retention_retain_until_date) {
-      std::cout << resp.retention_retain_until_date.ToHttpHeaderValue()
+    if (resp->retention_retain_until_date) {
+      std::cout << resp->retention_retain_until_date.ToHttpHeaderValue()
                 << std::endl;
     } else {
       std::cout << "-" << std::endl;
     }
     std::cout << "Legal Hold: ";
-    if (minio::s3::IsLegalHoldValid(resp.legal_hold)) {
-      std::cout << minio::s3::LegalHoldToString(resp.legal_hold) << std::endl;
+    if (minio::s3::IsLegalHoldValid(resp->legal_hold)) {
+      std::cout << minio::s3::LegalHoldToString(resp->legal_hold) << std::endl;
     } else {
       std::cout << "-" << std::endl;
     }
     std::cout << "Delete Marker: "
-              << minio::utils::BoolToString(resp.delete_marker) << std::endl;
+              << minio::utils::BoolToString(resp->delete_marker) << std::endl;
     std::cout << "User Metadata: " << std::endl;
-    std::list<std::string> keys = resp.user_metadata.Keys();
+    std::list<std::string> keys = resp->user_metadata.Keys();
     for (auto& key : keys) {
-      std::cout << "  " << key << ": " << resp.user_metadata.GetFront(key)
+      std::cout << "  " << key << ": " << resp->user_metadata.GetFront(key)
                 << std::endl;
     }
   } else {
-    std::cout << "unable to get stat object; " << resp.Error().String()
+    std::cout << "unable to get stat object; " << resp.error().String()
               << std::endl;
   }
 

@@ -63,14 +63,14 @@ int main(int argc, char* argv[]) {
   args.object = "my-object";
 
   // Call put object.
-  minio::s3::PutObjectResponse resp = client.PutObject(args);
+  auto resp = client.PutObject(args);
 
   // Handle response.
   if (resp) {
-    std::cout << "my-object is successfully created etag=" << resp.etag << " "
+    std::cout << "my-object is successfully created etag=" << resp->etag << " "
               << std::endl;
   } else {
-    std::cout << "unable to do put object; " << resp.Error().String()
+    std::cout << "unable to do put object; " << resp.error().String()
               << std::endl;
   }
 

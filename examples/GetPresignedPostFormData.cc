@@ -36,20 +36,20 @@ int main() {
   policy.AddContentLengthRangeCondition(1 * 1024 * 1024, 10 * 1024 * 1024);
 
   // Call get presigned post form data.
-  minio::s3::GetPresignedPostFormDataResponse resp =
-      client.GetPresignedPostFormData(policy);
+  auto resp = client.GetPresignedPostFormData(policy);
 
   // Handle response.
   if (resp) {
     std::string fields;
-    for (auto& [key, value] : resp.form_data) fields += key + "=" + value + " ";
+    for (auto& [key, value] : resp->form_data)
+      fields += key + "=" + value + " ";
     fields += "-F file=@<FILE>";
     std::cout << "Example CURL command to use form-data:" << std::endl
               << "curl -X POST https://play.min.io/my-bucket " << fields
               << std::endl;
   } else {
     std::cout << "unable to get presigned post form data; "
-              << resp.Error().String() << std::endl;
+              << resp.error().String() << std::endl;
   }
 
   return 0;

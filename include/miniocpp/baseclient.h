@@ -31,6 +31,7 @@
 #include "providers.h"
 #include "request.h"
 #include "response.h"
+#include "result.h"
 #include "utils.h"
 
 #ifdef MINIO_CPP_RDMA
@@ -93,176 +94,201 @@ class BaseClient {
                               const utils::Multimap& headers,
                               const std::string& bucket_name,
                               bool retry = false);
-  Response GetErrorResponse(http::Response resp, std::string_view resource,
-                            http::Method method, const std::string& bucket_name,
-                            const std::string& object_name);
-  Response execute(Request& req);
-  Response Execute(Request& req);
-  GetRegionResponse GetRegion(const std::string& bucket_name,
-                              const std::string& region);
+  Result<Response> GetErrorResponse(http::Response resp,
+                                    std::string_view resource,
+                                    http::Method method,
+                                    const std::string& bucket_name,
+                                    const std::string& object_name);
+  Result<Response> execute(Request& req);
+  Result<Response> Execute(Request& req);
+  Result<GetRegionResponse> GetRegion(const std::string& bucket_name,
+                                      const std::string& region);
 
-  AbortMultipartUploadResponse AbortMultipartUpload(
+  Result<AbortMultipartUploadResponse> AbortMultipartUpload(
       AbortMultipartUploadArgs args);
-  BucketExistsResponse BucketExists(BucketExistsArgs args);
-  CompleteMultipartUploadResponse CompleteMultipartUpload(
+  Result<BucketExistsResponse> BucketExists(BucketExistsArgs args);
+  Result<CompleteMultipartUploadResponse> CompleteMultipartUpload(
       CompleteMultipartUploadArgs args);
-  CreateMultipartUploadResponse CreateMultipartUpload(
+  Result<CreateMultipartUploadResponse> CreateMultipartUpload(
       CreateMultipartUploadArgs args);
-  DeleteBucketEncryptionResponse DeleteBucketEncryption(
+  Result<DeleteBucketEncryptionResponse> DeleteBucketEncryption(
       DeleteBucketEncryptionArgs args);
-  DisableObjectLegalHoldResponse DisableObjectLegalHold(
+  Result<DisableObjectLegalHoldResponse> DisableObjectLegalHold(
       DisableObjectLegalHoldArgs args);
-  DeleteBucketLifecycleResponse DeleteBucketLifecycle(
+  Result<DeleteBucketLifecycleResponse> DeleteBucketLifecycle(
       DeleteBucketLifecycleArgs args);
-  DeleteBucketNotificationResponse DeleteBucketNotification(
+  Result<DeleteBucketNotificationResponse> DeleteBucketNotification(
       DeleteBucketNotificationArgs args);
-  DeleteBucketPolicyResponse DeleteBucketPolicy(DeleteBucketPolicyArgs args);
-  DeleteBucketReplicationResponse DeleteBucketReplication(
-      DeleteBucketReplicationArgs args);
-  DeleteBucketTagsResponse DeleteBucketTags(DeleteBucketTagsArgs args);
-  DeleteObjectLockConfigResponse DeleteObjectLockConfig(
-      DeleteObjectLockConfigArgs args);
-  DeleteObjectTagsResponse DeleteObjectTags(DeleteObjectTagsArgs args);
-  EnableObjectLegalHoldResponse EnableObjectLegalHold(
-      EnableObjectLegalHoldArgs args);
-  GetBucketEncryptionResponse GetBucketEncryption(GetBucketEncryptionArgs args);
-  GetBucketLifecycleResponse GetBucketLifecycle(GetBucketLifecycleArgs args);
-  GetBucketNotificationResponse GetBucketNotification(
-      GetBucketNotificationArgs args);
-  GetBucketPolicyResponse GetBucketPolicy(GetBucketPolicyArgs args);
-  GetBucketReplicationResponse GetBucketReplication(
-      GetBucketReplicationArgs args);
-  GetBucketTagsResponse GetBucketTags(GetBucketTagsArgs args);
-  GetBucketVersioningResponse GetBucketVersioning(GetBucketVersioningArgs args);
-  GetObjectResponse GetObject(GetObjectArgs args);
-  GetObjectLockConfigResponse GetObjectLockConfig(GetObjectLockConfigArgs args);
-  GetObjectRetentionResponse GetObjectRetention(GetObjectRetentionArgs args);
-  GetObjectTagsResponse GetObjectTags(GetObjectTagsArgs args);
-  GetPresignedObjectUrlResponse GetPresignedObjectUrl(
-      GetPresignedObjectUrlArgs args);
-  GetPresignedPostFormDataResponse GetPresignedPostFormData(PostPolicy policy);
-  IsObjectLegalHoldEnabledResponse IsObjectLegalHoldEnabled(
-      IsObjectLegalHoldEnabledArgs args);
-  ListBucketsResponse ListBuckets(ListBucketsArgs args);
-  ListBucketsResponse ListBuckets();
-  ListenBucketNotificationResponse ListenBucketNotification(
-      ListenBucketNotificationArgs args);
-  ListObjectsResponse ListObjectsV1(ListObjectsV1Args args);
-  ListObjectsResponse ListObjectsV2(ListObjectsV2Args args);
-  ListObjectsResponse ListObjectVersions(ListObjectVersionsArgs args);
-  MakeBucketResponse MakeBucket(MakeBucketArgs args);
-  PutObjectResponse PutObject(PutObjectApiArgs args);
-  RemoveBucketResponse RemoveBucket(RemoveBucketArgs args);
-  RemoveObjectResponse RemoveObject(RemoveObjectArgs args);
-  RemoveObjectsResponse RemoveObjects(RemoveObjectsApiArgs args);
-  SetBucketEncryptionResponse SetBucketEncryption(SetBucketEncryptionArgs args);
-  SetBucketLifecycleResponse SetBucketLifecycle(SetBucketLifecycleArgs args);
-  SetBucketNotificationResponse SetBucketNotification(
-      SetBucketNotificationArgs args);
-  SetBucketPolicyResponse SetBucketPolicy(SetBucketPolicyArgs args);
-  SetBucketReplicationResponse SetBucketReplication(
-      SetBucketReplicationArgs args);
-  SetBucketTagsResponse SetBucketTags(SetBucketTagsArgs args);
-  SetBucketVersioningResponse SetBucketVersioning(SetBucketVersioningArgs args);
-  SetObjectLockConfigResponse SetObjectLockConfig(SetObjectLockConfigArgs args);
-  SetObjectRetentionResponse SetObjectRetention(SetObjectRetentionArgs args);
-  SetObjectTagsResponse SetObjectTags(SetObjectTagsArgs args);
-  SelectObjectContentResponse SelectObjectContent(SelectObjectContentArgs args);
-  StatObjectResponse StatObject(StatObjectArgs args);
-  UploadPartResponse UploadPart(UploadPartArgs args);
-  UploadPartCopyResponse UploadPartCopy(UploadPartCopyArgs args);
-
-  // Async overloads — return std::future<T> backed by std::async.
-  // These are additive and non-breaking; sync methods remain unchanged.
-  std::future<AbortMultipartUploadResponse> AbortMultipartUploadAsync(
-      AbortMultipartUploadArgs args);
-  std::future<BucketExistsResponse> BucketExistsAsync(BucketExistsArgs args);
-  std::future<CompleteMultipartUploadResponse> CompleteMultipartUploadAsync(
-      CompleteMultipartUploadArgs args);
-  std::future<CreateMultipartUploadResponse> CreateMultipartUploadAsync(
-      CreateMultipartUploadArgs args);
-  std::future<DeleteBucketEncryptionResponse> DeleteBucketEncryptionAsync(
-      DeleteBucketEncryptionArgs args);
-  std::future<DeleteBucketLifecycleResponse> DeleteBucketLifecycleAsync(
-      DeleteBucketLifecycleArgs args);
-  std::future<DeleteBucketNotificationResponse> DeleteBucketNotificationAsync(
-      DeleteBucketNotificationArgs args);
-  std::future<DeleteBucketPolicyResponse> DeleteBucketPolicyAsync(
+  Result<DeleteBucketPolicyResponse> DeleteBucketPolicy(
       DeleteBucketPolicyArgs args);
-  std::future<DeleteBucketReplicationResponse> DeleteBucketReplicationAsync(
+  Result<DeleteBucketReplicationResponse> DeleteBucketReplication(
       DeleteBucketReplicationArgs args);
-  std::future<DeleteBucketTagsResponse> DeleteBucketTagsAsync(
-      DeleteBucketTagsArgs args);
-  std::future<DeleteObjectLockConfigResponse> DeleteObjectLockConfigAsync(
+  Result<DeleteBucketTagsResponse> DeleteBucketTags(DeleteBucketTagsArgs args);
+  Result<DeleteObjectLockConfigResponse> DeleteObjectLockConfig(
       DeleteObjectLockConfigArgs args);
-  std::future<DeleteObjectTagsResponse> DeleteObjectTagsAsync(
-      DeleteObjectTagsArgs args);
-  std::future<DisableObjectLegalHoldResponse> DisableObjectLegalHoldAsync(
-      DisableObjectLegalHoldArgs args);
-  std::future<EnableObjectLegalHoldResponse> EnableObjectLegalHoldAsync(
+  Result<DeleteObjectTagsResponse> DeleteObjectTags(DeleteObjectTagsArgs args);
+  Result<EnableObjectLegalHoldResponse> EnableObjectLegalHold(
       EnableObjectLegalHoldArgs args);
-  std::future<GetBucketEncryptionResponse> GetBucketEncryptionAsync(
+  Result<GetBucketEncryptionResponse> GetBucketEncryption(
       GetBucketEncryptionArgs args);
-  std::future<GetBucketLifecycleResponse> GetBucketLifecycleAsync(
+  Result<GetBucketLifecycleResponse> GetBucketLifecycle(
       GetBucketLifecycleArgs args);
-  std::future<GetBucketNotificationResponse> GetBucketNotificationAsync(
+  Result<GetBucketNotificationResponse> GetBucketNotification(
       GetBucketNotificationArgs args);
-  std::future<GetBucketPolicyResponse> GetBucketPolicyAsync(
-      GetBucketPolicyArgs args);
-  std::future<GetBucketReplicationResponse> GetBucketReplicationAsync(
+  Result<GetBucketPolicyResponse> GetBucketPolicy(GetBucketPolicyArgs args);
+  Result<GetBucketReplicationResponse> GetBucketReplication(
       GetBucketReplicationArgs args);
-  std::future<GetBucketTagsResponse> GetBucketTagsAsync(GetBucketTagsArgs args);
-  std::future<GetBucketVersioningResponse> GetBucketVersioningAsync(
+  Result<GetBucketTagsResponse> GetBucketTags(GetBucketTagsArgs args);
+  Result<GetBucketVersioningResponse> GetBucketVersioning(
       GetBucketVersioningArgs args);
-  std::future<GetObjectResponse> GetObjectAsync(GetObjectArgs args);
-  std::future<GetObjectLockConfigResponse> GetObjectLockConfigAsync(
+  Result<GetObjectResponse> GetObject(GetObjectArgs args);
+  Result<GetObjectLockConfigResponse> GetObjectLockConfig(
       GetObjectLockConfigArgs args);
-  std::future<GetObjectRetentionResponse> GetObjectRetentionAsync(
+  Result<GetObjectRetentionResponse> GetObjectRetention(
       GetObjectRetentionArgs args);
-  std::future<GetObjectTagsResponse> GetObjectTagsAsync(GetObjectTagsArgs args);
-  std::future<GetPresignedObjectUrlResponse> GetPresignedObjectUrlAsync(
+  Result<GetObjectTagsResponse> GetObjectTags(GetObjectTagsArgs args);
+  Result<GetPresignedObjectUrlResponse> GetPresignedObjectUrl(
       GetPresignedObjectUrlArgs args);
-  std::future<GetPresignedPostFormDataResponse> GetPresignedPostFormDataAsync(
+  Result<GetPresignedPostFormDataResponse> GetPresignedPostFormData(
       PostPolicy policy);
-  std::future<IsObjectLegalHoldEnabledResponse> IsObjectLegalHoldEnabledAsync(
+  Result<IsObjectLegalHoldEnabledResponse> IsObjectLegalHoldEnabled(
       IsObjectLegalHoldEnabledArgs args);
-  std::future<ListBucketsResponse> ListBucketsAsync(ListBucketsArgs args);
-  std::future<ListBucketsResponse> ListBucketsAsync();
-  std::future<ListenBucketNotificationResponse> ListenBucketNotificationAsync(
+  Result<ListBucketsResponse> ListBuckets(ListBucketsArgs args);
+  Result<ListBucketsResponse> ListBuckets();
+  Result<ListenBucketNotificationResponse> ListenBucketNotification(
       ListenBucketNotificationArgs args);
-  std::future<ListObjectsResponse> ListObjectsV1Async(ListObjectsV1Args args);
-  std::future<ListObjectsResponse> ListObjectsV2Async(ListObjectsV2Args args);
-  std::future<ListObjectsResponse> ListObjectVersionsAsync(
-      ListObjectVersionsArgs args);
-  std::future<MakeBucketResponse> MakeBucketAsync(MakeBucketArgs args);
-  std::future<PutObjectResponse> PutObjectAsync(PutObjectApiArgs args);
-  std::future<RemoveBucketResponse> RemoveBucketAsync(RemoveBucketArgs args);
-  std::future<RemoveObjectResponse> RemoveObjectAsync(RemoveObjectArgs args);
-  std::future<RemoveObjectsResponse> RemoveObjectsAsync(
-      RemoveObjectsApiArgs args);
-  std::future<SelectObjectContentResponse> SelectObjectContentAsync(
-      SelectObjectContentArgs args);
-  std::future<SetBucketEncryptionResponse> SetBucketEncryptionAsync(
+  Result<ListObjectsResponse> ListObjectsV1(ListObjectsV1Args args);
+  Result<ListObjectsResponse> ListObjectsV2(ListObjectsV2Args args);
+  Result<ListObjectsResponse> ListObjectVersions(ListObjectVersionsArgs args);
+  Result<MakeBucketResponse> MakeBucket(MakeBucketArgs args);
+  Result<PutObjectResponse> PutObject(PutObjectApiArgs args);
+  Result<RemoveBucketResponse> RemoveBucket(RemoveBucketArgs args);
+  Result<RemoveObjectResponse> RemoveObject(RemoveObjectArgs args);
+  Result<RemoveObjectsResponse> RemoveObjects(RemoveObjectsApiArgs args);
+  Result<SetBucketEncryptionResponse> SetBucketEncryption(
       SetBucketEncryptionArgs args);
-  std::future<SetBucketLifecycleResponse> SetBucketLifecycleAsync(
+  Result<SetBucketLifecycleResponse> SetBucketLifecycle(
       SetBucketLifecycleArgs args);
-  std::future<SetBucketNotificationResponse> SetBucketNotificationAsync(
+  Result<SetBucketNotificationResponse> SetBucketNotification(
       SetBucketNotificationArgs args);
-  std::future<SetBucketPolicyResponse> SetBucketPolicyAsync(
-      SetBucketPolicyArgs args);
-  std::future<SetBucketReplicationResponse> SetBucketReplicationAsync(
+  Result<SetBucketPolicyResponse> SetBucketPolicy(SetBucketPolicyArgs args);
+  Result<SetBucketReplicationResponse> SetBucketReplication(
       SetBucketReplicationArgs args);
-  std::future<SetBucketTagsResponse> SetBucketTagsAsync(SetBucketTagsArgs args);
-  std::future<SetBucketVersioningResponse> SetBucketVersioningAsync(
+  Result<SetBucketTagsResponse> SetBucketTags(SetBucketTagsArgs args);
+  Result<SetBucketVersioningResponse> SetBucketVersioning(
       SetBucketVersioningArgs args);
-  std::future<SetObjectLockConfigResponse> SetObjectLockConfigAsync(
+  Result<SetObjectLockConfigResponse> SetObjectLockConfig(
       SetObjectLockConfigArgs args);
-  std::future<SetObjectRetentionResponse> SetObjectRetentionAsync(
+  Result<SetObjectRetentionResponse> SetObjectRetention(
       SetObjectRetentionArgs args);
-  std::future<SetObjectTagsResponse> SetObjectTagsAsync(SetObjectTagsArgs args);
-  std::future<StatObjectResponse> StatObjectAsync(StatObjectArgs args);
-  std::future<UploadPartResponse> UploadPartAsync(UploadPartArgs args);
-  std::future<UploadPartCopyResponse> UploadPartCopyAsync(
+  Result<SetObjectTagsResponse> SetObjectTags(SetObjectTagsArgs args);
+  Result<SelectObjectContentResponse> SelectObjectContent(
+      SelectObjectContentArgs args);
+  Result<StatObjectResponse> StatObject(StatObjectArgs args);
+  Result<UploadPartResponse> UploadPart(UploadPartArgs args);
+  Result<UploadPartCopyResponse> UploadPartCopy(UploadPartCopyArgs args);
+
+  // Async overloads — return std::future<Result<T>> backed by std::async.
+  // All sync methods now also return Result<T>.
+  std::future<Result<AbortMultipartUploadResponse>> AbortMultipartUploadAsync(
+      AbortMultipartUploadArgs args);
+  std::future<Result<BucketExistsResponse>> BucketExistsAsync(
+      BucketExistsArgs args);
+  std::future<Result<CompleteMultipartUploadResponse>>
+  CompleteMultipartUploadAsync(CompleteMultipartUploadArgs args);
+  std::future<Result<CreateMultipartUploadResponse>> CreateMultipartUploadAsync(
+      CreateMultipartUploadArgs args);
+  std::future<Result<DeleteBucketEncryptionResponse>>
+  DeleteBucketEncryptionAsync(DeleteBucketEncryptionArgs args);
+  std::future<Result<DeleteBucketLifecycleResponse>> DeleteBucketLifecycleAsync(
+      DeleteBucketLifecycleArgs args);
+  std::future<Result<DeleteBucketNotificationResponse>>
+  DeleteBucketNotificationAsync(DeleteBucketNotificationArgs args);
+  std::future<Result<DeleteBucketPolicyResponse>> DeleteBucketPolicyAsync(
+      DeleteBucketPolicyArgs args);
+  std::future<Result<DeleteBucketReplicationResponse>>
+  DeleteBucketReplicationAsync(DeleteBucketReplicationArgs args);
+  std::future<Result<DeleteBucketTagsResponse>> DeleteBucketTagsAsync(
+      DeleteBucketTagsArgs args);
+  std::future<Result<DeleteObjectLockConfigResponse>>
+  DeleteObjectLockConfigAsync(DeleteObjectLockConfigArgs args);
+  std::future<Result<DeleteObjectTagsResponse>> DeleteObjectTagsAsync(
+      DeleteObjectTagsArgs args);
+  std::future<Result<DisableObjectLegalHoldResponse>>
+  DisableObjectLegalHoldAsync(DisableObjectLegalHoldArgs args);
+  std::future<Result<EnableObjectLegalHoldResponse>> EnableObjectLegalHoldAsync(
+      EnableObjectLegalHoldArgs args);
+  std::future<Result<GetBucketEncryptionResponse>> GetBucketEncryptionAsync(
+      GetBucketEncryptionArgs args);
+  std::future<Result<GetBucketLifecycleResponse>> GetBucketLifecycleAsync(
+      GetBucketLifecycleArgs args);
+  std::future<Result<GetBucketNotificationResponse>> GetBucketNotificationAsync(
+      GetBucketNotificationArgs args);
+  std::future<Result<GetBucketPolicyResponse>> GetBucketPolicyAsync(
+      GetBucketPolicyArgs args);
+  std::future<Result<GetBucketReplicationResponse>> GetBucketReplicationAsync(
+      GetBucketReplicationArgs args);
+  std::future<Result<GetBucketTagsResponse>> GetBucketTagsAsync(
+      GetBucketTagsArgs args);
+  std::future<Result<GetBucketVersioningResponse>> GetBucketVersioningAsync(
+      GetBucketVersioningArgs args);
+  std::future<Result<GetObjectResponse>> GetObjectAsync(GetObjectArgs args);
+  std::future<Result<GetObjectLockConfigResponse>> GetObjectLockConfigAsync(
+      GetObjectLockConfigArgs args);
+  std::future<Result<GetObjectRetentionResponse>> GetObjectRetentionAsync(
+      GetObjectRetentionArgs args);
+  std::future<Result<GetObjectTagsResponse>> GetObjectTagsAsync(
+      GetObjectTagsArgs args);
+  std::future<Result<GetPresignedObjectUrlResponse>> GetPresignedObjectUrlAsync(
+      GetPresignedObjectUrlArgs args);
+  std::future<Result<GetPresignedPostFormDataResponse>>
+  GetPresignedPostFormDataAsync(PostPolicy policy);
+  std::future<Result<IsObjectLegalHoldEnabledResponse>>
+  IsObjectLegalHoldEnabledAsync(IsObjectLegalHoldEnabledArgs args);
+  std::future<Result<ListBucketsResponse>> ListBucketsAsync(
+      ListBucketsArgs args);
+  std::future<Result<ListBucketsResponse>> ListBucketsAsync();
+  std::future<Result<ListenBucketNotificationResponse>>
+  ListenBucketNotificationAsync(ListenBucketNotificationArgs args);
+  std::future<Result<ListObjectsResponse>> ListObjectsV1Async(
+      ListObjectsV1Args args);
+  std::future<Result<ListObjectsResponse>> ListObjectsV2Async(
+      ListObjectsV2Args args);
+  std::future<Result<ListObjectsResponse>> ListObjectVersionsAsync(
+      ListObjectVersionsArgs args);
+  std::future<Result<MakeBucketResponse>> MakeBucketAsync(MakeBucketArgs args);
+  std::future<Result<PutObjectResponse>> PutObjectAsync(PutObjectApiArgs args);
+  std::future<Result<RemoveBucketResponse>> RemoveBucketAsync(
+      RemoveBucketArgs args);
+  std::future<Result<RemoveObjectResponse>> RemoveObjectAsync(
+      RemoveObjectArgs args);
+  std::future<Result<RemoveObjectsResponse>> RemoveObjectsAsync(
+      RemoveObjectsApiArgs args);
+  std::future<Result<SelectObjectContentResponse>> SelectObjectContentAsync(
+      SelectObjectContentArgs args);
+  std::future<Result<SetBucketEncryptionResponse>> SetBucketEncryptionAsync(
+      SetBucketEncryptionArgs args);
+  std::future<Result<SetBucketLifecycleResponse>> SetBucketLifecycleAsync(
+      SetBucketLifecycleArgs args);
+  std::future<Result<SetBucketNotificationResponse>> SetBucketNotificationAsync(
+      SetBucketNotificationArgs args);
+  std::future<Result<SetBucketPolicyResponse>> SetBucketPolicyAsync(
+      SetBucketPolicyArgs args);
+  std::future<Result<SetBucketReplicationResponse>> SetBucketReplicationAsync(
+      SetBucketReplicationArgs args);
+  std::future<Result<SetBucketTagsResponse>> SetBucketTagsAsync(
+      SetBucketTagsArgs args);
+  std::future<Result<SetBucketVersioningResponse>> SetBucketVersioningAsync(
+      SetBucketVersioningArgs args);
+  std::future<Result<SetObjectLockConfigResponse>> SetObjectLockConfigAsync(
+      SetObjectLockConfigArgs args);
+  std::future<Result<SetObjectRetentionResponse>> SetObjectRetentionAsync(
+      SetObjectRetentionArgs args);
+  std::future<Result<SetObjectTagsResponse>> SetObjectTagsAsync(
+      SetObjectTagsArgs args);
+  std::future<Result<StatObjectResponse>> StatObjectAsync(StatObjectArgs args);
+  std::future<Result<UploadPartResponse>> UploadPartAsync(UploadPartArgs args);
+  std::future<Result<UploadPartCopyResponse>> UploadPartCopyAsync(
       UploadPartCopyArgs args);
 
   // Windows API fix:
@@ -273,11 +299,11 @@ class BaseClient {
   // didn't. This fixes the issue by providing both functions `GetObject()` can
   // expand to as inline wrappers.
 #if defined(_WIN32)
-  inline GetObjectResponse GetObjectA(const GetObjectArgs& args) {
+  inline Result<GetObjectResponse> GetObjectA(const GetObjectArgs& args) {
     return GetObject(args);
   }
 
-  inline GetObjectResponse GetObjectW(const GetObjectArgs& args) {
+  inline Result<GetObjectResponse> GetObjectW(const GetObjectArgs& args) {
     return GetObject(args);
   }
 #endif  // _WIN32

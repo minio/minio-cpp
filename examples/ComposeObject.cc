@@ -48,13 +48,13 @@ int main() {
   args.sources = sources;
 
   // Call compose object.
-  minio::s3::ComposeObjectResponse resp = client.ComposeObject(args);
+  auto resp = client.ComposeObject(args);
 
   // Handle response.
   if (resp) {
     std::cout << "my-object is successfully created" << std::endl;
   } else {
-    std::cout << "unable to compose object; " << resp.Error().String()
+    std::cout << "unable to compose object; " << resp.error().String()
               << std::endl;
   }
 

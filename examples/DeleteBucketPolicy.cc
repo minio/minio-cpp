@@ -33,14 +33,14 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call delete bucket policy.
-  minio::s3::DeleteBucketPolicyResponse resp = client.DeleteBucketPolicy(args);
+  auto resp = client.DeleteBucketPolicy(args);
 
   // Handle response.
   if (resp) {
     std::cout << "bucket policy of my-bucket is deleted successfully"
               << std::endl;
   } else {
-    std::cout << "unable to delete bucket policy; " << resp.Error().String()
+    std::cout << "unable to delete bucket policy; " << resp.error().String()
               << std::endl;
   }
 

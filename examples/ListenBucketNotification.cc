@@ -41,13 +41,12 @@ int main() {
   };
 
   // Call listen bucket notification.
-  minio::s3::ListenBucketNotificationResponse resp =
-      client.ListenBucketNotification(args);
+  auto resp = client.ListenBucketNotification(args);
 
   // Handle response.
   if (!resp) {
     std::cout << "unable to do listen bucket notification; "
-              << resp.Error().String() << std::endl;
+              << resp.error().String() << std::endl;
   }
 
   return 0;

@@ -29,19 +29,18 @@ int main() {
   minio::s3::Client client(base_url, &provider);
 
   // Create set bucket encryption arguments.
-  minio::s3::SseConfig sseS3Config = minio::s3::SseConfig::S3();
+  auto sseS3Config = minio::s3::SseConfig::S3();
   minio::s3::SetBucketEncryptionArgs args(sseS3Config);
   args.bucket = "my-bucket";
 
   // Call set bucket encryption.
-  minio::s3::SetBucketEncryptionResponse resp =
-      client.SetBucketEncryption(args);
+  auto resp = client.SetBucketEncryption(args);
 
   // Handle response.
   if (resp) {
     std::cout << "Bucket encryption is set successfully" << std::endl;
   } else {
-    std::cout << "unable to set bucket encryption; " << resp.Error().String()
+    std::cout << "unable to set bucket encryption; " << resp.error().String()
               << std::endl;
   }
 

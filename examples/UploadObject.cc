@@ -35,14 +35,14 @@ int main() {
   args.filename = "my-object.csv";
 
   // Call upload object.
-  minio::s3::UploadObjectResponse resp = client.UploadObject(args);
+  auto resp = client.UploadObject(args);
 
   // Handle response.
   if (resp) {
     std::cout << "my-object.csv is successfully uploaded to my-object"
               << std::endl;
   } else {
-    std::cout << "unable to upload object; " << resp.Error().String()
+    std::cout << "unable to upload object; " << resp.error().String()
               << std::endl;
   }
 

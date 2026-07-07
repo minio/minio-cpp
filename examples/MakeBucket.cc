@@ -33,13 +33,13 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call make bucket.
-  minio::s3::MakeBucketResponse resp = client.MakeBucket(args);
+  auto resp = client.MakeBucket(args);
 
   // Handle response.
   if (resp) {
     std::cout << "my-bucket is created successfully" << std::endl;
   } else {
-    std::cout << "unable to create bucket; " << resp.Error().String()
+    std::cout << "unable to create bucket; " << resp.error().String()
               << std::endl;
   }
 

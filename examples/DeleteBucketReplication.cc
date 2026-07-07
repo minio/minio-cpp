@@ -33,15 +33,14 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call delete bucket encryption.
-  minio::s3::DeleteBucketEncryptionResponse resp =
-      client.DeleteBucketEncryption(args);
+  auto resp = client.DeleteBucketEncryption(args);
 
   // Handle response.
   if (resp) {
     std::cout << "bucket encryption of my-bucket is deleted successfully"
               << std::endl;
   } else {
-    std::cout << "unable to delete bucket encryption; " << resp.Error().String()
+    std::cout << "unable to delete bucket encryption; " << resp.error().String()
               << std::endl;
   }
 

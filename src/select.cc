@@ -124,7 +124,7 @@ bool SelectHandler::process(const http::DataFunctionArgs& /* args */,
       done_ = true;
       std::string msg("prelude CRC mismatch; expected: ");
       msg += std::to_string(expected) + ", got: " + std::to_string(got);
-      result_func_(error::make<SelectResult>(msg));
+      result_func_(SelectResult(error::Error(msg)));
       return false;
     }
     total_length_ = utils::Int(prelude_.substr(0, 4));
@@ -142,7 +142,7 @@ bool SelectHandler::process(const http::DataFunctionArgs& /* args */,
       done_ = true;
       std::string msg("message CRC mismatch; expected: ");
       msg += std::to_string(expected) + ", got: " + std::to_string(got);
-      result_func_(error::make<SelectResult>(msg));
+      result_func_(SelectResult(error::Error(msg)));
       return false;
     }
   }
@@ -159,8 +159,8 @@ bool SelectHandler::process(const http::DataFunctionArgs& /* args */,
 
   if (headers[":message-type"] == "error") {
     done_ = true;
-    result_func_(error::make<SelectResult>(headers[":error-code"] + ": " +
-                                           headers[":error-message"]));
+    result_func_(SelectResult(error::Error(headers[":error-code"] + ": " +
+                                           headers[":error-message"])));
     return false;
   }
 
@@ -186,7 +186,7 @@ bool SelectHandler::process(const http::DataFunctionArgs& /* args */,
     if (!result) {
       done_ = true;
       result_func_(
-          error::make<SelectResult>("unable to parse XML; " + payload));
+          SelectResult(error::Error("unable to parse XML; " + payload)));
       return false;
     }
 
@@ -226,8 +226,8 @@ bool SelectHandler::process(const http::DataFunctionArgs& /* args */,
   }
 
   done_ = true;
-  result_func_(error::make<SelectResult>(std::string("unknown event-type ") +
-                                         headers[":event-type"]));
+  result_func_(SelectResult(error::Error(std::string("unknown event-type ") +
+                                         headers[":event-type"])));
   return false;
 }
 

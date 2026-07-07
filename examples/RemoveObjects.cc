@@ -47,12 +47,12 @@ int main() {
   };
 
   // Call remove objects.
-  minio::s3::RemoveObjectsResult result = client.RemoveObjects(args);
+  auto result = client.RemoveObjects(args);
   for (; result; result++) {
-    minio::s3::DeleteError err = *result;
-    if (!err) {
-      std::cout << "unable to do remove objects; " << err.Error().String()
-                << std::endl;
+    auto err = *result;
+    if (!err.code.empty() || !err.message.empty()) {
+      std::cout << "unable to do remove objects; " << err.code << ": "
+                << err.message << std::endl;
       break;
     }
 

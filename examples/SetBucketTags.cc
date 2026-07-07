@@ -35,13 +35,13 @@ int main() {
   args.tags["User"] = "jsmith";
 
   // Call set bucket tags.
-  minio::s3::SetBucketTagsResponse resp = client.SetBucketTags(args);
+  auto resp = client.SetBucketTags(args);
 
   // Handle response.
   if (resp) {
     std::cout << "Bucket tags are set successfully" << std::endl;
   } else {
-    std::cout << "unable to set bucket tags; " << resp.Error().String()
+    std::cout << "unable to set bucket tags; " << resp.error().String()
               << std::endl;
   }
 

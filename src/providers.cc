@@ -92,7 +92,7 @@ Credentials ChainedProvider::Fetch() {
     if (creds_) return creds_;
   }
 
-  return error::make<Credentials>("All providers fail to fetch credentials");
+  return Credentials{error::Error("All providers fail to fetch credentials")};
 }
 
 StaticProvider::StaticProvider(std::string access_key, std::string secret_key,
@@ -154,7 +154,7 @@ AwsConfigProvider::AwsConfigProvider(std::string filename,
 
   INIReader reader(filename);
   if (reader.ParseError() < 0) {
-    this->creds_ = error::make<Credentials>("unable to read " + filename);
+    this->creds_ = Credentials{error::Error("unable to read " + filename)};
   } else {
     this->creds_ = Credentials{error::SUCCESS,
                                reader.Get(profile, "aws_access_key_id", ""),
@@ -186,14 +186,14 @@ MinioClientConfigProvider::MinioClientConfigProvider(std::string filename,
     aliases = json["aliases"];
   } else {
     this->creds_ =
-        error::make<Credentials>("invalid configuration in file " + filename);
+        Credentials{error::Error("invalid configuration in file " + filename)};
     return;
   }
 
   if (!aliases.contains(alias)) {
-    this->creds_ = error::make<Credentials>(
+    this->creds_ = Credentials{error::Error(
         "alias " + alias + " not found in MinIO client configuration file " +
-        filename);
+        filename)};
     return;
   }
 
@@ -259,7 +259,12 @@ Credentials AssumeRoleProvider::Fetch() {
   if (!resp) {
     creds_ = Credentials{resp.Error()};
   } else {
-    creds_ = Credentials::ParseXML(resp.body, "AssumeRoleResult");
+    auto parse_res = Credentials::ParseXML(resp.body, "AssumeRoleResult");
+    if (parse_res) {
+      creds_ = std::move(*parse_res);
+    } else {
+      creds_ = Credentials{parse_res.error()};
+    }
   }
 
   return creds_;
@@ -323,9 +328,14 @@ Credentials WebIdentityClientGrantsProvider::Fetch() {
   if (!resp) {
     creds_ = Credentials{resp.Error()};
   } else {
-    creds_ = Credentials::ParseXML(
+    auto parse_res = Credentials::ParseXML(
         resp.body, IsWebIdentity() ? "AssumeRoleWithWebIdentityResult"
                                    : "AssumeRoleWithClientGrantsResult");
+    if (parse_res) {
+      creds_ = std::move(*parse_res);
+    } else {
+      creds_ = Credentials{parse_res.error()};
+    }
   }
   return creds_;
 }
@@ -430,9 +440,9 @@ Credentials IamAwsProvider::fetch(http::Url url) {
   nlohmann::json json = nlohmann::json::parse(resp.body);
   std::string code = json.value("Code", "Success");
   if (code != "Success") {
-    return error::make<Credentials>(url.String() + " failed with code " + code +
+    return Credentials{error::Error(url.String() + " failed with code " + code +
                                     " and message " +
-                                    json.value("Message", ""));
+                                    json.value("Message", ""))};
   }
 
   std::string expiration = json["Expiration"];
@@ -486,7 +496,13 @@ Credentials LdapIdentityProvider::Fetch() {
   http::Response resp = req.Execute();
   if (!resp) return Credentials{resp.Error()};
 
-  creds_ = Credentials::ParseXML(resp.body, "AssumeRoleWithLDAPIdentityResult");
+  auto parse_res =
+      Credentials::ParseXML(resp.body, "AssumeRoleWithLDAPIdentityResult");
+  if (parse_res) {
+    creds_ = std::move(*parse_res);
+  } else {
+    creds_ = Credentials{parse_res.error()};
+  }
   return creds_;
 }
 
@@ -535,7 +551,13 @@ Credentials CertificateIdentityProvider::Fetch() {
   http::Response resp = req.Execute();
   if (!resp) return Credentials{resp.Error()};
 
-  creds_ = Credentials::ParseXML(resp.body, "AssumeRoleWithCertificateResult");
+  auto parse_res =
+      Credentials::ParseXML(resp.body, "AssumeRoleWithCertificateResult");
+  if (parse_res) {
+    creds_ = std::move(*parse_res);
+  } else {
+    creds_ = Credentials{parse_res.error()};
+  }
   return creds_;
 }
 

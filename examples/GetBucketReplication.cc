@@ -33,16 +33,15 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call get bucket encryption.
-  minio::s3::GetBucketEncryptionResponse resp =
-      client.GetBucketEncryption(args);
+  auto resp = client.GetBucketEncryption(args);
 
   // Handle response.
   if (resp) {
-    std::cout << "SSE Algorithm: " << resp.config.sse_algorithm << std::endl;
-    std::cout << "KMS Master Key ID: " << resp.config.kms_master_key_id
+    std::cout << "SSE Algorithm: " << resp->config.sse_algorithm << std::endl;
+    std::cout << "KMS Master Key ID: " << resp->config.kms_master_key_id
               << std::endl;
   } else {
-    std::cout << "unable to get bucket encryption; " << resp.Error().String()
+    std::cout << "unable to get bucket encryption; " << resp.error().String()
               << std::endl;
   }
 

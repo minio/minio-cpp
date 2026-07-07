@@ -38,14 +38,14 @@ int main() {
   };
 
   // Call get object.
-  minio::s3::GetObjectResponse resp = client.GetObject(args);
+  auto resp = client.GetObject(args);
 
   // Handle response.
   if (resp) {
     std::cout << std::endl
               << "data of my-object is received successfully" << std::endl;
   } else {
-    std::cout << "unable to get object; " << resp.Error().String() << std::endl;
+    std::cout << "unable to get object; " << resp.error().String() << std::endl;
   }
 
   return 0;

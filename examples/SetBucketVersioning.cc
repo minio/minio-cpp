@@ -34,14 +34,13 @@ int main() {
   args.status = true;
 
   // Call set bucket versioning.
-  minio::s3::SetBucketVersioningResponse resp =
-      client.SetBucketVersioning(args);
+  auto resp = client.SetBucketVersioning(args);
 
   // Handle response.
   if (resp) {
     std::cout << "Bucket versioning is enabled successfully" << std::endl;
   } else {
-    std::cout << "unable to set bucket versioning; " << resp.Error().String()
+    std::cout << "unable to set bucket versioning; " << resp.error().String()
               << std::endl;
   }
 

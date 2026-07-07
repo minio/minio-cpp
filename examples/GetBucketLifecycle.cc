@@ -33,14 +33,14 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call get bucket lifecycle.
-  minio::s3::GetBucketLifecycleResponse resp = client.GetBucketLifecycle(args);
+  auto resp = client.GetBucketLifecycle(args);
 
   // Handle response.
   if (resp) {
-    std::cout << "Lifecycle configuration: " << resp.config.ToXML()
+    std::cout << "Lifecycle configuration: " << resp->config.ToXML()
               << std::endl;
   } else {
-    std::cout << "unable to get bucket lifecycle; " << resp.Error().String()
+    std::cout << "unable to get bucket lifecycle; " << resp.error().String()
               << std::endl;
   }
 

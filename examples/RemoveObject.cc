@@ -34,13 +34,13 @@ int main() {
   args.object = "my-object";
 
   // Call remove object.
-  minio::s3::RemoveObjectResponse resp = client.RemoveObject(args);
+  auto resp = client.RemoveObject(args);
 
   // Handle response.
   if (resp) {
     std::cout << "my-object is removed successfully" << std::endl;
   } else {
-    std::cout << "unable to remove object; " << resp.Error().String()
+    std::cout << "unable to remove object; " << resp.error().String()
               << std::endl;
   }
 

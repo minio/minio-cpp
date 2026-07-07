@@ -33,18 +33,18 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call bucket exists.
-  minio::s3::BucketExistsResponse resp = client.BucketExists(args);
+  auto resp = client.BucketExists(args);
 
   // Handle response.
   if (resp) {
-    if (resp.exist) {
+    if (resp->exist) {
       std::cout << "my-bucket exists" << std::endl;
     } else {
       std::cout << "my-bucket does not exist" << std::endl;
     }
   } else {
     std::cout << "unable to do bucket existence check; "
-              << resp.Error().String() << std::endl;
+              << resp.error().String() << std::endl;
   }
 
   return 0;

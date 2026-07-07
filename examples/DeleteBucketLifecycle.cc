@@ -33,15 +33,14 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call delete bucket lifecycle.
-  minio::s3::DeleteBucketLifecycleResponse resp =
-      client.DeleteBucketLifecycle(args);
+  auto resp = client.DeleteBucketLifecycle(args);
 
   // Handle response.
   if (resp) {
     std::cout << "bucket lifecycle of my-bucket is deleted successfully"
               << std::endl;
   } else {
-    std::cout << "unable to delete bucket lifecycle; " << resp.Error().String()
+    std::cout << "unable to delete bucket lifecycle; " << resp.error().String()
               << std::endl;
   }
 

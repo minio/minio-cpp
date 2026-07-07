@@ -31,11 +31,11 @@ int main() {
 
   std::string expression = "select * from S3Object";
   minio::s3::CsvInputSerialization csv_input;
-  minio::s3::FileHeaderInfo file_header_info = minio::s3::FileHeaderInfo::kUse;
+  auto file_header_info = minio::s3::FileHeaderInfo::kUse;
   csv_input.file_header_info =
       std::make_shared<minio::s3::FileHeaderInfo>(file_header_info);
   minio::s3::CsvOutputSerialization csv_output;
-  minio::s3::QuoteFields quote_fields = minio::s3::QuoteFields::kAsNeeded;
+  auto quote_fields = minio::s3::QuoteFields::kAsNeeded;
   csv_output.quote_fields =
       std::make_shared<minio::s3::QuoteFields>(quote_fields);
   minio::s3::SelectRequest request(expression, &csv_input, &csv_output);
@@ -53,13 +53,12 @@ int main() {
   minio::s3::SelectObjectContentArgs args(request, func);
   args.bucket = "my-bucket";
   args.object = "my-object.csv";
-  minio::s3::SelectObjectContentResponse resp =
-      client.SelectObjectContent(args);
+  auto resp = client.SelectObjectContent(args);
   if (resp) {
     std::cout << "records retrieved" << std::endl;
     std::cout << records << std::endl;
   } else {
-    std::cout << "unable to do select object content; " << resp.Error().String()
+    std::cout << "unable to do select object content; " << resp.error().String()
               << std::endl;
   }
 

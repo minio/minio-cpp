@@ -33,8 +33,7 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call delete object lock config.
-  minio::s3::DeleteObjectLockConfigResponse resp =
-      client.DeleteObjectLockConfig(args);
+  auto resp = client.DeleteObjectLockConfig(args);
 
   // Handle response.
   if (resp) {
@@ -42,7 +41,7 @@ int main() {
               << std::endl;
   } else {
     std::cout << "unable to delete object lock configuration; "
-              << resp.Error().String() << std::endl;
+              << resp.error().String() << std::endl;
   }
 
   return 0;

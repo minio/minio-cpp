@@ -33,8 +33,7 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call delete bucket notification.
-  minio::s3::DeleteBucketNotificationResponse resp =
-      client.DeleteBucketNotification(args);
+  auto resp = client.DeleteBucketNotification(args);
 
   // Handle response.
   if (resp) {
@@ -42,7 +41,7 @@ int main() {
               << std::endl;
   } else {
     std::cout << "unable to delete bucket notification; "
-              << resp.Error().String() << std::endl;
+              << resp.error().String() << std::endl;
   }
 
   return 0;

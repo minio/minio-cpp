@@ -33,35 +33,28 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call list objects.
-  minio::s3::ListObjectsResult result = client.ListObjects(args);
+  auto result = client.ListObjects(args);
   for (; result; result++) {
-    minio::s3::Item item = *result;
-    if (item) {
-      std::cout << "Name: " << item.name << std::endl;
-      std::cout << "Version ID: " << item.version_id << std::endl;
-      std::cout << "ETag: " << item.etag << std::endl;
-      std::cout << "Size: " << item.size << std::endl;
-      std::cout << "Last Modified: " << item.last_modified << std::endl;
-      std::cout << "Delete Marker: "
-                << minio::utils::BoolToString(item.is_delete_marker)
-                << std::endl;
-      std::cout << "User Metadata: " << std::endl;
-      for (auto& [key, value] : item.user_metadata) {
-        std::cout << "  " << key << ": " << value << std::endl;
-      }
-      std::cout << "Owner ID: " << item.owner_id << std::endl;
-      std::cout << "Owner Name: " << item.owner_name << std::endl;
-      std::cout << "Storage Class: " << item.storage_class << std::endl;
-      std::cout << "Is Latest: " << minio::utils::BoolToString(item.is_latest)
-                << std::endl;
-      std::cout << "Is Prefix: " << minio::utils::BoolToString(item.is_prefix)
-                << std::endl;
-      std::cout << "---" << std::endl;
-    } else {
-      std::cout << "unable to listobjects; " << item.Error().String()
-                << std::endl;
-      break;
+    auto item = *result;
+    std::cout << "Name: " << item.name << std::endl;
+    std::cout << "Version ID: " << item.version_id << std::endl;
+    std::cout << "ETag: " << item.etag << std::endl;
+    std::cout << "Size: " << item.size << std::endl;
+    std::cout << "Last Modified: " << item.last_modified << std::endl;
+    std::cout << "Delete Marker: "
+              << minio::utils::BoolToString(item.is_delete_marker) << std::endl;
+    std::cout << "User Metadata: " << std::endl;
+    for (auto& [key, value] : item.user_metadata) {
+      std::cout << "  " << key << ": " << value << std::endl;
     }
+    std::cout << "Owner ID: " << item.owner_id << std::endl;
+    std::cout << "Owner Name: " << item.owner_name << std::endl;
+    std::cout << "Storage Class: " << item.storage_class << std::endl;
+    std::cout << "Is Latest: " << minio::utils::BoolToString(item.is_latest)
+              << std::endl;
+    std::cout << "Is Prefix: " << minio::utils::BoolToString(item.is_prefix)
+              << std::endl;
+    std::cout << "---" << std::endl;
   }
 
   return 0;

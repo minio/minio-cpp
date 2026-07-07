@@ -22,6 +22,7 @@
 #include <type_traits>
 
 #include "error.h"
+#include "result.h"
 #include "utils.h"
 
 namespace minio::creds {
@@ -72,7 +73,8 @@ struct Credentials {
     return !err && !access_key.empty() && !expired(expiration);
   }
 
-  static Credentials ParseXML(std::string_view data, const std::string& root);
+  static Result<Credentials> ParseXML(std::string_view data,
+                                      const std::string& root);
 };  // class Credentials
 
 }  // namespace minio::creds

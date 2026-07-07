@@ -29,16 +29,16 @@ int main() {
   minio::s3::Client client(base_url, &provider);
 
   // Call list buckets.
-  minio::s3::ListBucketsResponse resp = client.ListBuckets();
+  auto resp = client.ListBuckets();
 
   // Handle response.
   if (resp) {
-    for (auto& bucket : resp.buckets) {
+    for (auto& bucket : resp->buckets) {
       std::cout << "Bucket: " << bucket.name << "; Creation date: "
                 << bucket.creation_date.ToHttpHeaderValue() << std::endl;
     }
   } else {
-    std::cout << "unable to list buckets; " << resp.Error().String()
+    std::cout << "unable to list buckets; " << resp.error().String()
               << std::endl;
   }
 

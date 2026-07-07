@@ -33,13 +33,13 @@ int main() {
   args.bucket = "my-bucket";
 
   // Call get bucket policy.
-  minio::s3::GetBucketPolicyResponse resp = client.GetBucketPolicy(args);
+  auto resp = client.GetBucketPolicy(args);
 
   // Handle response.
   if (resp) {
-    std::cout << "Bucket policy: " << resp.policy << std::endl;
+    std::cout << "Bucket policy: " << resp->policy << std::endl;
   } else {
-    std::cout << "unable to get bucket policy; " << resp.Error().String()
+    std::cout << "unable to get bucket policy; " << resp.error().String()
               << std::endl;
   }
 

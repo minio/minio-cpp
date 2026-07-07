@@ -22,6 +22,7 @@
 #include <type_traits>
 
 #include "miniocpp/error.h"
+#include "miniocpp/result.h"
 #include "miniocpp/utils.h"
 
 namespace minio::creds {
@@ -33,12 +34,12 @@ bool expired(const utils::UtcTime& expiration) {
   return expiration < now;
 }
 
-Credentials Credentials::ParseXML(std::string_view data,
-                                  const std::string& root) {
+Result<Credentials> Credentials::ParseXML(std::string_view data,
+                                          const std::string& root) {
   pugi::xml_document xdoc;
   pugi::xml_parse_result result = xdoc.load_string(data.data());
   if (!result) {
-    return error::make<Credentials>("unable to parse XML");
+    return tl::make_unexpected(error::Error("unable to parse XML"));
   }
   auto credentials = xdoc.select_node((root + "/Credentials").c_str());
 
