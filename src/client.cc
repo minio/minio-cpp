@@ -126,10 +126,10 @@ const CudaHostCopy& GetCudaHostCopy() {
     CudaHostCopy c;
 #ifndef _MSC_VER
     if (void* h = dlopen("libcuda.so.1", RTLD_LAZY | RTLD_LOCAL)) {
-      c.dtoh = reinterpret_cast<CudaHostCopy::DtoHFn>(
-          dlsym(h, "cuMemcpyDtoH_v2"));
-      c.htod = reinterpret_cast<CudaHostCopy::HtoDFn>(
-          dlsym(h, "cuMemcpyHtoD_v2"));
+      c.dtoh =
+          reinterpret_cast<CudaHostCopy::DtoHFn>(dlsym(h, "cuMemcpyDtoH_v2"));
+      c.htod =
+          reinterpret_cast<CudaHostCopy::HtoDFn>(dlsym(h, "cuMemcpyHtoD_v2"));
       c.ctx_get = reinterpret_cast<CudaHostCopy::CtxGetCurrentFn>(
           dlsym(h, "cuCtxGetCurrent"));
       c.ctx_set = reinterpret_cast<CudaHostCopy::CtxSetCurrentFn>(
