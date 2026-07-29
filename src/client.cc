@@ -20,6 +20,7 @@
 #ifdef _MSC_VER
 #include <malloc.h>
 #else
+#include <dlfcn.h>
 #include <unistd.h>
 #endif
 
@@ -92,6 +93,43 @@ struct AlignedBuffer {
 };
 
 #ifdef MINIO_CPP_RDMA
+// The HTTP fallbacks below fill or drain the caller's buffer with ordinary host
+// loads and stores, which fault on a CUDA device pointer. Stage through host
+// memory instead. The two driver-API copies are resolved lazily with dlopen so
+// libminiocpp keeps its "no CUDA link dependency" property: a host without the
+// driver simply reports the copy as unavailable and the caller gets an error
+// rather than a crash.
+struct CudaHostCopy {
+  using DtoHFn = int (*)(void*, unsigned long long, size_t);
+  using HtoDFn = int (*)(unsigned long long, const void*, size_t);
+  DtoHFn dtoh = nullptr;
+  HtoDFn htod = nullptr;
+  bool Ok() const { return dtoh != nullptr && htod != nullptr; }
+};
+
+const CudaHostCopy& GetCudaHostCopy() {
+  static const CudaHostCopy fns = [] {
+    CudaHostCopy c;
+#ifndef _MSC_VER
+    if (void* h = dlopen("libcuda.so.1", RTLD_LAZY | RTLD_LOCAL)) {
+      c.dtoh = reinterpret_cast<CudaHostCopy::DtoHFn>(
+          dlsym(h, "cuMemcpyDtoH_v2"));
+      c.htod = reinterpret_cast<CudaHostCopy::HtoDFn>(
+          dlsym(h, "cuMemcpyHtoD_v2"));
+    }
+#endif
+    return c;
+  }();
+  return fns;
+}
+
+// True when buf is not ordinary host memory, i.e. the HTTP fallbacks cannot
+// touch it directly.
+bool IsDeviceBuffer(void* buf) {
+  return buf != nullptr &&
+         cuObjClient::getMemoryType(buf) != CUOBJ_MEMORY_SYSTEM;
+}
+
 // Releases an RDMA buffer registration when it goes out of scope. Declared
 // *after* the buffer it covers, so destruction order (reverse of declaration)
 // guarantees deregister-before-free regardless of which control path returns.
@@ -586,10 +624,27 @@ Result<GetObjectResponse> Client::GetObject(GetObjectArgs args) {
       // fall through to HTTP-into-buffer path below.
     }
 
-    // HTTP fallback: stream the body into the caller's buffer.
+    // HTTP fallback: stream the body into the caller's buffer. pubsetbuf and
+    // the stream writes below are ordinary host stores, so a device pointer has
+    // to be staged through host memory — writing straight into it faults
+    // (SIGSEGV at the buffer address) the moment an RDMA GET declines, which is
+    // exactly what concurrent GETs provoke.
+    const bool device_buf = IsDeviceBuffer(args.buf);
+    std::vector<char> stage;
+    char* sink = args.buf;
+    if (device_buf) {
+      if (!GetCudaHostCopy().Ok()) {
+        return error::make<GetObjectResponse>(
+            "RDMA GET failed and the HTTP fallback cannot reach device memory: "
+            "libcuda.so.1 is unavailable");
+      }
+      stage.resize(size);
+      sink = stage.data();
+    }
+
     GetObjectArgs targs;
     std::stringstream ss(std::ios_base::in | std::ios_base::out);
-    ss.rdbuf()->pubsetbuf(args.buf, size);
+    ss.rdbuf()->pubsetbuf(sink, size);
 
     targs.bucket = args.bucket;
     targs.object = args.object;
@@ -599,7 +654,14 @@ Result<GetObjectResponse> Client::GetObject(GetObjectArgs args) {
       return true;
     };
 
-    return BaseClient::GetObject(targs);
+    Result<GetObjectResponse> tresp = BaseClient::GetObject(targs);
+    if (tresp.has_value() && device_buf &&
+        GetCudaHostCopy().htod(reinterpret_cast<unsigned long long>(args.buf),
+                               stage.data(), size) != 0) {
+      return error::make<GetObjectResponse>(
+          "unable to copy the staged HTTP body into device memory");
+    }
+    return tresp;
   }
 #endif
 
@@ -1075,8 +1137,31 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
     // Skip body hashing for signing — caller's buffer may be GPU-resident,
     // and we'd otherwise drag device memory through OpenSSL just to compute
     // a hash that TLS already authenticates.
+    //
+    // For the same reason the upload cannot read the buffer directly: pubsetbuf
+    // and the stream reads below are host loads, so a device pointer is staged
+    // out to host memory first.
+    const bool device_buf = IsDeviceBuffer(args.buf);
+    std::vector<char> stage;
+    char* src = args.buf;
+    if (device_buf) {
+      if (!GetCudaHostCopy().Ok()) {
+        return error::make<PutObjectResponse>(
+            "RDMA PUT failed and the HTTP fallback cannot reach device memory: "
+            "libcuda.so.1 is unavailable");
+      }
+      stage.resize(size);
+      if (GetCudaHostCopy().dtoh(stage.data(),
+                                 reinterpret_cast<unsigned long long>(args.buf),
+                                 size) != 0) {
+        return error::make<PutObjectResponse>(
+            "unable to stage device memory to host for the HTTP fallback");
+      }
+      src = stage.data();
+    }
+
     std::stringstream ss(std::ios_base::in | std::ios_base::out);
-    ss.rdbuf()->pubsetbuf(args.buf, size);
+    ss.rdbuf()->pubsetbuf(src, size);
 
     PutObjectArgs http_args(ss, static_cast<uint64_t>(size), 16 * 1024 * 1024L);
     http_args.bucket = args.bucket;
