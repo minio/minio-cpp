@@ -32,6 +32,7 @@
 #include <iostream>
 #include <list>
 #include <memory>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <type_traits>
@@ -163,37 +164,63 @@ class ScopedCudaContext {
       ok_ = true;  // caller already established one; nothing to do
       return;
     }
+    // No context on this thread. cuPointerGetAttribute can itself require one,
+    // so borrow device 0's primary context purely to make the ordinal query
+    // legal, then move to the buffer's own device when it differs.
+    if (!Retain(0)) return;
     int ordinal = 0;
     // 9 == CU_POINTER_ATTRIBUTE_DEVICE_ORDINAL
     if (fns.ptr_attr(&ordinal, 9,
                      reinterpret_cast<unsigned long long>(devptr)) != 0) {
-      return;
+      return;  // destructor releases the bootstrap context
     }
-    void* ctx = nullptr;
-    if (fns.ctx_retain(&ctx, ordinal) != 0) return;
-    if (fns.ctx_set(ctx) != 0) {
-      fns.ctx_release(ordinal);
-      return;
+    if (ordinal != 0) {
+      const int bootstrap = *retained_ordinal_;
+      retained_ordinal_.reset();  // Retain() overwrites it; release manually
+      if (!Retain(ordinal)) {
+        Release(bootstrap);
+        return;
+      }
+      Release(bootstrap);
     }
-    retained_ordinal_ = ordinal;
     ok_ = true;
   }
   ScopedCudaContext(const ScopedCudaContext&) = delete;
   ScopedCudaContext& operator=(const ScopedCudaContext&) = delete;
   ~ScopedCudaContext() {
-    if (retained_ordinal_ >= 0) {
-      fns_->ctx_set(nullptr);
-      fns_->ctx_release(retained_ordinal_);
+    if (!retained_ordinal_.has_value()) return;
+    if (fns_->ctx_set(nullptr) != 0) {
+      std::cerr << "warning: cuCtxSetCurrent(nullptr) failed during teardown"
+                << std::endl;
     }
+    Release(*retained_ordinal_);
   }
   bool Ok() const { return ok_; }
 
  private:
+  // Retains device `ordinal`'s primary context and makes it current.
+  bool Retain(int ordinal) {
+    void* ctx = nullptr;
+    if (fns_->ctx_retain(&ctx, ordinal) != 0) return false;
+    if (fns_->ctx_set(ctx) != 0) {
+      Release(ordinal);
+      return false;
+    }
+    retained_ordinal_ = ordinal;
+    return true;
+  }
+
+  void Release(int ordinal) {
+    if (fns_->ctx_release(ordinal) != 0) {
+      std::cerr << "warning: cuDevicePrimaryCtxRelease failed for device "
+                << ordinal << std::endl;
+    }
+  }
+
   const CudaHostCopy* fns_;
-  int retained_ordinal_ = -1;
+  std::optional<int> retained_ordinal_;
   bool ok_ = false;
 };
-
 // True when buf is not ordinary host memory, i.e. the HTTP fallbacks cannot
 // touch it directly.
 bool IsDeviceBuffer(void* buf) {
