@@ -102,9 +102,23 @@ struct AlignedBuffer {
 struct CudaHostCopy {
   using DtoHFn = int (*)(void*, unsigned long long, size_t);
   using HtoDFn = int (*)(unsigned long long, const void*, size_t);
+  using CtxGetCurrentFn = int (*)(void**);
+  using CtxSetCurrentFn = int (*)(void*);
+  using PrimaryCtxRetainFn = int (*)(void**, int);
+  using PrimaryCtxReleaseFn = int (*)(int);
+  using PointerGetAttrFn = int (*)(void*, int, unsigned long long);
   DtoHFn dtoh = nullptr;
   HtoDFn htod = nullptr;
-  bool Ok() const { return dtoh != nullptr && htod != nullptr; }
+  CtxGetCurrentFn ctx_get = nullptr;
+  CtxSetCurrentFn ctx_set = nullptr;
+  PrimaryCtxRetainFn ctx_retain = nullptr;
+  PrimaryCtxReleaseFn ctx_release = nullptr;
+  PointerGetAttrFn ptr_attr = nullptr;
+  bool Ok() const {
+    return dtoh != nullptr && htod != nullptr && ctx_get != nullptr &&
+           ctx_set != nullptr && ctx_retain != nullptr &&
+           ctx_release != nullptr && ptr_attr != nullptr;
+  }
 };
 
 const CudaHostCopy& GetCudaHostCopy() {
@@ -116,12 +130,69 @@ const CudaHostCopy& GetCudaHostCopy() {
           dlsym(h, "cuMemcpyDtoH_v2"));
       c.htod = reinterpret_cast<CudaHostCopy::HtoDFn>(
           dlsym(h, "cuMemcpyHtoD_v2"));
+      c.ctx_get = reinterpret_cast<CudaHostCopy::CtxGetCurrentFn>(
+          dlsym(h, "cuCtxGetCurrent"));
+      c.ctx_set = reinterpret_cast<CudaHostCopy::CtxSetCurrentFn>(
+          dlsym(h, "cuCtxSetCurrent"));
+      c.ctx_retain = reinterpret_cast<CudaHostCopy::PrimaryCtxRetainFn>(
+          dlsym(h, "cuDevicePrimaryCtxRetain"));
+      c.ctx_release = reinterpret_cast<CudaHostCopy::PrimaryCtxReleaseFn>(
+          dlsym(h, "cuDevicePrimaryCtxRelease_v2"));
+      c.ptr_attr = reinterpret_cast<CudaHostCopy::PointerGetAttrFn>(
+          dlsym(h, "cuPointerGetAttribute"));
     }
 #endif
     return c;
   }();
   return fns;
 }
+
+// The driver API copies operate on the calling thread's *current* context.
+// GetObjectAsync/PutObjectAsync dispatch through std::async, so a fallback can
+// run on a pool thread that has never touched CUDA; there every copy would fail
+// with CUDA_ERROR_INVALID_CONTEXT. Borrow the primary context of the device the
+// buffer belongs to for the duration of the copy, and put the thread back the
+// way we found it afterwards. A thread that already has a context is left
+// alone.
+class ScopedCudaContext {
+ public:
+  ScopedCudaContext(const CudaHostCopy& fns, void* devptr) : fns_(&fns) {
+    void* current = nullptr;
+    if (fns.ctx_get(&current) != 0) return;
+    if (current != nullptr) {
+      ok_ = true;  // caller already established one; nothing to do
+      return;
+    }
+    int ordinal = 0;
+    // 9 == CU_POINTER_ATTRIBUTE_DEVICE_ORDINAL
+    if (fns.ptr_attr(&ordinal, 9,
+                     reinterpret_cast<unsigned long long>(devptr)) != 0) {
+      return;
+    }
+    void* ctx = nullptr;
+    if (fns.ctx_retain(&ctx, ordinal) != 0) return;
+    if (fns.ctx_set(ctx) != 0) {
+      fns.ctx_release(ordinal);
+      return;
+    }
+    retained_ordinal_ = ordinal;
+    ok_ = true;
+  }
+  ScopedCudaContext(const ScopedCudaContext&) = delete;
+  ScopedCudaContext& operator=(const ScopedCudaContext&) = delete;
+  ~ScopedCudaContext() {
+    if (retained_ordinal_ >= 0) {
+      fns_->ctx_set(nullptr);
+      fns_->ctx_release(retained_ordinal_);
+    }
+  }
+  bool Ok() const { return ok_; }
+
+ private:
+  const CudaHostCopy* fns_;
+  int retained_ordinal_ = -1;
+  bool ok_ = false;
+};
 
 // True when buf is not ordinary host memory, i.e. the HTTP fallbacks cannot
 // touch it directly.
@@ -655,11 +726,17 @@ Result<GetObjectResponse> Client::GetObject(GetObjectArgs args) {
     };
 
     Result<GetObjectResponse> tresp = BaseClient::GetObject(targs);
-    if (tresp.has_value() && device_buf &&
-        GetCudaHostCopy().htod(reinterpret_cast<unsigned long long>(args.buf),
-                               stage.data(), size) != 0) {
-      return error::make<GetObjectResponse>(
-          "unable to copy the staged HTTP body into device memory");
+    if (tresp.has_value() && device_buf) {
+      ScopedCudaContext ctx(GetCudaHostCopy(), args.buf);
+      if (!ctx.Ok()) {
+        return error::make<GetObjectResponse>(
+            "unable to establish a CUDA context for the HTTP fallback copy");
+      }
+      if (GetCudaHostCopy().htod(reinterpret_cast<unsigned long long>(args.buf),
+                                 stage.data(), size) != 0) {
+        return error::make<GetObjectResponse>(
+            "unable to copy the staged HTTP body into device memory");
+      }
     }
     return tresp;
   }
@@ -1149,6 +1226,11 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
         return error::make<PutObjectResponse>(
             "RDMA PUT failed and the HTTP fallback cannot reach device memory: "
             "libcuda.so.1 is unavailable");
+      }
+      ScopedCudaContext ctx(GetCudaHostCopy(), args.buf);
+      if (!ctx.Ok()) {
+        return error::make<PutObjectResponse>(
+            "unable to establish a CUDA context for the HTTP fallback copy");
       }
       stage.resize(size);
       if (GetCudaHostCopy().dtoh(stage.data(),
