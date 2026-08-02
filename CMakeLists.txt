@@ -174,6 +174,25 @@ target_include_directories(miniocpp PUBLIC
   $<BUILD_INTERFACE:${MINIO_CPP_INCLUDES}>
 )
 target_link_libraries(miniocpp PUBLIC ${MINIO_CPP_LIBS})
+
+# Optional C++20 module interface for the public API (modules/miniocpp.cc).
+# FILE_SET CXX_MODULES (CMake 3.28+) attaches it as a real part of the miniocpp
+# target's build - the compiler gets whatever flags it needs for a module
+# interface unit (e.g. /interface for MSVC) based on this declaration, not on
+# the file's extension, so any CMake/MSBuild/Meson (via cmake.subproject())
+# consumer of this target picks up `import miniocpp;` automatically. Requires
+# C++20 (MINIO_CPP_STD=20); silently skipped otherwise for older setups.
+set(MINIO_CPP_HAS_CXX_MODULE OFF)
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.28" AND MINIO_CPP_STD STREQUAL "20")
+  set(MINIO_CPP_HAS_CXX_MODULE ON)
+  target_sources(miniocpp
+    PUBLIC
+      FILE_SET CXX_MODULES
+      BASE_DIRS modules
+      FILES modules/miniocpp.cc
+  )
+endif()
+
 if (MINIO_CPP_ENABLE_RDMA)
   target_compile_definitions(miniocpp PUBLIC MINIO_CPP_RDMA)
 endif()
@@ -295,12 +314,22 @@ configure_package_config_file(
   NO_CHECK_REQUIRED_COMPONENTS_MACRO
 )
 
-install(TARGETS miniocpp
-        EXPORT miniocpp-targets
-        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-        ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+if (MINIO_CPP_HAS_CXX_MODULE)
+  install(TARGETS miniocpp
+          EXPORT miniocpp-targets
+          RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+          ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+          LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+          INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+          FILE_SET CXX_MODULES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/miniocpp/modules")
+else()
+  install(TARGETS miniocpp
+          EXPORT miniocpp-targets
+          RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+          ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+          LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+          INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+endif()
 
 install(EXPORT miniocpp-targets
         NAMESPACE miniocpp::
