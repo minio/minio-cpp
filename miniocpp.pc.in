@@ -7,6 +7,6 @@ Name: @PROJECT_NAME@
 Description: @PROJECT_DESCRIPTION@
 Version: @PROJECT_VERSION@
 
-Requires:
+Requires: curlpp libcrypto libssl pugixml zlib
 Libs: -L${libdir} -lminiocpp
 Cflags: -I${includedir}
