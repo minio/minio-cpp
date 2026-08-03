@@ -104,6 +104,10 @@ list(APPEND MINIO_CPP_LIBS
 if (WIN32)
   list(APPEND MINIO_CPP_LIBS wsock32)
   list(APPEND MINIO_CPP_LIBS ws2_32)
+  # miniocpp.pc.in has no visibility into target_link_libraries() - without this,
+  # pkg-config consumers (non-CMake) are missing wsock32/ws2_32 at link time
+  # (getaddrinfo, select, ...).
+  set(MINIO_CPP_PC_EXTRA_LIBS " -lwsock32 -lws2_32")
 endif()
 
 # Minio C++ Library
@@ -137,6 +141,7 @@ set(MINIO_CPP_HEADERS
   include/miniocpp/providers.h
   include/miniocpp/request.h
   include/miniocpp/response.h
+  include/miniocpp/result.h
   include/miniocpp/select.h
   include/miniocpp/signer.h
   include/miniocpp/sse.h
@@ -341,6 +346,10 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/miniocpp-config.cmake"
 
 install(FILES
         ${MINIO_CPP_HEADERS} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/miniocpp")
+
+# error.h/credentials.h depend on the vendored tl::expected, which is otherwise
+# never installed - without this, consumers (e.g. via vcpkg) fail to build.
+install(DIRECTORY include/tl DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
 configure_file(miniocpp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/miniocpp.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/miniocpp.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)

@@ -8,5 +8,5 @@ Description: @PROJECT_DESCRIPTION@
 Version: @PROJECT_VERSION@
 
 Requires: curlpp libcrypto libssl pugixml zlib
-Libs: -L${libdir} -lminiocpp
+Libs: -L${libdir} -lminiocpp@MINIO_CPP_PC_EXTRA_LIBS@
 Cflags: -I${includedir}

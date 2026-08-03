@@ -46,7 +46,8 @@ miniocpp_lib = static_library('miniocpp', miniocpp_sources,
 miniocpp_module_lib = static_library('miniocpp_module', 'modules/miniocpp.cc',
   include_directories : miniocpp_include,
   dependencies : all_deps,
-  cpp_args : ['/interface'],
+  cpp_args : cxx.get_id() == 'msvc' ? ['/interface'] : [],
+  override_options : ['cpp_std=c++20'],
 )
 
 miniocpp_dep = declare_dependency(
