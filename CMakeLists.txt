@@ -192,20 +192,48 @@ target_link_libraries(miniocpp PUBLIC ${MINIO_CPP_LIBS})
 # Ninja Multi-Config, and Visual Studio (17.4+) generators - with any other
 # generator (e.g. the Linux/macOS default "Unix Makefiles") CMake hard-errors
 # at the Generate step as soon as it sees FILE_SET CXX_MODULES sources, even
-# if MINIO_CPP_STD=20 was requested intentionally. So gate on the generator
-# too, and silently fall back to a module-less build rather than failing.
+# if MINIO_CPP_STD=20 was requested intentionally. Generator *name* alone is
+# not enough either: CMake 3.28 requires Ninja 1.11+ for the dyndep-based
+# scanning, and MSVC itself only gained module support with the 14.34 (VS
+# 17.4) toolset (cl.exe reports this as compiler version 19.34) - an older
+# Ninja or older MSVC can still match the generator check above and then
+# break module dependency scanning instead of falling back cleanly. So
+# gate on actual tool versions too, and silently fall back to a module-less
+# build rather than failing.
 set(MINIO_CPP_HAS_CXX_MODULE OFF)
-if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.28" AND MINIO_CPP_STD STREQUAL "20"
-    AND (CMAKE_GENERATOR STREQUAL "Ninja"
-         OR CMAKE_GENERATOR STREQUAL "Ninja Multi-Config"
-         OR CMAKE_GENERATOR MATCHES "^Visual Studio "))
-  set(MINIO_CPP_HAS_CXX_MODULE ON)
-  target_sources(miniocpp
-    PUBLIC
-      FILE_SET CXX_MODULES
-      BASE_DIRS modules
-      FILES modules/miniocpp.cc
-  )
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.28" AND MINIO_CPP_STD STREQUAL "20")
+  set(MINIO_CPP_MODULE_TOOLCHAIN_OK OFF)
+  if (CMAKE_GENERATOR STREQUAL "Ninja" OR CMAKE_GENERATOR STREQUAL "Ninja Multi-Config")
+    execute_process(
+      COMMAND "${CMAKE_MAKE_PROGRAM}" --version
+      OUTPUT_VARIABLE MINIO_CPP_NINJA_VERSION
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_QUIET
+    )
+    if (MINIO_CPP_NINJA_VERSION VERSION_GREATER_EQUAL "1.11")
+      set(MINIO_CPP_MODULE_TOOLCHAIN_OK ON)
+    endif()
+  elseif (CMAKE_GENERATOR MATCHES "^Visual Studio ")
+    set(MINIO_CPP_MODULE_TOOLCHAIN_OK ON)
+  endif()
+
+  # Applies regardless of which of the generators above is in use - Ninja can
+  # also drive an MSVC toolchain on Windows, and MSVC's own module support is
+  # gated on the toolset version, not the generator.
+  if (MINIO_CPP_MODULE_TOOLCHAIN_OK AND CMAKE_CXX_COMPILER_ID STREQUAL "MSVC"
+      AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "19.34")
+    set(MINIO_CPP_MODULE_TOOLCHAIN_OK OFF)
+  endif()
+
+  if (MINIO_CPP_MODULE_TOOLCHAIN_OK)
+    set(MINIO_CPP_HAS_CXX_MODULE ON)
+    target_sources(miniocpp
+      PUBLIC
+        FILE_SET CXX_MODULES
+        BASE_DIRS modules
+        FILES modules/miniocpp.cc
+    )
+  endif()
 endif()
 
 if (MINIO_CPP_ENABLE_RDMA)
