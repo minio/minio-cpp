@@ -468,8 +468,12 @@ Response Request::execute() {
         headers.Add("Content-Length", std::to_string(body.size()));
       }
       request.setOpt(new curlpp::Options::ReadStream(&body_stream));
-      request.setOpt(
-          new curlpp::Options::InfileSize(static_cast<long>(body.size())));
+      // CURLOPT_INFILESIZE_LARGE (curl_off_t), not CURLOPT_INFILESIZE (long):
+      // the latter is documented to be capped at 2 GiB and silently truncates
+      // the upload for larger single-request bodies (e.g. a >4 GiB buffer that
+      // could not be RDMA-registered and falls back to a single PUT).
+      request.setOpt(new curlpp::Options::InfileSizeLarge(
+          static_cast<curl_off_t>(body.size())));
       request.setOpt(new curlpp::Options::Upload(true));
       break;
   }

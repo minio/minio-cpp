@@ -696,9 +696,20 @@ Result<GetObjectResponse> Client::GetObject(GetObjectArgs args) {
 
     const size_t size = *args.size;
 
+    // An explicit offset selects an object byte-range (size bytes from it),
+    // letting a caller stream an object larger than one registration as a
+    // sequence of <= 4 GiB ranged GETs. Unset means read the whole object.
+    const int64_t range_offset =
+        args.offset.has_value() ? static_cast<int64_t>(*args.offset) : -1;
+
     // Process-wide cuObjClient — see client.h for the race rationale.
+    // A buffer larger than a single cuObject registration
+    // (kCuObjMaxMemoryRegSize, 4 GiB) cannot be pinned for RDMA; skip straight
+    // to the HTTP path rather than issue a registration that is guaranteed to
+    // fail.
     cuObjClient& rdma_client = SharedRDMAClient();
-    bool use_rdma = (rdma_client.cuMemObjGetDescriptor(args.buf, size) == 0);
+    bool use_rdma = size <= kCuObjMaxMemoryRegSize &&
+                    rdma_client.cuMemObjGetDescriptor(args.buf, size) == 0;
 
     if (use_rdma) {
       s3_rdma_client_ctx getCtx = {
@@ -710,7 +721,8 @@ Result<GetObjectResponse> Client::GetObject(GetObjectArgs args) {
           .op = CUOBJ_GET,
       };
 
-      ssize_t ret = rdmaGetWithRetry(&rdma_client, &getCtx, args.buf, size);
+      ssize_t ret =
+          rdmaGetWithRetry(&rdma_client, &getCtx, args.buf, size, range_offset);
       rdma_client.cuMemObjPutDescriptor(args.buf);
 
       if (ret > 0) {
@@ -747,6 +759,12 @@ Result<GetObjectResponse> Client::GetObject(GetObjectArgs args) {
     targs.bucket = args.bucket;
     targs.object = args.object;
     targs.region = region;
+    // Mirror the RDMA range on the fallback: read the same size bytes from the
+    // same object offset (Headers() turns offset/length into a Range header).
+    if (range_offset >= 0) {
+      targs.offset = static_cast<size_t>(range_offset);
+      targs.length = size;
+    }
     targs.datafunc = [&ss = ss](minio::http::DataFunctionArgs args) -> bool {
       ss << args.datachunk;
       return true;
@@ -1213,8 +1231,12 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
 
     const size_t size = *args.size;
 
+    // A buffer larger than a single cuObject registration
+    // (kCuObjMaxMemoryRegSize, 4 GiB) cannot be pinned for RDMA; skip straight
+    // to the single HTTP PUT below.
     cuObjClient& rdma_client = SharedRDMAClient();
-    bool use_rdma = (rdma_client.cuMemObjGetDescriptor(args.buf, size) == 0);
+    bool use_rdma = size <= kCuObjMaxMemoryRegSize &&
+                    rdma_client.cuMemObjGetDescriptor(args.buf, size) == 0;
 
     if (use_rdma) {
       s3_rdma_client_ctx putCtx = {
@@ -1269,15 +1291,21 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
       src = stage.data();
     }
 
-    std::stringstream ss(std::ios_base::in | std::ios_base::out);
-    ss.rdbuf()->pubsetbuf(src, size);
-
-    PutObjectArgs http_args(ss, static_cast<uint64_t>(size), 16 * 1024 * 1024L);
-    http_args.bucket = args.bucket;
-    http_args.object = args.object;
-    http_args.region = region;
-    http_args.headers.Add("x-amz-content-sha256", "UNSIGNED-PAYLOAD");
-    return PutObject(http_args);
+    // Single PUT of the whole buffer via the request body — not multipart. The
+    // buffer is already fully resident (host, or staged from device above), so
+    // re-chunking it into parts buys nothing; AIStor accepts a single PUT up to
+    // kMaxObjectSize (5 TiB), far beyond kCuObjMaxMemoryRegSize (the 4 GiB RDMA
+    // registration ceiling that routed an oversized buffer here) and beyond
+    // anything a client can pin or allocate.
+    PutObjectApiArgs api_args;
+    api_args.bucket = args.bucket;
+    api_args.object = args.object;
+    api_args.region = region;
+    api_args.data = std::string_view(src, size);
+    api_args.buf = src;
+    api_args.size = size;
+    api_args.headers.Add("x-amz-content-sha256", "UNSIGNED-PAYLOAD");
+    return BaseClient::PutObject(api_args);
   }
 #endif
 
@@ -1321,7 +1349,8 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
     if (rdma_connected) {
       for (unsigned int i = 0; i < max_inflight; i++) {
         char* pool_buf = static_cast<char*>(buf_pool[i].ptr);
-        if (rdma_client.cuMemObjGetDescriptor(pool_buf, args.part_size) == 0) {
+        if (args.part_size <= kCuObjMaxMemoryRegSize &&
+            rdma_client.cuMemObjGetDescriptor(pool_buf, args.part_size) == 0) {
           rdma_regs[i] = ScopedRDMARegistration(&rdma_client, pool_buf);
         }
       }
@@ -1613,7 +1642,7 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
   // being non-null to even attempt the RDMA path.
   cuObjClient& rdma_client = SharedRDMAClient();
   ScopedRDMARegistration rdma_reg;
-  if (rdma_client.isConnected() &&
+  if (rdma_client.isConnected() && args.part_size <= kCuObjMaxMemoryRegSize &&
       rdma_client.cuMemObjGetDescriptor(buf, args.part_size) == 0) {
     rdma_reg = ScopedRDMARegistration(&rdma_client, buf);
     args.rdmaclient = &rdma_client;

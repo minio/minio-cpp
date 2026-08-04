@@ -67,6 +67,15 @@ inline constexpr int kRDMAReplyNotImplemented = 501;
 // Return codes for rdmaPut/rdmaGet
 inline constexpr ssize_t kRDMANotSupported = -2;
 
+// Maximum buffer a single cuObject registration (cuMemObjGetDescriptor) can
+// pin — 4 GiB. RDMA is only attempted for buffers up to this size; a larger
+// buffer cannot be registered for RDMA, so PutObject/GetObject transfer it over
+// a single ordinary HTTP request instead (the buffer is already resident, and
+// AIStor accepts a single PUT up to kMaxObjectSize == 5 TiB — far beyond this
+// limit and beyond anything a client can pin or allocate). Sizing the buffer is
+// the caller's responsibility; the SDK does not chunk registrations.
+inline constexpr size_t kCuObjMaxMemoryRegSize = 4ULL * 1024 * 1024 * 1024;
+
 // RDMA control-plane timeouts (seconds). The HTTP exchange carries only
 // the token and a few headers — keep them aggressive so a dead NIC surfaces
 // fast and the retry path can pick up the failover NIC.
@@ -214,8 +223,13 @@ inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
   return static_cast<ssize_t>(size);
 }
 
+// range_offset < 0 reads the whole object; range_offset >= 0 reads size bytes
+// starting at that object offset. The object offset travels in a Range header
+// (the server derives its rangeBase from it) and is independent of the buffer
+// address carried in the RDMA token — see AIStor rdmaTransferBounds().
 inline static ssize_t rdmaGet(s3_rdma_client_ctx_t* sctx, const char* token,
-                              const void* buf, size_t size) {
+                              const void* buf, size_t size,
+                              int64_t range_offset = -1) {
   char rdma_token[256];
   snprintf(rdma_token, sizeof(rdma_token), "%s:%016lx:%016lx", token,
            (uint64_t)buf, (uint64_t)size);
@@ -239,6 +253,19 @@ inline static ssize_t rdmaGet(s3_rdma_client_ctx_t* sctx, const char* token,
   sign_headers.Add("x-amz-date", date.ToAmzDate());
   sign_headers.Add("x-amz-content-sha256", kUnsignedPayload);
   sign_headers.Add(kAmzRDMAToken, rdma_token);
+
+  // A byte-range request; added before signing so the server accepts the
+  // SignedHeaders. bytes=<offset>-<offset+size-1> selects the object range;
+  // the server replies 206 (kRDMAReplyPartialContent) for it.
+  if (range_offset >= 0) {
+    if (size == 0) return -1;  // a zero-length range would emit bytes=X-(X-1)
+    char range_hdr[64];
+    snprintf(
+        range_hdr, sizeof(range_hdr), "bytes=%lld-%lld",
+        static_cast<long long>(range_offset),
+        static_cast<long long>(range_offset + static_cast<int64_t>(size) - 1));
+    sign_headers.Add("Range", range_hdr);
+  }
 
   if (!creds.session_token.empty()) {
     sign_headers.Add("X-Amz-Security-Token", creds.session_token);
@@ -330,7 +357,7 @@ inline static ssize_t rdmaPutWithRetry(cuObjClient* rdmaclient,
 // lifecycle and one retry for NIC failover.
 inline static ssize_t rdmaGetWithRetry(cuObjClient* rdmaclient,
                                        s3_rdma_client_ctx_t* sctx, void* buf,
-                                       size_t size) {
+                                       size_t size, int64_t range_offset = -1) {
   ssize_t ret = -1;
   for (int attempt = 0; attempt < kRDMAMaxAttempts; ++attempt) {
     char* token = nullptr;
@@ -339,7 +366,7 @@ inline static ssize_t rdmaGetWithRetry(cuObjClient* rdmaclient,
     if (terr != CU_OBJ_SUCCESS || token == nullptr) {
       return -1;
     }
-    ret = rdmaGet(sctx, token, buf, size);
+    ret = rdmaGet(sctx, token, buf, size, range_offset);
     rdmaclient->cuMemObjPutRDMAToken(token);
     if (ret > 0 || ret == kRDMANotSupported) {
       return ret;

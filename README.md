@@ -179,6 +179,17 @@ for convenience; see `vendor/cuobj/NOTICE` for the applicable NVIDIA
 license terms. The default build (`MINIO_CPP_ENABLE_RDMA=OFF`) omits
 the entire RDMA stack and has no dependency on any of those libraries.
 
+### Buffer size limit
+
+A single cuObject registration (`cuMemObjGetDescriptor`) can pin at most
+**4 GiB** (`kCuObjMaxMemoryRegSize`). `PutObject`/`GetObject` therefore use
+RDMA only for buffers up to that size; a larger buffer is transferred over a
+single ordinary HTTP request instead (AIStor accepts a single PUT up to 5 TiB,
+far beyond the RDMA registration ceiling and beyond anything a client can
+realistically pin or allocate). The SDK does not chunk registrations — sizing
+the buffer you hand to the RDMA API is the caller's responsibility; supply a
+buffer &le; 4 GiB to keep the transfer on the RDMA fast path.
+
 ## License
 
 This SDK is distributed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0), see [LICENSE](https://github.com/minio/minio-cpp/blob/master/LICENSE) for more information.
