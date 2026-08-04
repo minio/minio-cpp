@@ -696,6 +696,12 @@ Result<GetObjectResponse> Client::GetObject(GetObjectArgs args) {
 
     const size_t size = *args.size;
 
+    // An explicit offset selects an object byte-range (size bytes from it),
+    // letting a caller stream an object larger than one registration as a
+    // sequence of <= 4 GiB ranged GETs. Unset means read the whole object.
+    const int64_t range_offset =
+        args.offset.has_value() ? static_cast<int64_t>(*args.offset) : -1;
+
     // Process-wide cuObjClient — see client.h for the race rationale.
     // A buffer larger than a single cuObject registration
     // (kCuObjMaxMemoryRegSize, 4 GiB) cannot be pinned for RDMA; skip straight
@@ -715,7 +721,8 @@ Result<GetObjectResponse> Client::GetObject(GetObjectArgs args) {
           .op = CUOBJ_GET,
       };
 
-      ssize_t ret = rdmaGetWithRetry(&rdma_client, &getCtx, args.buf, size);
+      ssize_t ret =
+          rdmaGetWithRetry(&rdma_client, &getCtx, args.buf, size, range_offset);
       rdma_client.cuMemObjPutDescriptor(args.buf);
 
       if (ret > 0) {
@@ -752,6 +759,12 @@ Result<GetObjectResponse> Client::GetObject(GetObjectArgs args) {
     targs.bucket = args.bucket;
     targs.object = args.object;
     targs.region = region;
+    // Mirror the RDMA range on the fallback: read the same size bytes from the
+    // same object offset (Headers() turns offset/length into a Range header).
+    if (range_offset >= 0) {
+      targs.offset = static_cast<size_t>(range_offset);
+      targs.length = size;
+    }
     targs.datafunc = [&ss = ss](minio::http::DataFunctionArgs args) -> bool {
       ss << args.datachunk;
       return true;
