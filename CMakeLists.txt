@@ -194,12 +194,13 @@ target_link_libraries(miniocpp PUBLIC ${MINIO_CPP_LIBS})
 # at the Generate step as soon as it sees FILE_SET CXX_MODULES sources, even
 # if MINIO_CPP_STD=20 was requested intentionally. Generator *name* alone is
 # not enough either: CMake 3.28 requires Ninja 1.11+ for the dyndep-based
-# scanning, and MSVC itself only gained module support with the 14.34 (VS
-# 17.4) toolset (cl.exe reports this as compiler version 19.34) - an older
-# Ninja or older MSVC can still match the generator check above and then
-# break module dependency scanning instead of falling back cleanly. So
-# gate on actual tool versions too, and silently fall back to a module-less
-# build rather than failing.
+# scanning, and each compiler has its own minimum version for module support
+# (MSVC 14.34 / VS 17.4, reported as compiler version 19.34; Clang 16;
+# GCC 14) - see https://cmake.org/cmake/help/v3.28/manual/cmake-cxxmodules.7.html.
+# An older or unrecognized compiler can still match the generator check
+# above and then break module dependency scanning instead of falling back
+# cleanly, so reject anything not explicitly known-good rather than
+# defaulting to allowed.
 set(MINIO_CPP_HAS_CXX_MODULE OFF)
 if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.28" AND MINIO_CPP_STD STREQUAL "20")
   set(MINIO_CPP_MODULE_TOOLCHAIN_OK OFF)
@@ -218,11 +219,25 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.28" AND MINIO_CPP_STD STREQUAL "20")
   endif()
 
   # Applies regardless of which of the generators above is in use - Ninja can
-  # also drive an MSVC toolchain on Windows, and MSVC's own module support is
-  # gated on the toolset version, not the generator.
-  if (MINIO_CPP_MODULE_TOOLCHAIN_OK AND CMAKE_CXX_COMPILER_ID STREQUAL "MSVC"
-      AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "19.34")
-    set(MINIO_CPP_MODULE_TOOLCHAIN_OK OFF)
+  # also drive an MSVC/Clang/GCC toolchain, and each compiler's own module
+  # support is gated on its own version, not the generator. Reject any
+  # compiler not explicitly listed here, rather than silently allowing it.
+  if (MINIO_CPP_MODULE_TOOLCHAIN_OK)
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+      if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "19.34")
+        set(MINIO_CPP_MODULE_TOOLCHAIN_OK OFF)
+      endif()
+    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+      if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "16.0")
+        set(MINIO_CPP_MODULE_TOOLCHAIN_OK OFF)
+      endif()
+    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+      if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "14")
+        set(MINIO_CPP_MODULE_TOOLCHAIN_OK OFF)
+      endif()
+    else()
+      set(MINIO_CPP_MODULE_TOOLCHAIN_OK OFF)
+    endif()
   endif()
 
   if (MINIO_CPP_MODULE_TOOLCHAIN_OK)
@@ -374,6 +389,16 @@ else()
           INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 endif()
 
+# Known limitation: this export does not pass CXX_MODULES_DIRECTORY, so an
+# installed package (via find_package(miniocpp) + CMake, as opposed to
+# consuming subprojects/miniocpp source directly, or via pkg-config/vcpkg)
+# is missing the generated module metadata CMake needs to let a downstream
+# CMake consumer `import miniocpp;` - see
+# https://cmake.org/cmake/help/latest/command/install.html#exporting-c-modules.
+# Separately, installing module interfaces is not supported at all with
+# the Visual Studio generator (independent of the MINIO_CPP_HAS_CXX_MODULE
+# toolchain gate above, which only covers the build step). Neither gap is
+# covered by an automated test yet.
 install(EXPORT miniocpp-targets
         NAMESPACE miniocpp::
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/miniocpp"
