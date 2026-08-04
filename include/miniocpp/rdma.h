@@ -258,6 +258,7 @@ inline static ssize_t rdmaGet(s3_rdma_client_ctx_t* sctx, const char* token,
   // SignedHeaders. bytes=<offset>-<offset+size-1> selects the object range;
   // the server replies 206 (kRDMAReplyPartialContent) for it.
   if (range_offset >= 0) {
+    if (size == 0) return -1;  // a zero-length range would emit bytes=X-(X-1)
     char range_hdr[64];
     snprintf(
         range_hdr, sizeof(range_hdr), "bytes=%lld-%lld",

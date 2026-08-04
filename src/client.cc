@@ -1349,7 +1349,8 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
     if (rdma_connected) {
       for (unsigned int i = 0; i < max_inflight; i++) {
         char* pool_buf = static_cast<char*>(buf_pool[i].ptr);
-        if (rdma_client.cuMemObjGetDescriptor(pool_buf, args.part_size) == 0) {
+        if (args.part_size <= kCuObjMaxMemoryRegSize &&
+            rdma_client.cuMemObjGetDescriptor(pool_buf, args.part_size) == 0) {
           rdma_regs[i] = ScopedRDMARegistration(&rdma_client, pool_buf);
         }
       }
@@ -1641,7 +1642,7 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
   // being non-null to even attempt the RDMA path.
   cuObjClient& rdma_client = SharedRDMAClient();
   ScopedRDMARegistration rdma_reg;
-  if (rdma_client.isConnected() &&
+  if (rdma_client.isConnected() && args.part_size <= kCuObjMaxMemoryRegSize &&
       rdma_client.cuMemObjGetDescriptor(buf, args.part_size) == 0) {
     rdma_reg = ScopedRDMARegistration(&rdma_client, buf);
     args.rdmaclient = &rdma_client;
