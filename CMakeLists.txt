@@ -187,8 +187,18 @@ target_link_libraries(miniocpp PUBLIC ${MINIO_CPP_LIBS})
 # the file's extension, so any CMake/MSBuild/Meson (via cmake.subproject())
 # consumer of this target picks up `import miniocpp;` automatically. Requires
 # C++20 (MINIO_CPP_STD=20); silently skipped otherwise for older setups.
+#
+# CMake's module dependency scanning is only implemented for the Ninja,
+# Ninja Multi-Config, and Visual Studio (17.4+) generators - with any other
+# generator (e.g. the Linux/macOS default "Unix Makefiles") CMake hard-errors
+# at the Generate step as soon as it sees FILE_SET CXX_MODULES sources, even
+# if MINIO_CPP_STD=20 was requested intentionally. So gate on the generator
+# too, and silently fall back to a module-less build rather than failing.
 set(MINIO_CPP_HAS_CXX_MODULE OFF)
-if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.28" AND MINIO_CPP_STD STREQUAL "20")
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.28" AND MINIO_CPP_STD STREQUAL "20"
+    AND (CMAKE_GENERATOR STREQUAL "Ninja"
+         OR CMAKE_GENERATOR STREQUAL "Ninja Multi-Config"
+         OR CMAKE_GENERATOR MATCHES "^Visual Studio "))
   set(MINIO_CPP_HAS_CXX_MODULE ON)
   target_sources(miniocpp
     PUBLIC
