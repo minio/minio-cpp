@@ -697,8 +697,13 @@ Result<GetObjectResponse> Client::GetObject(GetObjectArgs args) {
     const size_t size = *args.size;
 
     // Process-wide cuObjClient — see client.h for the race rationale.
+    // A buffer larger than a single cuObject registration
+    // (kCuObjMaxMemoryRegSize, 4 GiB) cannot be pinned for RDMA; skip straight
+    // to the HTTP path rather than issue a registration that is guaranteed to
+    // fail.
     cuObjClient& rdma_client = SharedRDMAClient();
-    bool use_rdma = (rdma_client.cuMemObjGetDescriptor(args.buf, size) == 0);
+    bool use_rdma = size <= kCuObjMaxMemoryRegSize &&
+                    rdma_client.cuMemObjGetDescriptor(args.buf, size) == 0;
 
     if (use_rdma) {
       s3_rdma_client_ctx getCtx = {
@@ -1213,8 +1218,12 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
 
     const size_t size = *args.size;
 
+    // A buffer larger than a single cuObject registration
+    // (kCuObjMaxMemoryRegSize, 4 GiB) cannot be pinned for RDMA; skip straight
+    // to the single HTTP PUT below.
     cuObjClient& rdma_client = SharedRDMAClient();
-    bool use_rdma = (rdma_client.cuMemObjGetDescriptor(args.buf, size) == 0);
+    bool use_rdma = size <= kCuObjMaxMemoryRegSize &&
+                    rdma_client.cuMemObjGetDescriptor(args.buf, size) == 0;
 
     if (use_rdma) {
       s3_rdma_client_ctx putCtx = {
@@ -1269,15 +1278,21 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
       src = stage.data();
     }
 
-    std::stringstream ss(std::ios_base::in | std::ios_base::out);
-    ss.rdbuf()->pubsetbuf(src, size);
-
-    PutObjectArgs http_args(ss, static_cast<uint64_t>(size), 16 * 1024 * 1024L);
-    http_args.bucket = args.bucket;
-    http_args.object = args.object;
-    http_args.region = region;
-    http_args.headers.Add("x-amz-content-sha256", "UNSIGNED-PAYLOAD");
-    return PutObject(http_args);
+    // Single PUT of the whole buffer via the request body — not multipart. The
+    // buffer is already fully resident (host, or staged from device above), so
+    // re-chunking it into parts buys nothing; AIStor accepts a single PUT up to
+    // kMaxObjectSize (5 TiB), far beyond kCuObjMaxMemoryRegSize (the 4 GiB RDMA
+    // registration ceiling that routed an oversized buffer here) and beyond
+    // anything a client can pin or allocate.
+    PutObjectApiArgs api_args;
+    api_args.bucket = args.bucket;
+    api_args.object = args.object;
+    api_args.region = region;
+    api_args.data = std::string_view(src, size);
+    api_args.buf = src;
+    api_args.size = size;
+    api_args.headers.Add("x-amz-content-sha256", "UNSIGNED-PAYLOAD");
+    return BaseClient::PutObject(api_args);
   }
 #endif
 

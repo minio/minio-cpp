@@ -67,6 +67,15 @@ inline constexpr int kRDMAReplyNotImplemented = 501;
 // Return codes for rdmaPut/rdmaGet
 inline constexpr ssize_t kRDMANotSupported = -2;
 
+// Maximum buffer a single cuObject registration (cuMemObjGetDescriptor) can
+// pin — 4 GiB. RDMA is only attempted for buffers up to this size; a larger
+// buffer cannot be registered for RDMA, so PutObject/GetObject transfer it over
+// a single ordinary HTTP request instead (the buffer is already resident, and
+// AIStor accepts a single PUT up to kMaxObjectSize == 5 TiB — far beyond this
+// limit and beyond anything a client can pin or allocate). Sizing the buffer is
+// the caller's responsibility; the SDK does not chunk registrations.
+inline constexpr size_t kCuObjMaxMemoryRegSize = 4ULL * 1024 * 1024 * 1024;
+
 // RDMA control-plane timeouts (seconds). The HTTP exchange carries only
 // the token and a few headers — keep them aggressive so a dead NIC surfaces
 // fast and the retry path can pick up the failover NIC.
