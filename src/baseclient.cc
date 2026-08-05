@@ -131,7 +131,7 @@ void BaseClient::HandleRedirectResponse(std::string& code, std::string& message,
 }
 
 Result<Response> BaseClient::GetErrorResponse(http::Response resp,
-                                              std::string_view resource,
+                                              std::string_view,
                                               http::Method method,
                                               const std::string& bucket_name,
                                               const std::string& object_name) {

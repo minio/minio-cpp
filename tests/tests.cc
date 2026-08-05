@@ -798,7 +798,10 @@ class Tests {
         try {
           minio::s3::RemoveBucketArgs args;
           args.bucket = b;
-          client_.RemoveBucket(args);
+          if (auto rm_resp = client_.RemoveBucket(args); !rm_resp) {
+            std::cout << "warning: unable to remove bucket " << b << ": "
+                      << rm_resp.error().String() << std::endl;
+          }
         } catch (...) {
         }
       };
@@ -1101,7 +1104,10 @@ class Tests {
       } catch (const std::runtime_error&) {
         minio::s3::RemoveBucketArgs args;
         args.bucket = bucket_name;
-        client_.RemoveBucket(args);
+        if (auto rm_resp = client_.RemoveBucket(args); !rm_resp) {
+          std::cout << "warning: unable to remove bucket " << bucket_name
+                    << ": " << rm_resp.error().String() << std::endl;
+        }
         throw;
       }
     }
@@ -1243,7 +1249,10 @@ class Tests {
       } catch (const std::runtime_error&) {
         minio::s3::RemoveBucketArgs args;
         args.bucket = bucket_name;
-        client_.RemoveBucket(args);
+        if (auto rm_resp = client_.RemoveBucket(args); !rm_resp) {
+          std::cout << "warning: unable to remove bucket " << bucket_name
+                    << ": " << rm_resp.error().String() << std::endl;
+        }
         throw;
       }
     }
@@ -1296,7 +1305,10 @@ class Tests {
           try {
             minio::s3::RemoveBucketArgs args;
             args.bucket = b;
-            client_.RemoveBucket(args);
+            if (auto rm_resp = client_.RemoveBucket(args); !rm_resp) {
+              std::cout << "warning: unable to remove bucket " << b << ": "
+                        << rm_resp.error().String() << std::endl;
+            }
           } catch (...) {
           }
         }
@@ -1371,7 +1383,10 @@ class Tests {
       {
         minio::s3::RemoveBucketArgs args;
         args.bucket = bucket_name;
-        client_.RemoveBucket(args);
+        if (auto rm_resp = client_.RemoveBucket(args); !rm_resp) {
+          std::cout << "warning: unable to remove bucket " << bucket_name
+                    << ": " << rm_resp.error().String() << std::endl;
+        }
       }
     }
 
@@ -1405,7 +1420,10 @@ class Tests {
       {
         minio::s3::RemoveBucketArgs args;
         args.bucket = bucket_name;
-        client_.RemoveBucket(args);
+        if (auto rm_resp = client_.RemoveBucket(args); !rm_resp) {
+          std::cout << "warning: unable to remove bucket " << bucket_name
+                    << ": " << rm_resp.error().String() << std::endl;
+        }
       }
     }
 
@@ -1439,7 +1457,10 @@ class Tests {
       {
         minio::s3::RemoveBucketArgs args;
         args.bucket = bucket_name;
-        client_.RemoveBucket(args);
+        if (auto rm_resp = client_.RemoveBucket(args); !rm_resp) {
+          std::cout << "warning: unable to remove bucket " << bucket_name
+                    << ": " << rm_resp.error().String() << std::endl;
+        }
       }
     }
 
@@ -1473,7 +1494,10 @@ class Tests {
       {
         minio::s3::RemoveBucketArgs args;
         args.bucket = bucket_name;
-        client_.RemoveBucket(args);
+        if (auto rm_resp = client_.RemoveBucket(args); !rm_resp) {
+          std::cout << "warning: unable to remove bucket " << bucket_name
+                    << ": " << rm_resp.error().String() << std::endl;
+        }
       }
     }
 

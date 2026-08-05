@@ -269,7 +269,7 @@ struct ScopedRDMARegistration {
 
 }  // namespace
 
-ListObjectsResult::ListObjectsResult(error::Error err) : failed_(true) {
+ListObjectsResult::ListObjectsResult(error::Error) : failed_(true) {
   resp_ = std::make_shared<ListObjectsResponse>();
   itr_ = resp_->contents.end();
 }
@@ -384,7 +384,7 @@ void ListObjectsResult::Populate() {
   }
 }
 
-RemoveObjectsResult::RemoveObjectsResult(error::Error err) {
+RemoveObjectsResult::RemoveObjectsResult(error::Error) {
   done_ = true;
   itr_ = resp_.errors.end();
 }
@@ -1023,7 +1023,10 @@ Result<ComposeObjectResponse> Client::ComposeObject(ComposeObjectArgs args) {
     amu_args.region = args.region;
     amu_args.object = args.object;
     amu_args.upload_id = upload_id;
-    AbortMultipartUpload(amu_args);
+    if (auto amu_resp = AbortMultipartUpload(amu_args); !amu_resp) {
+      std::cerr << "warning: unable to abort multipart upload: "
+                << amu_resp.error().String() << std::endl;
+    }
   }
 
   return resp;
@@ -1586,7 +1589,10 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
         amu_args.region = std::move(args.region);
         amu_args.object = std::move(args.object);
         amu_args.upload_id = upload_id;
-        AbortMultipartUpload(amu_args);
+        if (auto amu_resp = AbortMultipartUpload(amu_args); !amu_resp) {
+          std::cerr << "warning: unable to abort multipart upload: "
+                    << amu_resp.error().String() << std::endl;
+        }
       }
       return tl::make_unexpected(first_err);
     }
@@ -1611,7 +1617,10 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
       amu_args.region = std::move(args.region);
       amu_args.object = std::move(args.object);
       amu_args.upload_id = upload_id;
-      AbortMultipartUpload(amu_args);
+      if (auto amu_resp = AbortMultipartUpload(amu_args); !amu_resp) {
+        std::cerr << "warning: unable to abort multipart upload: "
+                  << amu_resp.error().String() << std::endl;
+      }
     }
     if (!cmu_resp) {
       return tl::make_unexpected(cmu_resp.error());
@@ -1658,7 +1667,10 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
     amu_args.region = std::move(args.region);
     amu_args.object = std::move(args.object);
     amu_args.upload_id = upload_id;
-    AbortMultipartUpload(amu_args);
+    if (auto amu_resp = AbortMultipartUpload(amu_args); !amu_resp) {
+      std::cerr << "warning: unable to abort multipart upload: "
+                << amu_resp.error().String() << std::endl;
+    }
   }
 
   return resp;
