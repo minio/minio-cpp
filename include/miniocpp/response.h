@@ -196,7 +196,7 @@ struct StatObjectResponse : public Response {
   RetentionMode retention_mode;
   utils::UtcTime retention_retain_until_date;
   LegalHold legal_hold;
-  bool delete_marker;
+  bool delete_marker = false;
   utils::Multimap user_metadata;
 
   StatObjectResponse() = default;
@@ -284,7 +284,7 @@ MINIO_S3_DERIVE_FROM_PUT_OBJECT_RESPONSE(UploadObjectResponse)
 struct DeletedObject : public Response {
   std::string name;
   std::string version_id;
-  bool delete_marker;
+  bool delete_marker = false;
   std::string delete_marker_version_id;
 
   DeletedObject() = default;

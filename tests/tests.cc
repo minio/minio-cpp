@@ -301,6 +301,9 @@ class Tests {
             "StatObject(): expected: " + std::to_string(data.length()) +
             "; got: " + std::to_string(resp->size));
       }
+      if (resp->delete_marker) {
+        throw std::runtime_error("StatObject(): expected: false; got: true");
+      }
       RemoveObject(bucket_name_, object_name);
     } catch (const std::runtime_error&) {
       RemoveObject(bucket_name_, object_name);
