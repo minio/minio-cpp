@@ -1555,7 +1555,7 @@ void TestUrlParse() noexcept(false) {
       {"10.0.0.1", "10.0.0.1", 0},
       {"example.com", "example.com", 0},
       {"example.com:8080", "example.com", 8080},
-      {"10.0.0.1:9000", "10.0.0.1", 9001},
+      {"10.0.0.1:9000", "10.0.0.1", 9000},
   }};
 
   for (const auto& c : cases) {
