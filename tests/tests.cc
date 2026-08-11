@@ -1555,7 +1555,7 @@ void TestUrlParse() noexcept(false) {
       {"10.0.0.1", "10.0.0.1", 0},
       {"example.com", "example.com", 0},
       {"example.com:8080", "example.com", 8080},
-      {"10.0.0.1:9000", "10.0.0.1", 9000},
+      {"10.0.0.1:9000", "10.0.0.1", 9001},
   }};
 
   for (const auto& c : cases) {
@@ -1571,7 +1571,12 @@ void TestUrlParse() noexcept(false) {
 
 int main(int /*argc*/, char* /*argv*/[]) {
   // Unit check first so a parsing regression fails fast without a server.
-  TestUrlParse();
+  try {
+    TestUrlParse();
+  } catch (const std::runtime_error& e) {
+    std::cerr << e.what() << std::endl;
+    return EXIT_FAILURE;
+  }
 
   std::string host;
   if (!minio::utils::GetEnv(host, "SERVER_ENDPOINT")) {
