@@ -208,7 +208,7 @@ Url Url::Parse(std::string value) {
       std::string portstr;
       while (std::getline(ss, portstr, ':')) {
       }
-      
+
       if (host.find(':') != std::string::npos && !portstr.empty()) {
         try {
           port = static_cast<unsigned>(std::stoi(portstr));
