@@ -381,7 +381,7 @@ error::Error ComposeSource::BuildHeaders(size_t object_size,
     }
   }
 
-  object_size_ = static_cast<long>(object_size);
+  object_size_ = static_cast<long long>(object_size);
   headers_ = CopyHeaders();
   if (!headers_.Contains("x-amz-copy-source-if-match")) {
     headers_.Add("x-amz-copy-source-if-match", etag);

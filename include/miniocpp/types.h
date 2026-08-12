@@ -293,17 +293,17 @@ struct SelectRequest {
 struct SelectResult {
   error::Error err = error::SUCCESS;
   bool ended = false;
-  long int bytes_scanned = -1;
-  long int bytes_processed = -1;
-  long int bytes_returned = -1;
+  long long bytes_scanned = -1;
+  long long bytes_processed = -1;
+  long long bytes_returned = -1;
   std::string records;
 
   SelectResult() : ended(true) {}
 
   explicit SelectResult(error::Error err) : err(std::move(err)), ended(true) {}
 
-  SelectResult(long int bytes_scanned, long int bytes_processed,
-               long int bytes_returned)
+  SelectResult(long long bytes_scanned, long long bytes_processed,
+               long long bytes_returned)
       : bytes_scanned(bytes_scanned),
         bytes_processed(bytes_processed),
         bytes_returned(bytes_returned) {}

@@ -195,21 +195,21 @@ bool SelectHandler::process(const http::DataFunctionArgs& /* args */,
     auto root = xdoc.select_node(xpath.c_str());
     pugi::xpath_node text;
     std::string value;
-    long int bytes_scanned = -1;
-    long int bytes_processed = -1;
-    long int bytes_returned = -1;
+    long long bytes_scanned = -1;
+    long long bytes_processed = -1;
+    long long bytes_returned = -1;
 
     text = root.node().select_node("BytesScanned/text()");
     value = text.node().value();
-    if (!value.empty()) bytes_scanned = std::stol(value);
+    if (!value.empty()) bytes_scanned = std::stoll(value);
 
     text = root.node().select_node("BytesProcessed/text()");
     value = text.node().value();
-    if (!value.empty()) bytes_processed = std::stol(value);
+    if (!value.empty()) bytes_processed = std::stoll(value);
 
     text = root.node().select_node("BytesReturned/text()");
     value = text.node().value();
-    if (!value.empty()) bytes_returned = std::stol(value);
+    if (!value.empty()) bytes_returned = std::stoll(value);
 
     cont = result_func_(
         SelectResult(bytes_scanned, bytes_processed, bytes_returned));
