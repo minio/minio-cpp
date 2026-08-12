@@ -42,6 +42,8 @@ static constexpr unsigned MAX_DURATION_SECONDS = 60 * 60 * 24 * 7;
 struct Jwt {
   std::string token;
   unsigned int expiry = 0;
+  std::string access_token;
+  std::string refresh_token;
 
   Jwt() = default;
   explicit Jwt(std::string token, unsigned int expiry)
@@ -148,7 +150,8 @@ class AssumeRoleProvider : public Provider {
                      std::string policy = {}, std::string region = {},
                      std::string role_arn = {},
                      std::string role_session_name = {},
-                     std::string external_id = {});
+                     std::string external_id = {},
+                     std::string token_revoke_type = {});
 
   virtual ~AssumeRoleProvider();
 
@@ -163,13 +166,15 @@ class WebIdentityClientGrantsProvider : public Provider {
   std::string policy_;
   std::string role_arn_;
   std::string role_session_name_;
+  std::string token_revoke_type_;
 
  public:
   WebIdentityClientGrantsProvider(JwtFunction jwtfunc, http::Url sts_endpoint,
                                   unsigned int duration_seconds = 0,
                                   std::string policy = {},
                                   std::string role_arn = {},
-                                  std::string role_session_name = {});
+                                  std::string role_session_name = {},
+                                  std::string token_revoke_type = {});
 
   virtual ~WebIdentityClientGrantsProvider();
 
@@ -185,7 +190,8 @@ class ClientGrantsProvider : public WebIdentityClientGrantsProvider {
   ClientGrantsProvider(JwtFunction jwtfunc, http::Url sts_endpoint,
                        unsigned int duration_seconds = 0,
                        std::string policy = {}, std::string role_arn = {},
-                       std::string role_session_name = {});
+                       std::string role_session_name = {},
+                       std::string token_revoke_type = {});
 
   virtual ~ClientGrantsProvider();
 
@@ -197,7 +203,8 @@ class WebIdentityProvider : public WebIdentityClientGrantsProvider {
   WebIdentityProvider(JwtFunction jwtfunc, http::Url sts_endpoint,
                       unsigned int duration_seconds = 0,
                       std::string policy = {}, std::string role_arn = {},
-                      std::string role_session_name = {});
+                      std::string role_session_name = {},
+                      std::string token_revoke_type = {});
 
   virtual ~WebIdentityProvider();
 
@@ -231,7 +238,10 @@ class LdapIdentityProvider : public Provider {
 
  public:
   LdapIdentityProvider(http::Url sts_endpoint, std::string ldap_username,
-                       std::string ldap_password);
+                       std::string ldap_password, std::string policy = {},
+                       unsigned int duration_seconds = 0,
+                       std::string token_revoke_type = {},
+                       std::string config_name = {});
 
   virtual ~LdapIdentityProvider();
 
@@ -249,7 +259,8 @@ struct CertificateIdentityProvider : public Provider {
   CertificateIdentityProvider(http::Url sts_endpoint, std::string key_file,
                               std::string cert_file,
                               std::string ssl_cert_file = {},
-                              unsigned int duration_seconds = 0);
+                              unsigned int duration_seconds = 0,
+                              std::string token_revoke_type = {});
 
   virtual ~CertificateIdentityProvider();
 

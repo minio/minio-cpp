@@ -209,8 +209,9 @@ AssumeRoleProvider::AssumeRoleProvider(
     http::Url sts_endpoint, std::string access_key, std::string secret_key,
     unsigned int duration_seconds, std::string policy, std::string region,
     std::string role_arn, std::string role_session_name,
-    std::string external_id) {
+    std::string external_id, std::string token_revoke_type) {
   this->sts_endpoint_ = sts_endpoint;
+  if (this->sts_endpoint_.path.empty()) this->sts_endpoint_.path = "/";
   this->access_key_ = access_key;
   this->secret_key_ = secret_key;
   this->region_ = region;
@@ -229,6 +230,9 @@ AssumeRoleProvider::AssumeRoleProvider(
   }
   if (!policy.empty()) map.Add("Policy", policy);
   if (!external_id.empty()) map.Add("ExternalId", external_id);
+  if (!token_revoke_type.empty()) {
+    map.Add("TokenRevokeType", token_revoke_type);
+  }
 
   this->body_ = map.ToQueryString();
   this->content_sha256_ = utils::Sha256Hash(body_);
@@ -259,7 +263,8 @@ Credentials AssumeRoleProvider::Fetch() {
   if (!resp) {
     creds_ = Credentials{resp.Error()};
   } else {
-    auto parse_res = Credentials::ParseXML(resp.body, "AssumeRoleResult");
+    auto parse_res =
+        Credentials::ParseXML(resp.body, "AssumeRoleResponse/AssumeRoleResult");
     if (parse_res) {
       creds_ = std::move(*parse_res);
     } else {
@@ -272,13 +277,15 @@ Credentials AssumeRoleProvider::Fetch() {
 
 WebIdentityClientGrantsProvider::WebIdentityClientGrantsProvider(
     JwtFunction jwtfunc, http::Url sts_endpoint, unsigned int duration_seconds,
-    std::string policy, std::string role_arn, std::string role_session_name) {
+    std::string policy, std::string role_arn, std::string role_session_name,
+    std::string token_revoke_type) {
   this->jwtfunc_ = jwtfunc;
   this->sts_endpoint_ = sts_endpoint;
   this->duration_seconds_ = duration_seconds;
   this->policy_ = policy;
   this->role_arn_ = role_arn;
   this->role_session_name_ = role_session_name;
+  this->token_revoke_type_ = token_revoke_type;
 }
 
 WebIdentityClientGrantsProvider::~WebIdentityClientGrantsProvider() {}
@@ -304,10 +311,19 @@ Credentials WebIdentityClientGrantsProvider::Fetch() {
     map.Add("DurationSeconds", std::to_string(duration_seconds));
   }
   if (!policy_.empty()) map.Add("Policy", policy_);
+  if (!token_revoke_type_.empty()) {
+    map.Add("TokenRevokeType", token_revoke_type_);
+  }
 
   if (IsWebIdentity()) {
     map.Add("Action", "AssumeRoleWithWebIdentity");
     map.Add("WebIdentityToken", jwt.token);
+    if (!jwt.access_token.empty()) {
+      map.Add("WebIdentityAccessToken", jwt.access_token);
+    }
+    if (!jwt.refresh_token.empty()) {
+      map.Add("WebIdentityRefreshToken", jwt.refresh_token);
+    }
     if (!role_arn_.empty()) {
       map.Add("RoleArn", role_arn_);
       if (!role_session_name_.empty()) {
@@ -329,8 +345,10 @@ Credentials WebIdentityClientGrantsProvider::Fetch() {
     creds_ = Credentials{resp.Error()};
   } else {
     auto parse_res = Credentials::ParseXML(
-        resp.body, IsWebIdentity() ? "AssumeRoleWithWebIdentityResult"
-                                   : "AssumeRoleWithClientGrantsResult");
+        resp.body, IsWebIdentity() ? "AssumeRoleWithWebIdentityResponse/"
+                                     "AssumeRoleWithWebIdentityResult"
+                                   : "AssumeRoleWithClientGrantsResponse/"
+                                     "AssumeRoleWithClientGrantsResult");
     if (parse_res) {
       creds_ = std::move(*parse_res);
     } else {
@@ -342,9 +360,11 @@ Credentials WebIdentityClientGrantsProvider::Fetch() {
 
 ClientGrantsProvider::ClientGrantsProvider(
     JwtFunction jwtfunc, http::Url sts_endpoint, unsigned int duration_seconds,
-    std::string policy, std::string role_arn, std::string role_session_name)
+    std::string policy, std::string role_arn, std::string role_session_name,
+    std::string token_revoke_type)
     : WebIdentityClientGrantsProvider(jwtfunc, sts_endpoint, duration_seconds,
-                                      policy, role_arn, role_session_name) {}
+                                      policy, role_arn, role_session_name,
+                                      token_revoke_type) {}
 
 ClientGrantsProvider::~ClientGrantsProvider() {}
 
@@ -352,9 +372,11 @@ bool ClientGrantsProvider::IsWebIdentity() const { return false; }
 
 WebIdentityProvider::WebIdentityProvider(
     JwtFunction jwtfunc, http::Url sts_endpoint, unsigned int duration_seconds,
-    std::string policy, std::string role_arn, std::string role_session_name)
+    std::string policy, std::string role_arn, std::string role_session_name,
+    std::string token_revoke_type)
     : WebIdentityClientGrantsProvider(jwtfunc, sts_endpoint, duration_seconds,
-                                      policy, role_arn, role_session_name) {}
+                                      policy, role_arn, role_session_name,
+                                      token_revoke_type) {}
 
 WebIdentityProvider::~WebIdentityProvider() {}
 
@@ -477,13 +499,25 @@ error::Error IamAwsProvider::getRoleName(std::string& role_name,
 
 LdapIdentityProvider::LdapIdentityProvider(http::Url sts_endpoint,
                                            std::string ldap_username,
-                                           std::string ldap_password) {
+                                           std::string ldap_password,
+                                           std::string policy,
+                                           unsigned int duration_seconds,
+                                           std::string token_revoke_type,
+                                           std::string config_name) {
   this->sts_endpoint_ = sts_endpoint;
   utils::Multimap map;
   map.Add("Action", "AssumeRoleWithLDAPIdentity");
   map.Add("Version", "2011-06-15");
   map.Add("LDAPUsername", ldap_username);
   map.Add("LDAPPassword", ldap_password);
+  if (!policy.empty()) map.Add("Policy", policy);
+  if (duration_seconds > 0) {
+    map.Add("DurationSeconds", std::to_string(duration_seconds));
+  }
+  if (!token_revoke_type.empty()) {
+    map.Add("TokenRevokeType", token_revoke_type);
+  }
+  if (!config_name.empty()) map.Add("ConfigName", config_name);
   this->sts_endpoint_.query_string = map.ToQueryString();
 }
 
@@ -496,8 +530,9 @@ Credentials LdapIdentityProvider::Fetch() {
   http::Response resp = req.Execute();
   if (!resp) return Credentials{resp.Error()};
 
-  auto parse_res =
-      Credentials::ParseXML(resp.body, "AssumeRoleWithLDAPIdentityResult");
+  auto parse_res = Credentials::ParseXML(
+      resp.body,
+      "AssumeRoleWithLDAPIdentityResponse/AssumeRoleWithLDAPIdentityResult");
   if (parse_res) {
     creds_ = std::move(*parse_res);
   } else {
@@ -508,7 +543,8 @@ Credentials LdapIdentityProvider::Fetch() {
 
 CertificateIdentityProvider::CertificateIdentityProvider(
     http::Url sts_endpoint, std::string key_file, std::string cert_file,
-    std::string ssl_cert_file, unsigned int duration_seconds) {
+    std::string ssl_cert_file, unsigned int duration_seconds,
+    std::string token_revoke_type) {
   if (!sts_endpoint.https) {
     this->err_ = error::Error("sts endpoint scheme must be HTTPS");
     return;
@@ -528,6 +564,9 @@ CertificateIdentityProvider::CertificateIdentityProvider(
   map.Add("Action", "AssumeRoleWithCertificate");
   map.Add("Version", "2011-06-15");
   map.Add("DurationSeconds", std::to_string(expiry));
+  if (!token_revoke_type.empty()) {
+    map.Add("TokenRevokeType", token_revoke_type);
+  }
 
   sts_endpoint_ = sts_endpoint;
   sts_endpoint_.query_string = map.ToQueryString();
@@ -551,8 +590,9 @@ Credentials CertificateIdentityProvider::Fetch() {
   http::Response resp = req.Execute();
   if (!resp) return Credentials{resp.Error()};
 
-  auto parse_res =
-      Credentials::ParseXML(resp.body, "AssumeRoleWithCertificateResult");
+  auto parse_res = Credentials::ParseXML(
+      resp.body,
+      "AssumeRoleWithCertificateResponse/AssumeRoleWithCertificateResult");
   if (parse_res) {
     creds_ = std::move(*parse_res);
   } else {
