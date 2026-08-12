@@ -1568,7 +1568,6 @@ class Tests {
       return;
     }
 
-    // Success path: temporary credentials must all be non-empty.
     if (creds.access_key.empty() || creds.secret_key.empty() ||
         creds.session_token.empty()) {
       throw std::runtime_error(
