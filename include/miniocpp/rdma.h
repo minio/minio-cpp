@@ -132,11 +132,9 @@ inline static int parseRDMAReply(const std::string& rdma_reply) {
 }
 
 inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
-                              const void* buf, size_t size) {
-  char rdma_token[256];
-  snprintf(rdma_token, sizeof(rdma_token), "%s:%016lx:%016lx", token,
-           (uint64_t)buf, (uint64_t)size);
-
+                              size_t size) {
+  // The token is the RDMA descriptor verbatim; its leading fields already
+  // carry the buffer address and transfer size, so it is sent as-is.
   minio::utils::UtcTime date = minio::utils::UtcTime::Now();
   minio::creds::Credentials creds = sctx->provider->Fetch();
   minio::utils::Multimap query_params;
@@ -163,7 +161,7 @@ inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
   sign_headers.Add("Host", host);
   sign_headers.Add("x-amz-date", date.ToAmzDate());
   sign_headers.Add("x-amz-content-sha256", kUnsignedPayload);
-  sign_headers.Add(kAmzRDMAToken, rdma_token);
+  sign_headers.Add(kAmzRDMAToken, token);
   sign_headers.Add("Content-Type", "application/octet-stream");
   sign_headers.Add("Content-Length", "0");
 
@@ -228,12 +226,9 @@ inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
 // (the server derives its rangeBase from it) and is independent of the buffer
 // address carried in the RDMA token — see AIStor rdmaTransferBounds().
 inline static ssize_t rdmaGet(s3_rdma_client_ctx_t* sctx, const char* token,
-                              const void* buf, size_t size,
-                              int64_t range_offset = -1) {
-  char rdma_token[256];
-  snprintf(rdma_token, sizeof(rdma_token), "%s:%016lx:%016lx", token,
-           (uint64_t)buf, (uint64_t)size);
-
+                              size_t size, int64_t range_offset = -1) {
+  // The token is the RDMA descriptor verbatim; its leading fields already
+  // carry the buffer address and transfer size, so it is sent as-is.
   minio::utils::UtcTime date = minio::utils::UtcTime::Now();
   minio::creds::Credentials creds = sctx->provider->Fetch();
   minio::utils::Multimap query_params;
@@ -252,7 +247,7 @@ inline static ssize_t rdmaGet(s3_rdma_client_ctx_t* sctx, const char* token,
   sign_headers.Add("Host", host);
   sign_headers.Add("x-amz-date", date.ToAmzDate());
   sign_headers.Add("x-amz-content-sha256", kUnsignedPayload);
-  sign_headers.Add(kAmzRDMAToken, rdma_token);
+  sign_headers.Add(kAmzRDMAToken, token);
 
   // A byte-range request; added before signing so the server accepts the
   // SignedHeaders. bytes=<offset>-<offset+size-1> selects the object range;
@@ -343,7 +338,7 @@ inline static ssize_t rdmaPutWithRetry(cuObjClient* rdmaclient,
     if (terr != CU_OBJ_SUCCESS || token == nullptr) {
       return -1;
     }
-    ret = rdmaPut(sctx, token, buf, size);
+    ret = rdmaPut(sctx, token, size);
     rdmaclient->cuMemObjPutRDMAToken(token);
     if (ret > 0 || ret == kRDMANotSupported) {
       return ret;
@@ -366,7 +361,7 @@ inline static ssize_t rdmaGetWithRetry(cuObjClient* rdmaclient,
     if (terr != CU_OBJ_SUCCESS || token == nullptr) {
       return -1;
     }
-    ret = rdmaGet(sctx, token, buf, size, range_offset);
+    ret = rdmaGet(sctx, token, size, range_offset);
     rdmaclient->cuMemObjPutRDMAToken(token);
     if (ret > 0 || ret == kRDMANotSupported) {
       return ret;

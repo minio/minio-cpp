@@ -801,7 +801,7 @@ class Tests {
         try {
           minio::s3::RemoveBucketArgs args;
           args.bucket = b;
-          client_.RemoveBucket(args);
+          (void)client_.RemoveBucket(args);
         } catch (...) {
         }
       };
@@ -1104,7 +1104,7 @@ class Tests {
       } catch (const std::runtime_error&) {
         minio::s3::RemoveBucketArgs args;
         args.bucket = bucket_name;
-        client_.RemoveBucket(args);
+        (void)client_.RemoveBucket(args);
         throw;
       }
     }
@@ -1246,7 +1246,7 @@ class Tests {
       } catch (const std::runtime_error&) {
         minio::s3::RemoveBucketArgs args;
         args.bucket = bucket_name;
-        client_.RemoveBucket(args);
+        (void)client_.RemoveBucket(args);
         throw;
       }
     }
@@ -1299,7 +1299,7 @@ class Tests {
           try {
             minio::s3::RemoveBucketArgs args;
             args.bucket = b;
-            client_.RemoveBucket(args);
+            (void)client_.RemoveBucket(args);
           } catch (...) {
           }
         }
@@ -1374,7 +1374,7 @@ class Tests {
       {
         minio::s3::RemoveBucketArgs args;
         args.bucket = bucket_name;
-        client_.RemoveBucket(args);
+        (void)client_.RemoveBucket(args);
       }
     }
 
@@ -1408,7 +1408,7 @@ class Tests {
       {
         minio::s3::RemoveBucketArgs args;
         args.bucket = bucket_name;
-        client_.RemoveBucket(args);
+        (void)client_.RemoveBucket(args);
       }
     }
 
@@ -1442,7 +1442,7 @@ class Tests {
       {
         minio::s3::RemoveBucketArgs args;
         args.bucket = bucket_name;
-        client_.RemoveBucket(args);
+        (void)client_.RemoveBucket(args);
       }
     }
 
@@ -1476,7 +1476,7 @@ class Tests {
       {
         minio::s3::RemoveBucketArgs args;
         args.bucket = bucket_name;
-        client_.RemoveBucket(args);
+        (void)client_.RemoveBucket(args);
       }
     }
 
