@@ -601,4 +601,56 @@ Credentials CertificateIdentityProvider::Fetch() {
   return creds_;
 }
 
+CustomTokenIdentityProvider::CustomTokenIdentityProvider(
+    http::Url sts_endpoint, std::string role_arn, std::string token,
+    unsigned int duration_seconds, std::string token_revoke_type) {
+  if (sts_endpoint.host.empty()) {
+    this->err_ = error::Error("STS endpoint unknown");
+    return;
+  }
+  this->sts_endpoint_ = sts_endpoint;
+  this->role_arn_ = role_arn;
+  this->token_ = token;
+  this->duration_seconds_ = duration_seconds;
+  this->token_revoke_type_ = token_revoke_type;
+}
+
+CustomTokenIdentityProvider::~CustomTokenIdentityProvider() {}
+
+Credentials CustomTokenIdentityProvider::Fetch() {
+  if (err_) return Credentials{err_};
+
+  if (creds_) return creds_;
+
+  utils::Multimap map;
+  map.Add("Action", "AssumeRoleWithCustomToken");
+  map.Add("Version", "2011-06-15");
+  map.Add("RoleArn", role_arn_);
+  map.Add("Token", token_);
+  if (duration_seconds_ > 0) {
+    map.Add("DurationSeconds", std::to_string(duration_seconds_));
+  }
+  if (!token_revoke_type_.empty()) {
+    map.Add("TokenRevokeType", token_revoke_type_);
+  }
+
+  http::Url url = sts_endpoint_;
+  url.query_string = map.ToQueryString();
+  http::Request req(http::Method::kPost, url);
+  http::Response resp = req.Execute();
+  if (!resp) {
+    creds_ = Credentials{resp.Error()};
+  } else {
+    auto parse_res = Credentials::ParseXML(
+        resp.body,
+        "AssumeRoleWithCustomTokenResponse/AssumeRoleWithCustomTokenResult");
+    if (parse_res) {
+      creds_ = std::move(*parse_res);
+    } else {
+      creds_ = Credentials{parse_res.error()};
+    }
+  }
+  return creds_;
+}
+
 }  // namespace minio::creds

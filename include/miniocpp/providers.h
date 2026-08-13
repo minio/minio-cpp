@@ -267,6 +267,25 @@ struct CertificateIdentityProvider : public Provider {
   virtual Credentials Fetch() override;
 };  // struct CertificateIdentityProvider
 
+class CustomTokenIdentityProvider : public Provider {
+ private:
+  http::Url sts_endpoint_;
+  std::string role_arn_;
+  std::string token_;
+  unsigned int duration_seconds_ = 0;
+  std::string token_revoke_type_;
+
+ public:
+  CustomTokenIdentityProvider(http::Url sts_endpoint, std::string role_arn,
+                              std::string token,
+                              unsigned int duration_seconds = 0,
+                              std::string token_revoke_type = {});
+
+  virtual ~CustomTokenIdentityProvider();
+
+  virtual Credentials Fetch() override;
+};  // class CustomTokenIdentityProvider
+
 }  // namespace minio::creds
 
 #endif  // MINIO_CPP_PROVIDERS_H_INCLUDED
