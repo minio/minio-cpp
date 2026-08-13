@@ -22,6 +22,7 @@
 #include <miniocpp/request.h>
 #include <miniocpp/response.h>
 #include <miniocpp/result.h>
+#include <miniocpp/select.h>
 #include <miniocpp/types.h>
 
 using minio::Result;
@@ -38,6 +39,7 @@ using minio::Result;
 #include <iosfwd>
 #include <iostream>
 #include <list>
+#include <map>
 #include <ostream>
 #include <random>
 #include <sstream>
@@ -101,6 +103,43 @@ std::string RandBucketName() {
 }
 
 std::string RandObjectName() { return RandomString(charset, 8); }
+
+std::string PutUint32BigEndian(unsigned int v) {
+  std::string s(4, '\0');
+  s[0] = static_cast<char>((v >> 24) & 0xFF);
+  s[1] = static_cast<char>((v >> 16) & 0xFF);
+  s[2] = static_cast<char>((v >> 8) & 0xFF);
+  s[3] = static_cast<char>(v & 0xFF);
+  return s;
+}
+
+// Build a single S3 Select protocol frame (prelude + prelude CRC + headers
+// + payload + message CRC) for the given event headers and XML payload.
+std::string MakeSelectFrame(const std::map<std::string, std::string>& headers,
+                            const std::string& payload) {
+  std::string headerdata;
+  for (const auto& [name, value] : headers) {
+    headerdata += static_cast<char>(name.length());
+    headerdata += name;
+    headerdata += static_cast<char>(7);  // header value type: string
+    headerdata += static_cast<char>((value.length() >> 8) & 0xFF);
+    headerdata += static_cast<char>(value.length() & 0xFF);
+    headerdata += value;
+  }
+  headerdata += static_cast<char>(0);  // header terminator
+
+  std::string data = headerdata + payload;
+  unsigned int total_length = 16 + static_cast<unsigned int>(data.length());
+  std::string prelude =
+      PutUint32BigEndian(total_length) +
+      PutUint32BigEndian(static_cast<unsigned int>(headerdata.length()));
+  std::string prelude_crc =
+      PutUint32BigEndian(static_cast<unsigned int>(utils::CRC32(prelude)));
+  std::string message = prelude + prelude_crc + data;
+  std::string message_crc =
+      PutUint32BigEndian(static_cast<unsigned int>(utils::CRC32(message)));
+  return message + message_crc;
+}
 
 struct MakeBucketError : public std::runtime_error {
   MakeBucketError(std::string err) : runtime_error(err) {}
@@ -1537,6 +1576,58 @@ class Tests {
       RemoveObject(bucket_name_, object_name);
     }
   }  // TestAsyncOperations
+
+  // Regression test for SelectHandler Stats metric parsing: metrics larger
+  // than INT32_MAX must round-trip as exact long long values (any fallback
+  // to std::stol on 32-bit Windows LLP64 would truncate them). Uses a
+  // synthetic Stats event frame, independent of large objects.
+  void SelectStatsMetrics() {
+    std::cout << "SelectStatsMetrics()" << std::endl;
+
+    const long long scanned = 5000000000LL;
+    const long long processed = 6000000000LL;
+    const long long returned = 7000000000LL;
+
+    std::map<std::string, std::string> headers = {
+        {":message-type", "event"},
+        {":event-type", "Stats"},
+    };
+    std::string payload = "<Stats><BytesScanned>" + std::to_string(scanned) +
+                          "</BytesScanned><BytesProcessed>" +
+                          std::to_string(processed) +
+                          "</BytesProcessed><BytesReturned>" +
+                          std::to_string(returned) + "</BytesReturned></Stats>";
+
+    bool stats_delivered = false;
+    minio::s3::SelectHandler handler(
+        [&](minio::s3::SelectResult result) -> bool {
+          if (result.err) {
+            throw std::runtime_error("SelectStatsMetrics(): " +
+                                     result.err.String());
+          }
+          if (!result.bytes_scanned.has_value() ||
+              *result.bytes_scanned != scanned ||
+              !result.bytes_processed.has_value() ||
+              *result.bytes_processed != processed ||
+              !result.bytes_returned.has_value() ||
+              *result.bytes_returned != returned) {
+            throw std::runtime_error(
+                "SelectStatsMetrics(): unexpected metrics");
+          }
+          stats_delivered = true;
+          return true;
+        });
+
+    minio::http::DataFunctionArgs args;
+    args.datachunk = MakeSelectFrame(headers, payload);
+    if (!handler.DataFunction(args)) {
+      throw std::runtime_error("SelectStatsMetrics(): DataFunction failed");
+    }
+    if (!stats_delivered) {
+      throw std::runtime_error(
+          "SelectStatsMetrics(): Stats result was not delivered");
+    }
+  }
 };  // class Tests
 
 int main(int /*argc*/, char* /*argv*/[]) {
@@ -1596,6 +1687,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
   tests.SelectObjectContent();
   tests.ListenBucketNotification();
   tests.TestAsyncOperations();
+  tests.SelectStatsMetrics();
 
   return EXIT_SUCCESS;
 }
