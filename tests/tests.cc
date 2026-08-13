@@ -133,11 +133,11 @@ std::string MakeSelectFrame(const std::map<std::string, std::string>& headers,
   std::string prelude =
       PutUint32BigEndian(total_length) +
       PutUint32BigEndian(static_cast<unsigned int>(headerdata.length()));
-  std::string prelude_crc =
-      PutUint32BigEndian(static_cast<unsigned int>(utils::CRC32(prelude)));
+  std::string prelude_crc = PutUint32BigEndian(
+      static_cast<unsigned int>(minio::utils::CRC32(prelude)));
   std::string message = prelude + prelude_crc + data;
-  std::string message_crc =
-      PutUint32BigEndian(static_cast<unsigned int>(utils::CRC32(message)));
+  std::string message_crc = PutUint32BigEndian(
+      static_cast<unsigned int>(minio::utils::CRC32(message)));
   return message + message_crc;
 }
 
