@@ -195,9 +195,9 @@ bool SelectHandler::process(const http::DataFunctionArgs& /* args */,
     auto root = xdoc.select_node(xpath.c_str());
     pugi::xpath_node text;
     std::string value;
-    long long bytes_scanned = -1;
-    long long bytes_processed = -1;
-    long long bytes_returned = -1;
+    std::optional<long long> bytes_scanned;
+    std::optional<long long> bytes_processed;
+    std::optional<long long> bytes_returned;
 
     text = root.node().select_node("BytesScanned/text()");
     value = text.node().value();

@@ -382,7 +382,7 @@ struct ComposeSource : public ObjectConditionalReadArgs {
   utils::Multimap Headers() const;
 
  private:
-  long long object_size_ = -1;
+  std::optional<size_t> object_size_;
   utils::Multimap headers_;
 };  // struct ComposeSource
 

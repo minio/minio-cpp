@@ -381,7 +381,7 @@ error::Error ComposeSource::BuildHeaders(size_t object_size,
     }
   }
 
-  object_size_ = static_cast<long long>(object_size);
+  object_size_ = object_size;
   headers_ = CopyHeaders();
   if (!headers_.Contains("x-amz-copy-source-if-match")) {
     headers_.Add("x-amz-copy-source-if-match", etag);
@@ -391,14 +391,14 @@ error::Error ComposeSource::BuildHeaders(size_t object_size,
 }
 
 size_t ComposeSource::ObjectSize() const {
-  if (object_size_ == -1) {
+  if (!object_size_.has_value()) {
     std::cerr << "ABORT: ComposeSource::BuildHeaders() must be called prior to "
                  "this method invocation. This should not happen."
               << std::endl;
     std::terminate();
   }
 
-  return object_size_;
+  return *object_size_;
 }
 
 utils::Multimap ComposeSource::Headers() const {
