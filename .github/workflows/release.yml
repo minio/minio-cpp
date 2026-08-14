@@ -23,8 +23,56 @@ permissions:
   contents: read   # write is granted only to the release job below
 
 jobs:
+  # Resolve the release tag once (name + commit) so every build job and the
+  # release job operate on the same commit, even if the tag moves later.
+  resolve:
+    name: Resolve release tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      sha: ${{ steps.tag.outputs.sha }}
+    steps:
+    - name: Resolve release tag and commit
+      id: tag
+      env:
+        RELEASE_TAG: ${{ inputs.tag }}
+      run: |
+        if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+          case "$RELEASE_TAG" in
+            v[0-9]*)
+              ;;
+            *)
+              echo "::error::input tag must be an existing version tag, e.g. v0.4.0"
+              exit 1
+              ;;
+          esac
+          case "$RELEASE_TAG" in
+            */*)
+              echo "::error::tag '${RELEASE_TAG}' must not contain '/'"
+              exit 1
+              ;;
+          esac
+          SHA="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" \
+            "refs/tags/${RELEASE_TAG}^{}" | awk '{print $1}')"
+          if [ -z "$SHA" ]; then
+            SHA="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" \
+              "refs/tags/${RELEASE_TAG}" | awk '{print $1}')"
+          fi
+          if [ -z "$SHA" ]; then
+            echo "::error::tag '${RELEASE_TAG}' does not exist on ${GITHUB_REPOSITORY}"
+            exit 1
+          fi
+          TAG="$RELEASE_TAG"
+        else
+          TAG="${GITHUB_REF#refs/tags/}"
+          SHA="$GITHUB_SHA"
+        fi
+        echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+        echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
   build:
     name: Build ${{ matrix.name }}
+    needs: resolve
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -47,43 +95,11 @@ jobs:
             triplet: x64-windows-static
 
     steps:
-    # Manual dispatch: the tag must exist and be a version tag; the build and
-    # the release job (contents: write) depend on it. Resolve it to its peeled
-    # commit so the checkout below builds that exact commit.
-    - name: Validate release tag
-      id: validate
-      shell: bash
-      env:
-        RELEASE_TAG: ${{ inputs.tag }}
-      run: |
-        if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-          case "$RELEASE_TAG" in
-            v[0-9]*)
-              ;;
-            *)
-              echo "::error::input tag must be an existing version tag, e.g. v0.4.0"
-              exit 1
-              ;;
-          esac
-          SHA="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" \
-            "refs/tags/${RELEASE_TAG}^{}" | awk '{print $1}')"
-          if [ -z "$SHA" ]; then
-            SHA="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" \
-              "refs/tags/${RELEASE_TAG}" | awk '{print $1}')"
-          fi
-          if [ -z "$SHA" ]; then
-            echo "::error::tag '${RELEASE_TAG}' does not exist on ${GITHUB_REPOSITORY}"
-            exit 1
-          fi
-          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
-        fi
-
     - name: Checkout minio-cpp
       uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       with:
         path: minio-cpp
-        # Manual dispatch: build the commit the validated tag points to.
-        ref: ${{ github.event_name == 'workflow_dispatch' && steps.validate.outputs.sha || github.sha }}
+        ref: ${{ needs.resolve.outputs.sha }}
         persist-credentials: false
 
     - name: Checkout vcpkg
@@ -106,19 +122,13 @@ jobs:
           ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
         fi
 
-    - name: Resolve release tag and archive name
+    - name: Resolve archive name
       id: tag
       shell: bash
       env:
-        RELEASE_TAG: ${{ inputs.tag }}
+        RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
       run: |
-        if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-          TAG="$RELEASE_TAG"
-        else
-          TAG="${GITHUB_REF#refs/tags/}"
-        fi
-        echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-        echo "archive=minio-cpp-${TAG#v}-${{ matrix.name }}" >> "$GITHUB_OUTPUT"
+        echo "archive=minio-cpp-${RELEASE_TAG#v}-${{ matrix.name }}" >> "$GITHUB_OUTPUT"
 
     - name: Install dependencies (macOS)
       if: runner.os == 'macOS'
@@ -176,7 +186,7 @@ jobs:
 
   release:
     name: Publish release assets
-    needs: build
+    needs: [build, resolve]
     if: needs.build.result == 'success'
     runs-on: ubuntu-latest
     permissions:
@@ -188,22 +198,29 @@ jobs:
         path: artifacts
         merge-multiple: true
 
-    - name: Resolve release tag
-      id: tag
+    # Abort the release if the tag was moved while the build was running.
+    - name: Verify tag still points to the resolved commit
       env:
-        RELEASE_TAG: ${{ inputs.tag }}
+        RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+        RESOLVED_SHA: ${{ needs.resolve.outputs.sha }}
       run: |
         if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-          TAG="$RELEASE_TAG"
-        else
-          TAG="${GITHUB_REF#refs/tags/}"
+          SHA="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" \
+            "refs/tags/${RELEASE_TAG}^{}" | awk '{print $1}')"
+          if [ -z "$SHA" ]; then
+            SHA="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" \
+              "refs/tags/${RELEASE_TAG}" | awk '{print $1}')"
+          fi
+          if [ -z "$SHA" ] || [ "$SHA" != "$RESOLVED_SHA" ]; then
+            echo "::error::tag '${RELEASE_TAG}' moved since the build started"
+            exit 1
+          fi
         fi
-        echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
     - name: Create or update GitHub release with assets
       env:
         GH_TOKEN: ${{ github.token }}
-        RELEASE_TAG: ${{ steps.tag.outputs.tag }}
+        RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
       run: |
         set -euo pipefail
         TAG="$RELEASE_TAG"
@@ -211,5 +228,5 @@ jobs:
           gh release upload "$TAG" artifacts/* -R "$GITHUB_REPOSITORY" --clobber
         else
           gh release create "$TAG" artifacts/* -R "$GITHUB_REPOSITORY" \
-            --title "minio-cpp $TAG" --generate-notes
+            --title "minio-cpp $TAG" --generate-notes --verify-tag
         fi
