@@ -314,8 +314,7 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/miniocpp-config.cmake"
 install(FILES
         ${MINIO_CPP_HEADERS} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/miniocpp")
 
-# Vendored third-party headers referenced by public miniocpp headers
-# (e.g. tl::expected for C++17 builds) must ship with the install tree.
+# Vendored headers referenced by public miniocpp headers must ship too.
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/tl"
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
