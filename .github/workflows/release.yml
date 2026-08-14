@@ -1,0 +1,188 @@
+# Builds self-contained prebuilt SDK bundles (headers + static libraries +
+# CMake/pkg-config metadata) for the platforms below and attaches them to a
+# GitHub Release. Consumers download a bundle and use it with
+# `-DCMAKE_PREFIX_PATH=<bundle>` — no vcpkg and no network required.
+#
+# This addresses https://github.com/minio/minio-cpp/issues/212 (prebuilt
+# arm64 releases).
+#
+# Trigger: push a tag matching v* (e.g. `git tag v0.4.0 && git push --tags`),
+# or run manually via Actions -> "Release" -> "Run workflow", providing the
+# tag the artifacts should be attached to.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: >-
+          Tag to attach the prebuilt artifacts to, e.g. v0.4.0. The tag must
+          already exist on the repository (push it first).
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-amd64
+            os: ubuntu-24.04
+            triplet: x64-linux
+            package: tar.gz
+          - name: linux-arm64
+            os: ubuntu-24.04-arm
+            triplet: arm64-linux
+            package: tar.gz
+          - name: macos-amd64
+            os: macos-15-intel
+            triplet: x64-osx
+            package: tar.gz
+          - name: macos-arm64
+            os: macos-latest
+            triplet: arm64-osx
+            package: tar.gz
+          - name: windows-amd64
+            os: windows-latest
+            triplet: x64-windows
+            package: zip
+
+    steps:
+    - name: Checkout minio-cpp
+      uses: actions/checkout@v4
+      with:
+        path: minio-cpp
+
+    - name: Checkout vcpkg
+      uses: actions/checkout@v4
+      with:
+        repository: microsoft/vcpkg
+        ref: "2026.07.29"
+        path: vcpkg
+
+    # arm64 Linux has no prebuilt vcpkg CMake, so vcpkg falls back to the
+    # system cmake; the apt version (3.28) is too old for vcpkg's SPDX
+    # generation. Provide a recent cmake on PATH (same as ci.yml).
+    - name: Install recent CMake and Ninja
+      uses: lukka/get-cmake@fffaaafeea488556c2c12dad60690008bc1caacb # v4.4.2
+
+    - name: Bootstrap vcpkg
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          ./vcpkg/bootstrap-vcpkg.bat -disableMetrics
+        else
+          ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+        fi
+
+    - name: Resolve release tag and archive name
+      id: tag
+      shell: bash
+      run: |
+        if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+          TAG="${{ inputs.tag }}"
+        else
+          TAG="${GITHUB_REF#refs/tags/}"
+        fi
+        echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+        echo "archive=minio-cpp-${TAG#v}-${{ matrix.name }}" >> "$GITHUB_OUTPUT"
+
+    - name: Install dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: brew install pkg-config
+
+    - name: Configure and build
+      shell: bash
+      run: |
+        cd minio-cpp
+        ../vcpkg/vcpkg install
+        cmake . -B build \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake
+        cmake --build build --config Release -j 4
+
+    # vcpkg's manifest mode installs dependencies into
+    # <build>/vcpkg_installed/<triplet>. Installing miniocpp into that same
+    # prefix produces one flat, relocatable SDK bundle: all headers, all
+    # static libraries (miniocpp plus its dependencies) and all CMake configs
+    # live under a single directory that consumers can point
+    # CMAKE_PREFIX_PATH at.
+    - name: Install into SDK bundle
+      shell: bash
+      run: |
+        cd minio-cpp
+        cmake --install build --config Release \
+          --prefix "build/vcpkg_installed/${{ matrix.triplet }}"
+
+    - name: Package bundle
+      shell: bash
+      run: |
+        set -euo pipefail
+        ARCHIVE="${{ steps.tag.outputs.archive }}"
+        mv "minio-cpp/build/vcpkg_installed/${{ matrix.triplet }}" "$ARCHIVE"
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          tar -a -cf "$ARCHIVE.zip" "$ARCHIVE"
+        else
+          tar -czf "$ARCHIVE.tar.gz" "$ARCHIVE"
+        fi
+
+    - name: Upload bundle (tar.gz)
+      if: matrix.package == 'tar.gz'
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.tag.outputs.archive }}.tar.gz
+        path: ${{ steps.tag.outputs.archive }}.tar.gz
+        if-no-files-found: error
+
+    - name: Upload bundle (zip)
+      if: matrix.package == 'zip'
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.tag.outputs.archive }}.zip
+        path: ${{ steps.tag.outputs.archive }}.zip
+        if-no-files-found: error
+
+  release:
+    name: Publish release assets
+    needs: build
+    if: needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download all bundles
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+        merge-multiple: true
+
+    - name: Resolve release tag
+      id: tag
+      run: |
+        if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+          TAG="${{ inputs.tag }}"
+        else
+          TAG="${GITHUB_REF#refs/tags/}"
+        fi
+        echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+    - name: Create or update GitHub release with assets
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        TAG="${{ steps.tag.outputs.tag }}"
+        if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          gh release upload "$TAG" artifacts/* -R "$GITHUB_REPOSITORY" --clobber
+        else
+          gh release create "$TAG" artifacts/* -R "$GITHUB_REPOSITORY" \
+            --title "minio-cpp $TAG" --generate-notes
+        fi

@@ -31,6 +31,39 @@ Typically `minio-cpp` will be part of dependencies specified in `vcpkg.json` fil
 }
 ```
 
+## Prebuilt release bundles
+
+Don't want to (or can't) use `vcpkg` — for example because of network
+restrictions? Every [GitHub release](https://github.com/minio/minio-cpp/releases)
+ships self-contained, prebuilt SDK bundles for the most common platforms,
+including arm64:
+
+| Platform                    | Bundle                                              |
+| --------------------------- | --------------------------------------------------- |
+| Linux x86_64                | `minio-cpp-<version>-linux-amd64.tar.gz`            |
+| Linux arm64 (Graviton, RPi) | `minio-cpp-<version>-linux-arm64.tar.gz`            |
+| macOS x86_64                | `minio-cpp-<version>-macos-amd64.tar.gz`            |
+| macOS arm64 (Apple silicon) | `minio-cpp-<version>-macos-arm64.tar.gz`            |
+| Windows x86_64              | `minio-cpp-<version>-windows-amd64.zip`             |
+
+Each bundle is a single relocatable prefix containing everything needed to
+build and link against the SDK: the `miniocpp` headers, static libraries
+(`miniocpp` and all of its dependencies), CMake package configs and the
+`miniocpp.pc` file. Download a bundle, extract it, and point CMake at it:
+
+```bash
+$ curl -LO https://github.com/minio/minio-cpp/releases/download/<version>/minio-cpp-<version>-linux-arm64.tar.gz
+$ tar -xzf minio-cpp-<version>-linux-arm64.tar.gz
+$ cmake -S . -B build -DCMAKE_PREFIX_PATH="$PWD/minio-cpp-<version>-linux-arm64"
+```
+
+No `vcpkg`, no network and no extra dependency installation is required —
+`find_package(miniocpp REQUIRED)` in your `CMakeLists.txt` resolves the
+bundle exactly like the section below. The bundles are built automatically
+from every pushed `v*` tag (and can also be built on demand from the
+"Actions" tab); the release workflow lives in
+[`.github/workflows/release.yml`](.github/workflows/release.yml).
+
 ## Using `minio-cpp` with cmake
 
 MinIO C++ cliend SDK can be consumed as a dependency in CMakeLists.txt, the following can be used as an example:
