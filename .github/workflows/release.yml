@@ -4,6 +4,10 @@
 
 name: Release
 
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
 on:
   push:
     tags:
@@ -36,13 +40,36 @@ jobs:
             os: macos-15-intel
             triplet: x64-osx
           - name: macos-arm64
-            os: macos-latest
+            os: macos-15
             triplet: arm64-osx
           - name: windows-amd64
             os: windows-latest
             triplet: x64-windows-static
 
     steps:
+    # Manual dispatch: the tag must exist and be a version tag; the build and
+    # the release job (contents: write) depend on it.
+    - name: Validate release tag
+      shell: bash
+      env:
+        RELEASE_TAG: ${{ inputs.tag }}
+      run: |
+        if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+          case "$RELEASE_TAG" in
+            v[0-9]*)
+              ;;
+            *)
+              echo "::error::input tag must be an existing version tag, e.g. v0.4.0"
+              exit 1
+              ;;
+          esac
+          if ! git ls-remote --exit-code --tags "https://github.com/${GITHUB_REPOSITORY}.git" \
+            "refs/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "::error::tag '${RELEASE_TAG}' does not exist on ${GITHUB_REPOSITORY}"
+            exit 1
+          fi
+        fi
+
     - name: Checkout minio-cpp
       uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       with:
@@ -74,9 +101,11 @@ jobs:
     - name: Resolve release tag and archive name
       id: tag
       shell: bash
+      env:
+        RELEASE_TAG: ${{ inputs.tag }}
       run: |
         if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-          TAG="${{ inputs.tag }}"
+          TAG="$RELEASE_TAG"
         else
           TAG="${GITHUB_REF#refs/tags/}"
         fi
@@ -151,9 +180,11 @@ jobs:
 
     - name: Resolve release tag
       id: tag
+      env:
+        RELEASE_TAG: ${{ inputs.tag }}
       run: |
         if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-          TAG="${{ inputs.tag }}"
+          TAG="$RELEASE_TAG"
         else
           TAG="${GITHUB_REF#refs/tags/}"
         fi
