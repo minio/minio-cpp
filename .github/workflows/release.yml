@@ -48,8 +48,10 @@ jobs:
 
     steps:
     # Manual dispatch: the tag must exist and be a version tag; the build and
-    # the release job (contents: write) depend on it.
+    # the release job (contents: write) depend on it. Resolve it to its peeled
+    # commit so the checkout below builds that exact commit.
     - name: Validate release tag
+      id: validate
       shell: bash
       env:
         RELEASE_TAG: ${{ inputs.tag }}
@@ -63,19 +65,25 @@ jobs:
               exit 1
               ;;
           esac
-          if ! git ls-remote --exit-code --tags "https://github.com/${GITHUB_REPOSITORY}.git" \
-            "refs/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
+          SHA="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" \
+            "refs/tags/${RELEASE_TAG}^{}" | awk '{print $1}')"
+          if [ -z "$SHA" ]; then
+            SHA="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" \
+              "refs/tags/${RELEASE_TAG}" | awk '{print $1}')"
+          fi
+          if [ -z "$SHA" ]; then
             echo "::error::tag '${RELEASE_TAG}' does not exist on ${GITHUB_REPOSITORY}"
             exit 1
           fi
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
         fi
 
     - name: Checkout minio-cpp
       uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       with:
         path: minio-cpp
-        # Manual dispatch: build the tag the artifacts will be attached to.
-        ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+        # Manual dispatch: build the commit the validated tag points to.
+        ref: ${{ github.event_name == 'workflow_dispatch' && steps.validate.outputs.sha || github.sha }}
         persist-credentials: false
 
     - name: Checkout vcpkg
@@ -138,9 +146,11 @@ jobs:
 
     - name: Package bundle
       shell: bash
+      env:
+        RELEASE_ARCHIVE: ${{ steps.tag.outputs.archive }}
       run: |
         set -euo pipefail
-        ARCHIVE="${{ steps.tag.outputs.archive }}"
+        ARCHIVE="$RELEASE_ARCHIVE"
         mv "minio-cpp/build/vcpkg_installed/${{ matrix.triplet }}" "$ARCHIVE"
         if [ "$RUNNER_OS" = "Windows" ]; then
           tar -a -cf "$ARCHIVE.zip" "$ARCHIVE"
@@ -193,9 +203,10 @@ jobs:
     - name: Create or update GitHub release with assets
       env:
         GH_TOKEN: ${{ github.token }}
+        RELEASE_TAG: ${{ steps.tag.outputs.tag }}
       run: |
         set -euo pipefail
-        TAG="${{ steps.tag.outputs.tag }}"
+        TAG="$RELEASE_TAG"
         if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
           gh release upload "$TAG" artifacts/* -R "$GITHUB_REPOSITORY" --clobber
         else
