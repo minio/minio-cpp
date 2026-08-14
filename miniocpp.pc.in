@@ -1,5 +1,3 @@
-# pcfiledir-relative prefix so the file stays valid after relocation
-# (e.g. inside a prebuilt SDK bundle extracted anywhere).
 prefix=${pcfiledir}/../..
 exec_prefix=${prefix}
 libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@
