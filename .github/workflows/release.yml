@@ -204,17 +204,15 @@ jobs:
         RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
         RESOLVED_SHA: ${{ needs.resolve.outputs.sha }}
       run: |
-        if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+        SHA="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" \
+          "refs/tags/${RELEASE_TAG}^{}" | awk '{print $1}')"
+        if [ -z "$SHA" ]; then
           SHA="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" \
-            "refs/tags/${RELEASE_TAG}^{}" | awk '{print $1}')"
-          if [ -z "$SHA" ]; then
-            SHA="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" \
-              "refs/tags/${RELEASE_TAG}" | awk '{print $1}')"
-          fi
-          if [ -z "$SHA" ] || [ "$SHA" != "$RESOLVED_SHA" ]; then
-            echo "::error::tag '${RELEASE_TAG}' moved since the build started"
-            exit 1
-          fi
+            "refs/tags/${RELEASE_TAG}" | awk '{print $1}')"
+        fi
+        if [ -z "$SHA" ] || [ "$SHA" != "$RESOLVED_SHA" ]; then
+          echo "::error::tag '${RELEASE_TAG}' moved since the build started"
+          exit 1
         fi
 
     - name: Create or update GitHub release with assets
