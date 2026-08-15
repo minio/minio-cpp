@@ -19,6 +19,7 @@
 
 #include <curl/curl.h>
 
+#include <algorithm>
 #include <cerrno>
 #include <chrono>
 #include <curlpp/Easy.hpp>
@@ -208,7 +209,7 @@ Url Url::Parse(std::string value) {
       while (std::getline(ss, portstr, ':')) {
       }
 
-      if (!portstr.empty()) {
+      if (host.find(':') != std::string::npos && !portstr.empty()) {
         try {
           port = static_cast<unsigned>(std::stoi(portstr));
           host = host.substr(0, host.rfind(":" + portstr));

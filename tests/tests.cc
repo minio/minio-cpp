@@ -1542,7 +1542,45 @@ class Tests {
   }  // TestAsyncOperations
 };  // class Tests
 
+// Regression test for the host/port parsing guard in http::Url::Parse():
+// bare IPv4/hostname keep the whole string as host with port 0; only an
+// explicit ":port" suffix is split off.
+void TestUrlParse() noexcept(false) {
+  std::cout << "TestUrlParse()" << std::endl;
+
+  struct UrlParseCase {
+    std::string input;
+    std::string host;
+    unsigned int port;
+  };
+
+  const std::array<UrlParseCase, 4> cases = {{
+      {"10.0.0.1", "10.0.0.1", 0},
+      {"example.com", "example.com", 0},
+      {"example.com:8080", "example.com", 8080},
+      {"10.0.0.1:9000", "10.0.0.1", 9000},
+  }};
+
+  for (const auto& c : cases) {
+    const minio::http::Url url = minio::http::Url::Parse(c.input);
+    if (url.host != c.host || url.port != c.port) {
+      throw std::runtime_error(
+          "TestUrlParse(): Url::Parse(\"" + c.input + "\"): expected host='" +
+          c.host + "' port=" + std::to_string(c.port) + "; got host='" +
+          url.host + "' port=" + std::to_string(url.port));
+    }
+  }
+}
+
 int main(int /*argc*/, char* /*argv*/[]) {
+  // Unit check first so a parsing regression fails fast without a server.
+  try {
+    TestUrlParse();
+  } catch (const std::runtime_error& e) {
+    std::cerr << e.what() << std::endl;
+    return EXIT_FAILURE;
+  }
+
   std::string host;
   if (!minio::utils::GetEnv(host, "SERVER_ENDPOINT")) {
     std::cerr << "SERVER_ENDPOINT environment variable must be set"
