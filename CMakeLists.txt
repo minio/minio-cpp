@@ -137,6 +137,7 @@ set(MINIO_CPP_HEADERS
   include/miniocpp/providers.h
   include/miniocpp/request.h
   include/miniocpp/response.h
+  include/miniocpp/result.h
   include/miniocpp/select.h
   include/miniocpp/signer.h
   include/miniocpp/sse.h
@@ -312,6 +313,10 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/miniocpp-config.cmake"
 
 install(FILES
         ${MINIO_CPP_HEADERS} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/miniocpp")
+
+# Vendored headers referenced by public miniocpp headers must ship too.
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/tl"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
 configure_file(miniocpp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/miniocpp.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/miniocpp.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)

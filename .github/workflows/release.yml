@@ -1,0 +1,230 @@
+# Builds prebuilt SDK bundles (headers + static libs + CMake metadata) for
+# common platforms incl. arm64 and attaches them to a GitHub Release.
+# Trigger: push a v* tag, or run manually from the Actions tab.
+
+name: Release
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to attach artifacts to, e.g. v0.4.0 (must exist)
+        required: true
+        type: string
+
+permissions:
+  contents: read   # write is granted only to the release job below
+
+jobs:
+  # Resolve the release tag once (name + commit) so every build job and the
+  # release job operate on the same commit, even if the tag moves later.
+  resolve:
+    name: Resolve release tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      sha: ${{ steps.tag.outputs.sha }}
+    steps:
+    - name: Resolve release tag and commit
+      id: tag
+      env:
+        RELEASE_TAG: ${{ inputs.tag }}
+      run: |
+        if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+          case "$RELEASE_TAG" in
+            v[0-9]*)
+              ;;
+            *)
+              echo "::error::input tag must be an existing version tag, e.g. v0.4.0"
+              exit 1
+              ;;
+          esac
+          case "$RELEASE_TAG" in
+            */*)
+              echo "::error::tag '${RELEASE_TAG}' must not contain '/'"
+              exit 1
+              ;;
+          esac
+          SHA="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" \
+            "refs/tags/${RELEASE_TAG}^{}" | awk '{print $1}')"
+          if [ -z "$SHA" ]; then
+            SHA="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" \
+              "refs/tags/${RELEASE_TAG}" | awk '{print $1}')"
+          fi
+          if [ -z "$SHA" ]; then
+            echo "::error::tag '${RELEASE_TAG}' does not exist on ${GITHUB_REPOSITORY}"
+            exit 1
+          fi
+          TAG="$RELEASE_TAG"
+        else
+          TAG="${GITHUB_REF#refs/tags/}"
+          SHA="$GITHUB_SHA"
+        fi
+        echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+        echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.name }}
+    needs: resolve
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-amd64
+            os: ubuntu-24.04
+            triplet: x64-linux
+          - name: linux-arm64
+            os: ubuntu-24.04-arm
+            triplet: arm64-linux
+          - name: macos-amd64
+            os: macos-15-intel
+            triplet: x64-osx
+          - name: macos-arm64
+            os: macos-15
+            triplet: arm64-osx
+          - name: windows-amd64
+            os: windows-latest
+            triplet: x64-windows-static
+
+    steps:
+    - name: Checkout minio-cpp
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      with:
+        path: minio-cpp
+        ref: ${{ needs.resolve.outputs.sha }}
+        persist-credentials: false
+
+    - name: Checkout vcpkg
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      with:
+        repository: microsoft/vcpkg
+        ref: 9e593bb18ea69cc5095e012465dcd675a822ed0d # 2026.07.29
+        path: vcpkg
+        persist-credentials: false
+
+    - name: Install recent CMake and Ninja
+      uses: lukka/get-cmake@fffaaafeea488556c2c12dad60690008bc1caacb # v4.4.2
+
+    - name: Bootstrap vcpkg
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          ./vcpkg/bootstrap-vcpkg.bat -disableMetrics
+        else
+          ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+        fi
+
+    - name: Resolve archive name
+      id: tag
+      shell: bash
+      env:
+        RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+      run: |
+        echo "archive=minio-cpp-${RELEASE_TAG#v}-${{ matrix.name }}" >> "$GITHUB_OUTPUT"
+
+    - name: Install dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: brew install pkg-config
+
+    - name: Configure and build
+      shell: bash
+      run: |
+        cd minio-cpp
+        ../vcpkg/vcpkg install --triplet "${{ matrix.triplet }}"
+        cmake . -B build \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DVCPKG_TARGET_TRIPLET="${{ matrix.triplet }}" \
+          -DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake
+        cmake --build build --config Release -j 4
+
+    # Install miniocpp into vcpkg's dep prefix so the bundle is one flat,
+    # relocatable directory: headers + all static libs + CMake configs.
+    - name: Install into SDK bundle
+      shell: bash
+      run: |
+        cd minio-cpp
+        cmake --install build --config Release \
+          --prefix "build/vcpkg_installed/${{ matrix.triplet }}"
+
+    - name: Package bundle
+      shell: bash
+      env:
+        RELEASE_ARCHIVE: ${{ steps.tag.outputs.archive }}
+      run: |
+        set -euo pipefail
+        ARCHIVE="$RELEASE_ARCHIVE"
+        mv "minio-cpp/build/vcpkg_installed/${{ matrix.triplet }}" "$ARCHIVE"
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          tar -a -cf "$ARCHIVE.zip" "$ARCHIVE"
+        else
+          tar -czf "$ARCHIVE.tar.gz" "$ARCHIVE"
+        fi
+
+    - name: Upload bundle (tar.gz)
+      if: runner.os != 'Windows'
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      with:
+        name: ${{ steps.tag.outputs.archive }}.tar.gz
+        path: ${{ steps.tag.outputs.archive }}.tar.gz
+        if-no-files-found: error
+
+    - name: Upload bundle (zip)
+      if: runner.os == 'Windows'
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      with:
+        name: ${{ steps.tag.outputs.archive }}.zip
+        path: ${{ steps.tag.outputs.archive }}.zip
+        if-no-files-found: error
+
+  release:
+    name: Publish release assets
+    needs: [build, resolve]
+    if: needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # only this job may create/update the release
+    steps:
+    - name: Download all bundles
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      with:
+        path: artifacts
+        merge-multiple: true
+
+    # Abort the release if the tag was moved while the build was running.
+    - name: Verify tag still points to the resolved commit
+      env:
+        RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+        RESOLVED_SHA: ${{ needs.resolve.outputs.sha }}
+      run: |
+        SHA="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" \
+          "refs/tags/${RELEASE_TAG}^{}" | awk '{print $1}')"
+        if [ -z "$SHA" ]; then
+          SHA="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" \
+            "refs/tags/${RELEASE_TAG}" | awk '{print $1}')"
+        fi
+        if [ -z "$SHA" ] || [ "$SHA" != "$RESOLVED_SHA" ]; then
+          echo "::error::tag '${RELEASE_TAG}' moved since the build started"
+          exit 1
+        fi
+
+    - name: Create or update GitHub release with assets
+      env:
+        GH_TOKEN: ${{ github.token }}
+        RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+      run: |
+        set -euo pipefail
+        TAG="$RELEASE_TAG"
+        if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          gh release upload "$TAG" artifacts/* -R "$GITHUB_REPOSITORY" --clobber
+        else
+          gh release create "$TAG" artifacts/* -R "$GITHUB_REPOSITORY" \
+            --title "minio-cpp $TAG" --generate-notes --verify-tag
+        fi
