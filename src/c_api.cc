@@ -204,6 +204,22 @@ int miniocpp_rdma_available(void) {
   }
 }
 
+int miniocpp_rdma_nic_count(void) {
+  try {
+    return minio::rdma::Shared().NicCount();
+  } catch (...) {
+    return 0;
+  }
+}
+
+int miniocpp_rdma_healthy_nic_count(void) {
+  try {
+    return minio::rdma::Shared().HealthyNicCount();
+  } catch (...) {
+    return 0;
+  }
+}
+
 const char* miniocpp_last_error(void) {
   return g_last_error.empty() ? nullptr : g_last_error.c_str();
 }
