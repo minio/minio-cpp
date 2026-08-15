@@ -88,6 +88,13 @@ inline constexpr int kRDMAReplyNotImplemented = 501;
 // Return codes for rdmaPut/rdmaGet
 inline constexpr ssize_t kRDMANotSupported = -2;
 
+// The call never reached the fabric: a bad argument, or a URL that would not
+// build. Distinct from -1 because no rail carried this attempt, so charging one
+// a failure would take healthy hardware out of rotation over a client-side
+// mistake -- and the same error would repeat on the next rail anyway. Callers
+// treat it like any other failure and fall back to HTTP.
+inline constexpr ssize_t kRDMALocalError = -3;
+
 // Largest transfer a single RDMA descriptor can describe: the
 // x-amz-rdma-token carries the window size in a 32-bit field. RDMA is only
 // attempted for buffers up to this size; a larger buffer cannot be named to
@@ -168,7 +175,7 @@ inline static ssize_t rdmaPut(minio::rdma::ClientCtx* sctx, const char* token,
     // part number outside 1..10000 is not one S3 accepts.
     if (!sctx->partNumber || *sctx->partNumber == 0 ||
         *sctx->partNumber > 10000) {
-      return -1;
+      return kRDMALocalError;
     }
     query_params.Add("partNumber", std::to_string(*sctx->partNumber));
   }
@@ -176,7 +183,7 @@ inline static ssize_t rdmaPut(minio::rdma::ClientCtx* sctx, const char* token,
   if (minio::error::Error err =
           sctx->url.BuildUrl(url, minio::http::Method::kPut, region,
                              query_params, sctx->bucket, sctx->object)) {
-    return -1;
+    return kRDMALocalError;
   }
 
   std::string host = url.HostHeaderValue();
@@ -262,7 +269,7 @@ inline static ssize_t rdmaGet(minio::rdma::ClientCtx* sctx, const char* token,
   if (minio::error::Error err =
           sctx->url.BuildUrl(url, minio::http::Method::kGet, region,
                              query_params, sctx->bucket, sctx->object)) {
-    return -1;
+    return kRDMALocalError;
   }
 
   std::string host = url.HostHeaderValue();
@@ -277,7 +284,8 @@ inline static ssize_t rdmaGet(minio::rdma::ClientCtx* sctx, const char* token,
   // SignedHeaders. bytes=<offset>-<offset+size-1> selects the object range;
   // the server replies 206 (kRDMAReplyPartialContent) for it.
   if (range_offset >= 0) {
-    if (size == 0) return -1;  // a zero-length range would emit bytes=X-(X-1)
+    // A zero-length range would emit bytes=X-(X-1); never sent.
+    if (size == 0) return kRDMALocalError;
     char range_hdr[64];
     snprintf(
         range_hdr, sizeof(range_hdr), "bytes=%lld-%lld",
@@ -355,12 +363,14 @@ inline static ssize_t rdmaPutWithRetry(minio::rdma::Client* rdmaclient,
     minio::rdma::Token token = rdmaclient->GetToken(buf, size);
     if (!token) return -1;
     ret = rdmaPut(sctx, token.c_str(), size);
-    if (ret > 0 || ret == kRDMANotSupported) {
+    if (ret > 0 || ret == kRDMANotSupported || ret == kRDMALocalError) {
       return ret;
     }
-    // The transfer failed. Charge it to the rail this token named so the next
-    // request skips that rail rather than round-robinning back onto it. A 501
-    // returns above: the server declining RDMA says nothing about the rail.
+    // The transfer failed on the wire. Charge it to the rail this token named
+    // so the next request skips that rail rather than round-robinning back
+    // onto it. Two results return above instead: a 501, because the server
+    // declining RDMA says nothing about the rail, and a local error, because
+    // nothing was ever sent.
     //
     // A server-side fault marks every rail in turn, which is safe -- libs3rdma
     // clears all marks once no rail is left usable, so a fault that was never
@@ -381,10 +391,11 @@ inline static ssize_t rdmaGetWithRetry(minio::rdma::Client* rdmaclient,
     minio::rdma::Token token = rdmaclient->GetToken(buf, size);
     if (!token) return -1;
     ret = rdmaGet(sctx, token.c_str(), size, range_offset);
-    if (ret > 0 || ret == kRDMANotSupported) {
+    if (ret > 0 || ret == kRDMANotSupported || ret == kRDMALocalError) {
       return ret;
     }
     // See rdmaPutWithRetry: take the failing rail out of rotation.
+    // A local error returns above; no rail carried it.
     rdmaclient->ReportTokenFailure(token.c_str());
   }
   return ret;
