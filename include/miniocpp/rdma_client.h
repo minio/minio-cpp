@@ -38,6 +38,8 @@
 #include <s3rdma.h>
 
 #include <cstddef>
+#include <iostream>
+#include <string>
 #include <utility>
 
 namespace minio::rdma {
@@ -86,7 +88,11 @@ class Token {
 /// minio::rdma::Shared() below.
 class Client {
  public:
-  Client() : handle_(s3rdma_client_init(nullptr, nullptr, 0)) {}
+  Client() {
+    char err[512] = {0};
+    handle_ = s3rdma_client_init(nullptr, err, sizeof(err));
+    if (handle_ == nullptr) init_error_ = err;
+  }
   ~Client() {
     if (handle_ != nullptr) s3rdma_client_free(handle_);
   }
@@ -94,24 +100,35 @@ class Client {
   Client(const Client&) = delete;
   Client& operator=(const Client&) = delete;
 
+  /// Why the client could not open a device, or empty if it did.
+  ///
+  /// A host with no RDMA hardware is an ordinary outcome -- every transfer
+  /// takes the HTTP path -- but until this was captured the reason was
+  /// discarded, so a misconfigured HCA looked exactly like no HCA at all.
+  const std::string& InitError() const { return init_error_; }
+
   /// Whether this host has a usable RDMA device, so a transfer is worth
   /// attempting. DC is connectionless, so this says nothing about a
   /// particular server: one that will not serve RDMA declines per request
   /// with x-amz-rdma-reply: 501, and the caller falls back to HTTP.
-  bool Ready() const { return s3rdma_client_ready(handle_) != 0; }
+  bool Ready() const {
+    return handle_ != nullptr && s3rdma_client_ready(handle_) != 0;
+  }
 
   /// Pin `buf` for RDMA. Reference counted per address, so nesting a part
   /// registration inside an object registration costs one ibv_reg_mr.
   bool Register(void* buf, size_t size) {
-    return s3rdma_client_register(handle_, buf, size) == 0;
+    return handle_ != nullptr &&
+           s3rdma_client_register(handle_, buf, size) == 0;
   }
   bool Deregister(void* buf) {
-    return s3rdma_client_deregister(handle_, buf) == 0;
+    return handle_ != nullptr && s3rdma_client_deregister(handle_, buf) == 0;
   }
 
   /// Mint a token for `size` bytes at `offset` within the pinned region at
   /// `buf`. Returns an empty Token on failure.
   Token GetToken(void* buf, size_t size, size_t offset = 0) {
+    if (handle_ == nullptr) return Token{};
     char* raw = nullptr;
     if (s3rdma_client_get_token(handle_, buf, size, offset, &raw) != 0) {
       return Token{};
@@ -125,6 +142,7 @@ class Client {
 
  private:
   S3RdmaClientHandle handle_ = nullptr;
+  std::string init_error_;
 };
 
 /// The process-wide client. Meyers singleton — thread-safe per C++11
@@ -135,6 +153,17 @@ class Client {
 /// many callers touch it.
 inline Client& Shared() {
   static Client client;
+  static const bool reported = [] {
+    // Said once, at first use. A host with no RDMA hardware is an ordinary
+    // outcome and every transfer simply takes the HTTP path, but a
+    // misconfigured HCA reads identically from the outside unless the reason
+    // is printed somewhere.
+    if (!client.InitError().empty()) {
+      std::cerr << "RDMA disabled: " << client.InitError() << std::endl;
+    }
+    return true;
+  }();
+  (void)reported;
   return client;
 }
 

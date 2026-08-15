@@ -414,10 +414,12 @@ Response Request::execute() {
   curlpp::Easy request;
   curlpp::Multi requests;
 
-  // Attach the process-wide share so connections, DNS resolutions, and TLS
-  // sessions survive past this Easy handle's lifetime. Also enable TCP
-  // keep-alive so the kernel keeps pooled sockets healthy across idle gaps
-  // between S3 calls. curlpp doesn't wrap either option, so set via libcurl.
+  // Attach this thread's share so connections, DNS resolutions and TLS
+  // sessions survive past this Easy handle's lifetime. Per thread rather than
+  // per process: see CurlShare() for why sharing these across threads
+  // corrupts libcurl's state. Also enable TCP keep-alive so the kernel keeps
+  // pooled sockets healthy across idle gaps between S3 calls. curlpp doesn't
+  // wrap either option, so set via libcurl.
   CURL* const raw_handle = request.getHandle();
   curl_easy_setopt(raw_handle, CURLOPT_SHARE, CurlShare());
   curl_easy_setopt(raw_handle, CURLOPT_TCP_KEEPALIVE, 1L);

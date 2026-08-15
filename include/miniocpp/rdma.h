@@ -34,6 +34,7 @@
 // when a driver is present, and reports plain host memory when it is not.
 #include <cstdio>
 #include <cstring>
+#include <optional>
 #include <string>
 
 #include "credentials.h"
@@ -58,7 +59,7 @@ struct ClientCtx {
   std::string bucket = {};
   std::string object = {};
   std::string uploadId = {};
-  size_t partNumber = 0;
+  std::optional<size_t> partNumber = std::nullopt;
   std::string etag = {};
   minio::s3::BaseUrl url = {};
   std::string region = {};
@@ -163,10 +164,13 @@ inline static ssize_t rdmaPut(minio::rdma::ClientCtx* sctx, const char* token,
 
   if (!sctx->uploadId.empty()) {
     query_params.Add("uploadId", sctx->uploadId);
-    if (sctx->partNumber == 0 || sctx->partNumber > 10000) {
+    // An uploadId without a part number is not a request we can send, and a
+    // part number outside 1..10000 is not one S3 accepts.
+    if (!sctx->partNumber || *sctx->partNumber == 0 ||
+        *sctx->partNumber > 10000) {
       return -1;
     }
-    query_params.Add("partNumber", std::to_string(sctx->partNumber));
+    query_params.Add("partNumber", std::to_string(*sctx->partNumber));
   }
 
   if (minio::error::Error err =

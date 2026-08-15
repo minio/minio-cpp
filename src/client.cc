@@ -713,9 +713,14 @@ Result<GetObjectResponse> Client::GetObject(GetObjectArgs args) {
           .region = region,
       };
 
+      // RAII, matching the multipart paths below. rdmaGetWithRetry signs and
+      // sends an HTTP request, and curlpp throws, so a manual Deregister after
+      // the call is skipped on that path and the buffer stays pinned for the
+      // life of the process.
+      ScopedRDMARegistration reg(&rdma_client, args.buf);
+
       ssize_t ret =
           rdmaGetWithRetry(&rdma_client, &getCtx, args.buf, size, range_offset);
-      rdma_client.Deregister(args.buf);
 
       if (ret > 0) {
         GetObjectResponse go_result;
@@ -1239,8 +1244,11 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
           .region = region,
       };
 
+      // RAII, matching the multipart paths below -- see the GET path for why
+      // a manual Deregister after the call is not enough.
+      ScopedRDMARegistration reg(&rdma_client, args.buf);
+
       ssize_t ret = rdmaPutWithRetry(&rdma_client, &putCtx, args.buf, size);
-      rdma_client.Deregister(args.buf);
 
       if (ret > 0) {
         PutObjectResponse resp;
