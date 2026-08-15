@@ -72,43 +72,53 @@ void EnsureGlobalCurlInit() {
   (void)kCleanup;
 }
 
-// One mutex per CURL_LOCK_DATA_* slot. A single global mutex deadlocks
-// because libcurl can hold one slot's lock (e.g. SSL_SESSION) while
-// acquiring another (e.g. CONNECT) on the same thread.
-constexpr int kCurlShareSlots = CURL_LOCK_DATA_LAST;
-std::mutex* CurlShareMutexes() {
-  static std::mutex m[kCurlShareSlots];
-  return m;
-}
-
-void CurlShareLockCb(CURL*, curl_lock_data data, curl_lock_access, void*) {
-  if (data >= 0 && data < kCurlShareSlots) CurlShareMutexes()[data].lock();
-}
-
-void CurlShareUnlockCb(CURL*, curl_lock_data data, void*) {
-  if (data >= 0 && data < kCurlShareSlots) CurlShareMutexes()[data].unlock();
-}
-
-// Process-wide CURLSH that keeps the connection cache, DNS cache, and TLS
-// session cache alive across requests. Without this, every Request::execute()
-// constructs a fresh curlpp::Easy whose private caches are discarded on
-// destruction — forcing a full TLS handshake on every signed S3 call.
-CURLSH* GlobalCurlShare() {
-  static CURLSH* const share = [] {
-    EnsureGlobalCurlInit();
-    CURLSH* s = curl_share_init();
-    if (s == nullptr) {
+// Connection, DNS and TLS-session caches, kept per thread.
+//
+// These were once a single process-wide CURLSH with per-slot mutexes, which
+// libcurl's own documentation warns against: a shared connection cache is not
+// safe to use from several threads at once, and this crashed reliably under
+// concurrent PUTs -- a wild pointer read inside curl_multi_perform, with the
+// mutexes held exactly as documented. Bisecting the slots on libcurl 8.5:
+//
+//   none                  clean          CONNECT only          crashes
+//   DNS only              clean          CONNECT + SSL_SESSION crashes
+//   DNS + SSL_SESSION     crashes
+//
+// So the sharing itself is the problem, not one slot. Giving each thread its
+// own share keeps what the share was for -- a connection and TLS session
+// surviving past one Easy handle, so a signed S3 call does not pay a fresh
+// handshake every time -- while removing the cross-thread access entirely.
+// Nothing is shared between threads, so no lock callbacks are needed.
+//
+// The handle is destroyed when its thread exits. Every Easy that used it is
+// stack-local to Request::execute() and long gone by then.
+class ThreadCurlShare {
+ public:
+  ThreadCurlShare() : share_(curl_share_init()) {
+    if (share_ == nullptr) {
       std::cerr << "curl_share_init failed" << std::endl;
       std::terminate();
     }
-    curl_share_setopt(s, CURLSHOPT_LOCKFUNC, &CurlShareLockCb);
-    curl_share_setopt(s, CURLSHOPT_UNLOCKFUNC, &CurlShareUnlockCb);
-    curl_share_setopt(s, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
-    curl_share_setopt(s, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
-    curl_share_setopt(s, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
-    return s;
-  }();
-  return share;
+    curl_share_setopt(share_, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
+    curl_share_setopt(share_, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
+    curl_share_setopt(share_, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
+  }
+  ~ThreadCurlShare() {
+    if (share_ != nullptr) curl_share_cleanup(share_);
+  }
+  ThreadCurlShare(const ThreadCurlShare&) = delete;
+  ThreadCurlShare& operator=(const ThreadCurlShare&) = delete;
+
+  CURLSH* get() const { return share_; }
+
+ private:
+  CURLSH* share_;
+};
+
+CURLSH* CurlShare() {
+  EnsureGlobalCurlInit();
+  static thread_local ThreadCurlShare share;
+  return share.get();
 }
 
 }  // namespace
@@ -409,7 +419,7 @@ Response Request::execute() {
   // keep-alive so the kernel keeps pooled sockets healthy across idle gaps
   // between S3 calls. curlpp doesn't wrap either option, so set via libcurl.
   CURL* const raw_handle = request.getHandle();
-  curl_easy_setopt(raw_handle, CURLOPT_SHARE, GlobalCurlShare());
+  curl_easy_setopt(raw_handle, CURLOPT_SHARE, CurlShare());
   curl_easy_setopt(raw_handle, CURLOPT_TCP_KEEPALIVE, 1L);
 
   // Fail a stalled transfer instead of hanging forever. Skipped when the caller
