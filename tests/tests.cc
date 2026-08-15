@@ -1540,6 +1540,43 @@ class Tests {
       RemoveObject(bucket_name_, object_name);
     }
   }  // TestAsyncOperations
+
+  // Issue #205 regression: a failed AssumeRoleProvider::Fetch() leaves
+  // access_key/secret_key/session_token empty. The failure must be surfaced
+  // via creds.err instead of silently printing empty fields; on success all
+  // three temporary credentials must be non-empty.
+  void AssumeRoleProvider() {
+    std::cout << "AssumeRoleProvider()" << std::endl;
+
+    const minio::s3::BaseUrl& base_url = client_.GetBaseUrl();
+    minio::http::Url sts_endpoint(base_url.https, base_url.host, base_url.port);
+
+    std::string access_key;
+    std::string secret_key;
+    minio::utils::GetEnv(access_key, "ACCESS_KEY");
+    minio::utils::GetEnv(secret_key, "SECRET_KEY");
+
+    std::string region =
+        base_url.region.empty() ? "us-east-1" : base_url.region;
+    minio::creds::AssumeRoleProvider provider(sts_endpoint, access_key,
+                                              secret_key, 900, "", region);
+    minio::creds::Credentials creds = provider.Fetch();
+
+    if (!creds.err.String().empty()) {
+      // Failure path (issue #205): empty credential fields must be
+      // accompanied by a diagnosable error.
+      throw std::runtime_error(
+          "AssumeRoleProvider(): Fetch() failed with an error" +
+          creds.err.String());
+      return;
+    }
+
+    if (creds.access_key.empty() || creds.secret_key.empty() ||
+        creds.session_token.empty()) {
+      throw std::runtime_error(
+          "AssumeRoleProvider(): temporary credentials are empty");
+    }
+  }
 };  // class Tests
 
 // Regression test for the host/port parsing guard in http::Url::Parse():
@@ -1637,6 +1674,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
   tests.SelectObjectContent();
   tests.ListenBucketNotification();
   tests.TestAsyncOperations();
+  tests.AssumeRoleProvider();
 
   return EXIT_SUCCESS;
 }
