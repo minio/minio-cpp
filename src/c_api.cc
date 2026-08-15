@@ -58,6 +58,33 @@ class ReadCbStreamBuf : public std::streambuf {
   char buf_[64 * 1024];
 };
 
+// Parts kept in flight for a streaming upload.
+//
+// Left unset, PutObjectArgs keeps one part in flight and uploads strictly one
+// at a time: the next part is not read until the previous one has been
+// acknowledged, so the link sits idle for a whole round trip per part. On an
+// RDMA stream that measured 167.7 MiB/s per caller, against 318.6 at the four
+// this returns.
+//
+// It is not free. The parallel path allocates one part buffer per in-flight
+// part and registers each for RDMA, so the pinned memory is
+// max_inflight_parts * part_size -- 64 MiB at four. A caller running many
+// concurrent uploads multiplies that, which is why this stays modest and
+// tuning is left to the environment rather than raised for everyone.
+inline unsigned int StreamInflightParts() {
+  if (const char* env = std::getenv("MINIOCPP_STREAM_INFLIGHT_PARTS")) {
+    char* end = nullptr;
+    const unsigned long v = std::strtoul(env, &end, 10);
+    // *end == '\0' matters: strtoul stops at the first non-digit and still
+    // reports success, so "99junk" would otherwise select 99 and pin 1.5 GiB
+    // -- the opposite of the modest fallback a typo deserves.
+    if (end != env && *end == '\0' && v >= 1 && v <= 100) {
+      return static_cast<unsigned int>(v);
+    }
+  }
+  return 4;
+}
+
 struct ClientHolder {
   minio::s3::BaseUrl base_url;
   std::unique_ptr<minio::creds::StaticProvider> provider;
@@ -127,6 +154,7 @@ ssize_t miniocpp_put_object(miniocpp_client* c, const char* bucket,
     args.stream = sis.get();
     args.object_size = static_cast<long>(size);
     args.part_size = 16 * 1024 * 1024L;
+    args.max_inflight_parts = StreamInflightParts();
   }
 
   auto resp = holder->client->PutObject(args);
