@@ -136,6 +136,29 @@ class Client {
     return Token{raw};
   }
 
+  /// Rails this client can mint tokens on: every device with an ACTIVE port,
+  /// or the ones named in $S3RDMA_DEVICE.
+  int NicCount() const {
+    return handle_ == nullptr ? 0 : s3rdma_client_nic_count(handle_);
+  }
+
+  /// Rails currently usable. Below NicCount() means a rail failed a transfer
+  /// or lost its port and the client is serving on what is left.
+  int HealthyNicCount() const {
+    return handle_ == nullptr ? 0 : s3rdma_client_healthy_nic_count(handle_);
+  }
+
+  /// Tell the library the transfer for `token` failed, so the rail that token
+  /// named is skipped until it recovers.
+  ///
+  /// Without this a dead rail stays in rotation: the retry re-mints and
+  /// happens to land elsewhere, but the next request round-robins straight
+  /// back onto the dead rail, so every request keeps paying a failed attempt.
+  bool ReportTokenFailure(const char* token) {
+    return handle_ != nullptr && token != nullptr &&
+           s3rdma_client_report_token_failure(handle_, token) == 0;
+  }
+
   static MemoryType GetMemoryType(const void* ptr) {
     return static_cast<MemoryType>(s3rdma_client_memory_type(ptr));
   }
