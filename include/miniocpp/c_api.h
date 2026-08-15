@@ -87,9 +87,9 @@ MINIOCPP_API ssize_t miniocpp_get_object(miniocpp_client* client,
 MINIOCPP_API void* miniocpp_alloc_aligned(size_t size);
 MINIOCPP_API void miniocpp_free_aligned(void* ptr);
 
-// Returns 1 if the process-wide cuObjClient is currently connected to a
-// cuObjServer (i.e. an RDMA transfer is likely to succeed), 0 otherwise.
-// Safe to call before any IO. Does not require an existing miniocpp_client.
+// Returns 1 if this host has a usable RDMA device (i.e. an RDMA transfer is
+// worth attempting), 0 otherwise. Safe to call before any IO. Does not
+// require an existing miniocpp_client.
 MINIOCPP_API int miniocpp_rdma_available(void);
 
 // Thread-local last-error message from the most recent failing call on the

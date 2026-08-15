@@ -41,12 +41,11 @@ endif()
 
 option(MINIO_CPP_TEST "Build tests" OFF)
 option(MINIO_CPP_MAKE_DOC "Build documentation" OFF)
-# RDMA / GPU Direct Storage support. OFF by default so consumers without
-# NVIDIA cuFile + cuObj + ibverbs + rdmacm do not need those libraries on
-# the host. When ON, links against the vendored NVIDIA blobs in
-# vendor/cuobj/ and defines MINIO_CPP_RDMA so headers expose the
-# GetObjectRDMAArgs / PutObjectRDMAArgs API surface.
-option(MINIO_CPP_ENABLE_RDMA "Enable RDMA and GPU Direct Storage support" OFF)
+# RDMA support. OFF by default so consumers with no RDMA hardware do not
+# need the library on the host. When ON, links against the vendored
+# libs3rdma in vendor/s3rdma/ and defines MINIO_CPP_RDMA so headers expose
+# the GetObjectRDMAArgs / PutObjectRDMAArgs API surface.
+option(MINIO_CPP_ENABLE_RDMA "Enable RDMA support" OFF)
 
 set(MINIO_CPP_CFLAGS)
 set(MINIO_CPP_INCLUDES)
@@ -74,12 +73,14 @@ if (MINIO_CPP_ENABLE_RDMA)
   else()
     message(FATAL_ERROR "MINIO_CPP_ENABLE_RDMA: unsupported CMAKE_SYSTEM_PROCESSOR '${CMAKE_SYSTEM_PROCESSOR}'")
   endif()
-  set(MINIO_CPP_RDMA_LIBDIR "${CMAKE_SOURCE_DIR}/vendor/cuobj/lib/${MINIO_CPP_RDMA_ARCH}")
-  if (NOT EXISTS "${MINIO_CPP_RDMA_LIBDIR}/libcuobjclient.so")
-    message(FATAL_ERROR "MINIO_CPP_ENABLE_RDMA: ${MINIO_CPP_RDMA_ARCH} cuObj client libs not vendored at ${MINIO_CPP_RDMA_LIBDIR}")
+  set(MINIO_CPP_RDMA_LIBDIR "${CMAKE_SOURCE_DIR}/vendor/s3rdma/lib/${MINIO_CPP_RDMA_ARCH}")
+  if (NOT EXISTS "${MINIO_CPP_RDMA_LIBDIR}/libs3rdma.so")
+    message(FATAL_ERROR "MINIO_CPP_ENABLE_RDMA: libs3rdma not vendored for ${MINIO_CPP_RDMA_ARCH} at ${MINIO_CPP_RDMA_LIBDIR}. Run ./build-libs.sh in the s3rdma repo to build and vendor both arches.")
   endif()
-  list(APPEND MINIO_CPP_INCLUDES ${CMAKE_SOURCE_DIR}/vendor/cuobj/include)
-  list(APPEND MINIO_CPP_LIBS "-Bdynamic -L${MINIO_CPP_RDMA_LIBDIR} -lcufile -lpthread -lnuma -ldl -libverbs -lrdmacm -lrt -lcuobjclient")
+  # libs3rdma resolves the RDMA stack itself, at runtime, so nothing else is
+  # linked here and the SDK builds on a host with no RDMA packages installed.
+  list(APPEND MINIO_CPP_INCLUDES ${CMAKE_SOURCE_DIR}/vendor/s3rdma/include)
+  list(APPEND MINIO_CPP_LIBS "-Bdynamic -L${MINIO_CPP_RDMA_LIBDIR} -Wl,-rpath,${MINIO_CPP_RDMA_LIBDIR} -ls3rdma")
 endif()
 
 # Dependencies
@@ -148,9 +149,8 @@ set(MINIO_CPP_HEADERS
 if (MINIO_CPP_ENABLE_RDMA)
   list(APPEND MINIO_CPP_HEADERS
     include/miniocpp/c_api.h
-    include/miniocpp/nvidia-cufile.h
-    include/miniocpp/nvidia-cuobjclient.h
     include/miniocpp/rdma.h
+    include/miniocpp/rdma_client.h
   )
   list(APPEND MINIO_CPP_SOURCES src/c_api.cc)
 endif()

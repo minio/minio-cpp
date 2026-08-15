@@ -29,8 +29,17 @@
 // via the CUDA Toolkit, use `#include <cuda_runtime.h>` / `#include <cuda.h>`
 // directly, and let the linker resolve cu*/cuda* symbols at build time.
 //
-// CUdeviceptr / CUdevice / CUcontext / CUresult come from <cuda.h>,
-// transitively via <miniocpp/client.h>.
+// CUdeviceptr / CUdevice / CUcontext / CUresult are declared below rather
+// than included: the SDK links no CUDA library and pulls in no CUDA header,
+// and this example deliberately builds without the CUDA Toolkit. A production
+// application includes <cuda.h> and gets the real ones.
+namespace {
+using CUresult = int;
+using CUdevice = int;
+using CUdeviceptr = unsigned long long;
+struct CUctx_st;
+using CUcontext = CUctx_st *;
+}  // namespace
 namespace {
 
 struct Cuda {

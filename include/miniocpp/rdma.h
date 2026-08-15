@@ -20,20 +20,18 @@
 
 // CUDA dependency model
 // ---------------------
-// minio-cpp does NOT depend on the CUDA Toolkit (cudart / nvcc / cuda_runtime).
-// The SDK links only against libcufile + libcuobjclient (vendored), and its
-// headers pull in cuda.h solely for type declarations (CUdeviceptr, etc.)
-// that appear in cuFile / cuObj API signatures — no CUDA driver or runtime
-// symbols are called from within minio-cpp itself. The vendored copy of
-// cuda.h under vendor/cuobj/include/ satisfies this type-only include, so
-// the SDK compiles and runs on hosts without the CUDA Toolkit.
+// minio-cpp does NOT depend on the CUDA Toolkit (cudart / nvcc / cuda_runtime),
+// nor on any CUDA header. The SDK links only against libs3rdma (vendored under
+// vendor/s3rdma/), which is plain IBTA verbs, and calls no CUDA symbol. The SDK
+// therefore compiles and runs on hosts with no CUDA Toolkit and no NVIDIA
+// driver installed.
 //
 // CUDA is strictly an APPLICATION concern: if your application allocates
 // GPU buffers (cudaMalloc / cuMemAlloc) and hands them to PutObjectRDMAArgs
 // or GetObjectRDMAArgs, *your* application links against CUDA. Applications
 // that pass pinned host memory (posix_memalign / aligned_alloc) don't need
-// CUDA at all — cuFile detects host pointers via cuFileGetMemoryType and
-// skips the GPU codepath.
+// CUDA at all — libs3rdma classifies a pointer through dlopen("libcuda.so.1")
+// when a driver is present, and reports plain host memory when it is not.
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -41,11 +39,33 @@
 #include "credentials.h"
 #include "error.h"
 #include "http.h"
-#include "nvidia-cufile.h"
-#include "nvidia-cuobjclient.h"
+#include "rdma_client.h"
 #include "request.h"
 #include "signer.h"
 #include "utils.h"
+
+namespace minio::rdma {
+
+// Per-request state the RDMA control plane needs to build and sign the S3
+// request that carries the token.
+struct ClientCtx {
+  // All members carry explicit in-class defaults so designated-initializer
+  // construction (e.g. `ClientCtx{.bucket=...}`) does not trip
+  // -Wmissing-field-initializers for the std::string fields we leave
+  // unspecified at single-shot Put/Get call sites (uploadId/partNumber for
+  // non-multipart paths, etag/checksum for fields populated by the callee).
+  minio::creds::Provider* const provider = nullptr;
+  std::string bucket = {};
+  std::string object = {};
+  std::string uploadId = {};
+  size_t partNumber = 0;
+  std::string etag = {};
+  minio::s3::BaseUrl url = {};
+  std::string region = {};
+  std::string checksum = {};
+};
+
+}  // namespace minio::rdma
 
 // SHA256 hash of empty string (for RDMA requests with no body)
 inline constexpr const char* kEmptySha256 =
@@ -67,29 +87,29 @@ inline constexpr int kRDMAReplyNotImplemented = 501;
 // Return codes for rdmaPut/rdmaGet
 inline constexpr ssize_t kRDMANotSupported = -2;
 
-// Maximum buffer a single cuObject registration (cuMemObjGetDescriptor) can
-// pin — 4 GiB. RDMA is only attempted for buffers up to this size; a larger
-// buffer cannot be registered for RDMA, so PutObject/GetObject transfer it over
-// a single ordinary HTTP request instead (the buffer is already resident, and
-// AIStor accepts a single PUT up to kMaxObjectSize == 5 TiB — far beyond this
-// limit and beyond anything a client can pin or allocate). Sizing the buffer is
-// the caller's responsibility; the SDK does not chunk registrations.
-inline constexpr size_t kCuObjMaxMemoryRegSize = 4ULL * 1024 * 1024 * 1024;
+// Largest transfer a single RDMA descriptor can describe: the
+// x-amz-rdma-token carries the window size in a 32-bit field. RDMA is only
+// attempted for buffers up to this size; a larger buffer cannot be named to
+// the server at all, so PutObject/GetObject transfer it over a single ordinary
+// HTTP request instead (the buffer is already resident, and AIStor accepts a
+// single PUT up to kMaxObjectSize == 5 TiB — far beyond this limit and beyond
+// anything a client can pin or allocate). Sizing the buffer is the caller's
+// responsibility; the SDK does not chunk registrations.
+inline constexpr size_t kRDMAMaxMemoryRegSize = 0xFFFFFFFFULL;
 
 // RDMA control-plane timeouts (seconds). The HTTP exchange carries only
 // the token and a few headers — keep them aggressive so a dead NIC surfaces
-// fast and the retry path can pick up the failover NIC.
+// fast and the caller can fall back to HTTP without a long stall.
 inline constexpr long kRDMAConnectTimeoutSecs = 5;
 inline constexpr long kRDMATimeoutSecs = 10;
 
-// Extract the client NIC IP from the 81-char RDMA token. libcuobjclient
-// 1.2.0+ encodes the source NIC's GID in the last 32 hex chars of the
-// descriptor as an IPv4-mapped IPv6 suffix ("...ffffAABBCCDD"). Binding
-// the outbound HTTP socket to that address (via CURLOPT_INTERFACE) keeps
-// the TCP session and the RDMA peer on the same NIC, so the server's
-// RDMA_READ back to the client hits the same HCA that delivered the HTTP
-// request. Returns empty string if the token doesn't follow the expected
-// layout (older client, non-multipath).
+// Extract the client NIC IP from the 81-char RDMA token, whose last 32 hex
+// chars are the source NIC's GID. Binding the outbound HTTP socket to that
+// address (via CURLOPT_INTERFACE) keeps the TCP session and the RDMA peer on
+// the same NIC, so the server's RDMA_READ back to the client hits the same HCA
+// that delivered the HTTP request. Returns empty string unless the GID is an
+// IPv4-mapped IPv6 address ("...ffffAABBCCDD"), which is what a RoCEv2 GID
+// over IPv4 looks like — an InfiniBand or IPv6 GID names no address to bind.
 inline static std::string parseClientNICFromToken(const char* token) {
   if (token == nullptr) return {};
   size_t n = strlen(token);
@@ -109,10 +129,10 @@ inline static std::string parseClientNICFromToken(const char* token) {
   return std::string(buf);
 }
 
-// Maximum attempts for NIC-failover aware retry. Two attempts is sufficient:
-// the first failure is what surfaces the bad NIC to libcuobjclient's
-// async-event + health-check threads; the second mint will route to the
-// backup NIC when rdma_multipath_enabled=true and a healthy backup exists.
+// Attempts per transfer. A second attempt mints a fresh token, which is what
+// recovers a transfer whose first token was rejected or whose queue pair hit a
+// transient completion error; anything persistent fails again and falls back
+// to HTTP rather than stalling the caller.
 inline constexpr int kRDMAMaxAttempts = 2;
 
 // parseRDMAReply maps the server's x-amz-rdma-reply header to a transfer
@@ -131,7 +151,7 @@ inline static int parseRDMAReply(const std::string& rdma_reply) {
   }
 }
 
-inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
+inline static ssize_t rdmaPut(minio::rdma::ClientCtx* sctx, const char* token,
                               size_t size) {
   // The token is the RDMA descriptor verbatim; its leading fields already
   // carry the buffer address and transfer size, so it is sent as-is.
@@ -225,7 +245,7 @@ inline static ssize_t rdmaPut(s3_rdma_client_ctx_t* sctx, const char* token,
 // starting at that object offset. The object offset travels in a Range header
 // (the server derives its rangeBase from it) and is independent of the buffer
 // address carried in the RDMA token — see AIStor rdmaTransferBounds().
-inline static ssize_t rdmaGet(s3_rdma_client_ctx_t* sctx, const char* token,
+inline static ssize_t rdmaGet(minio::rdma::ClientCtx* sctx, const char* token,
                               size_t size, int64_t range_offset = -1) {
   // The token is the RDMA descriptor verbatim; its leading fields already
   // carry the buffer address and transfer size, so it is sent as-is.
@@ -315,31 +335,22 @@ inline static ssize_t rdmaGet(s3_rdma_client_ctx_t* sctx, const char* token,
 }
 
 // rdmaPutWithRetry mints a fresh RDMA token, issues rdmaPut, releases the
-// token, and retries once on transient RDMA failure. On the second attempt
-// libcuobjclient's multipath state will route the mint to the backup NIC
-// if the primary has been flagged unhealthy; this turns what would have
-// been a fail-and-fall-back-to-HTTP into a successful RDMA op across the
-// NIC transition.
+// token, and retries once on transient RDMA failure.
 //
-// Caller must have already registered the buffer via cuMemObjGetDescriptor.
+// Caller must have already registered the buffer via Client::Register.
 //
 // Returns:
 //   >0                 bytes transferred (success)
 //   kRDMANotSupported  server sent x-amz-rdma-reply: 501 (fall back to HTTP)
 //   -1                 exhausted retries (fall back to HTTP)
-inline static ssize_t rdmaPutWithRetry(cuObjClient* rdmaclient,
-                                       s3_rdma_client_ctx_t* sctx, void* buf,
+inline static ssize_t rdmaPutWithRetry(minio::rdma::Client* rdmaclient,
+                                       minio::rdma::ClientCtx* sctx, void* buf,
                                        size_t size) {
   ssize_t ret = -1;
   for (int attempt = 0; attempt < kRDMAMaxAttempts; ++attempt) {
-    char* token = nullptr;
-    cuObjErr_t terr =
-        rdmaclient->cuMemObjGetRDMAToken(buf, size, 0, CUOBJ_PUT, &token);
-    if (terr != CU_OBJ_SUCCESS || token == nullptr) {
-      return -1;
-    }
-    ret = rdmaPut(sctx, token, size);
-    rdmaclient->cuMemObjPutRDMAToken(token);
+    minio::rdma::Token token = rdmaclient->GetToken(buf, size);
+    if (!token) return -1;
+    ret = rdmaPut(sctx, token.c_str(), size);
     if (ret > 0 || ret == kRDMANotSupported) {
       return ret;
     }
@@ -349,20 +360,15 @@ inline static ssize_t rdmaPutWithRetry(cuObjClient* rdmaclient,
 
 // rdmaGetWithRetry is the GET counterpart to rdmaPutWithRetry. Same
 // contract: caller registers the buffer, this helper handles token
-// lifecycle and one retry for NIC failover.
-inline static ssize_t rdmaGetWithRetry(cuObjClient* rdmaclient,
-                                       s3_rdma_client_ctx_t* sctx, void* buf,
+// lifecycle and the retry.
+inline static ssize_t rdmaGetWithRetry(minio::rdma::Client* rdmaclient,
+                                       minio::rdma::ClientCtx* sctx, void* buf,
                                        size_t size, int64_t range_offset = -1) {
   ssize_t ret = -1;
   for (int attempt = 0; attempt < kRDMAMaxAttempts; ++attempt) {
-    char* token = nullptr;
-    cuObjErr_t terr =
-        rdmaclient->cuMemObjGetRDMAToken(buf, size, 0, CUOBJ_GET, &token);
-    if (terr != CU_OBJ_SUCCESS || token == nullptr) {
-      return -1;
-    }
-    ret = rdmaGet(sctx, token, size, range_offset);
-    rdmaclient->cuMemObjPutRDMAToken(token);
+    minio::rdma::Token token = rdmaclient->GetToken(buf, size);
+    if (!token) return -1;
+    ret = rdmaGet(sctx, token.c_str(), size, range_offset);
     if (ret > 0 || ret == kRDMANotSupported) {
       return ret;
     }

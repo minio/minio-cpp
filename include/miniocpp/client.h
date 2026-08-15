@@ -126,18 +126,9 @@ class Client : public BaseClient {
                                       std::string& upload_id, char* buf);
 
 #ifdef MINIO_CPP_RDMA
-  // Process-wide RDMA client, one instance for the whole process, lazily
-  // initialised on first use via std::call_once. Reasons this has to be
-  // process-wide rather than per-Client instance:
-  //   (1) libcuobjclient drives libcufile which maintains process-global
-  //       state (cufile.json, device/peer cache, health monitor threads,
-  //       multipath registration). Two concurrent constructors corrupt
-  //       the glibc heap ("malloc(): invalid size (unsorted)").
-  //   (2) Even after init, reusing a single client avoids the per-call
-  //       connect+register race that used to make isConnected() flap
-  //       under concurrency and silently skip RDMA in favour of HTTP.
-  // See SharedRDMAClient() in client.cc for the definition.
-  static cuObjClient& SharedRDMAClient();
+  // The process-wide RDMA client — see minio::rdma::Shared() in
+  // rdma_client.h, which this returns.
+  static minio::rdma::Client& SharedRDMAClient();
 #endif
 
  public:

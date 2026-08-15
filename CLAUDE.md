@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MinIO C++ SDK is an S3-compatible object storage client library. This fork extends the upstream minio-cpp with RDMA (Remote Direct Memory Access) and NVIDIA GPU Direct Storage support for high-performance data transfers.
+MinIO C++ SDK is an S3-compatible object storage client library. This fork extends the upstream minio-cpp with RDMA (Remote Direct Memory Access) support for high-performance data transfers, over RoCE or native InfiniBand, into host or GPU memory.
 
 ## Build Commands
 
@@ -12,8 +12,8 @@ MinIO C++ SDK is an S3-compatible object storage client library. This fork exten
 - CMake 3.10+
 - C++17 compiler
 - vcpkg package manager (set `VCPKG_ROOT` environment variable)
-- NVIDIA CUDA toolkit at `/usr/local/cuda` (for RDMA/GPU features)
-- cuObjClient library (for RDMA support)
+- `libs3rdma` vendored under `vendor/s3rdma/` (for RDMA support). Build and
+  vendor it for both arches with `./build-libs.sh` in the sibling s3rdma repo.
 
 ### Configure and Build
 
@@ -68,14 +68,19 @@ Examples are built when `MINIO_CPP_TEST=ON`. Run individual examples:
 - **`providers.h`/`credentials.h`** - Credential providers (StaticProvider, EnvProvider, etc.)
 - **`signer.h`** - AWS Signature V4 request signing
 
-### RDMA/GPU Support (Fork-specific)
+### RDMA Support (Fork-specific)
 
-- **`rdma.h`** - RDMA transport layer with S3 signing for GPU Direct Storage
-- **`rdma-httplib.h`** - HTTP-over-RDMA implementation
-- **`nvidia-cufile.h`** - NVIDIA cuFile integration headers
-- **`nvidia-cuobjclient.h`** - cuObjClient wrapper for RDMA operations
+- **`rdma_client.h`** - `minio::rdma::Client`, a thin RAII wrapper over the
+  `libs3rdma` client C API (register / mint token / classify pointer), plus
+  the process-wide `minio::rdma::Shared()` accessor
+- **`rdma.h`** - RDMA transport layer: token minting plus the S3 signing and
+  HTTP control plane that carries `x-amz-rdma-token`
 
-The RDMA implementation uses `objectPut`/`objectGet` callbacks that are invoked by the cuFile RDMA layer for direct GPU-to-storage transfers.
+The SDK is the RDMA passive side: it pins the caller's buffer, mints a token
+describing it, and sends that token on an ordinary signed HTTP request. The
+server performs the one-sided transfer (READ for a PUT, WRITE for a GET) and
+reports the outcome in `x-amz-rdma-reply`; a 501 means the server declined
+RDMA and the caller falls back to HTTP.
 
 ## Dependencies (vcpkg)
 
@@ -85,7 +90,7 @@ The RDMA implementation uses `objectPut`/`objectGet` callbacks that are invoked 
 - openssl - TLS/crypto
 - pugixml - XML parsing for S3 responses
 
-Additional system dependencies for RDMA: libcufile, libcuobjclient, libibverbs, librdmacm
+RDMA needs no additional system dependency at build time: libs3rdma is vendored, and it resolves the RDMA stack itself at runtime.
 
 ## Code Style Guidelines
 

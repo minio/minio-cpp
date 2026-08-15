@@ -50,8 +50,8 @@
 #include "miniocpp/utils.h"
 
 #ifdef MINIO_CPP_RDMA
-#include "miniocpp/nvidia-cuobjclient.h"
 #include "miniocpp/rdma.h"
+#include "miniocpp/rdma_client.h"
 #endif
 
 namespace minio::s3 {
@@ -224,18 +224,18 @@ class ScopedCudaContext {
 // True when buf is not ordinary host memory, i.e. the HTTP fallbacks cannot
 // touch it directly.
 bool IsDeviceBuffer(void* buf) {
-  return buf != nullptr &&
-         cuObjClient::getMemoryType(buf) != CUOBJ_MEMORY_SYSTEM;
+  return buf != nullptr && minio::rdma::Client::GetMemoryType(buf) !=
+                               minio::rdma::MemoryType::kSystem;
 }
 
 // Releases an RDMA buffer registration when it goes out of scope. Declared
 // *after* the buffer it covers, so destruction order (reverse of declaration)
 // guarantees deregister-before-free regardless of which control path returns.
 struct ScopedRDMARegistration {
-  cuObjClient* client = nullptr;
+  minio::rdma::Client* client = nullptr;
   void* buf = nullptr;
   ScopedRDMARegistration() = default;
-  ScopedRDMARegistration(cuObjClient* c, void* p) : client(c), buf(p) {}
+  ScopedRDMARegistration(minio::rdma::Client* c, void* p) : client(c), buf(p) {}
   ScopedRDMARegistration(const ScopedRDMARegistration&) = delete;
   ScopedRDMARegistration& operator=(const ScopedRDMARegistration&) = delete;
   ScopedRDMARegistration(ScopedRDMARegistration&& o) noexcept
@@ -257,8 +257,8 @@ struct ScopedRDMARegistration {
 
  private:
   void Release() {
-    if (client && buf && client->cuMemObjPutDescriptor(buf) != 0) {
-      std::cerr << "warning: cuMemObjPutDescriptor failed during teardown"
+    if (client && buf && !client->Deregister(buf)) {
+      std::cerr << "warning: RDMA deregistration failed during teardown"
                 << std::endl;
     }
     client = nullptr;
@@ -440,17 +440,8 @@ void RemoveObjectsResult::Populate() {
 }
 
 #ifdef MINIO_CPP_RDMA
-// Meyers singleton — thread-safe per C++11 [stmt.dcl]/4 ("If control
-// enters the declaration concurrently while the variable is being
-// initialized, the concurrent execution shall wait for completion of the
-// initialization."). This replaces the previous per-call cuObjClient
-// construction, which was racy under concurrency and caused the
-// glibc-level "malloc(): invalid size (unsorted)" abort when multiple
-// warp workers started up simultaneously.
-cuObjClient& Client::SharedRDMAClient() {
-  static CUObjIOOps ops{};
-  static cuObjClient client{ops, CUOBJ_PROTO_RDMA_DC_V1};
-  return client;
+minio::rdma::Client& Client::SharedRDMAClient() {
+  return minio::rdma::Shared();
 }
 #endif
 
@@ -703,28 +694,26 @@ Result<GetObjectResponse> Client::GetObject(GetObjectArgs args) {
     const int64_t range_offset =
         args.offset.has_value() ? static_cast<int64_t>(*args.offset) : -1;
 
-    // Process-wide cuObjClient — see client.h for the race rationale.
-    // A buffer larger than a single cuObject registration
-    // (kCuObjMaxMemoryRegSize, 4 GiB) cannot be pinned for RDMA; skip straight
-    // to the HTTP path rather than issue a registration that is guaranteed to
-    // fail.
-    cuObjClient& rdma_client = SharedRDMAClient();
-    bool use_rdma = size <= kCuObjMaxMemoryRegSize &&
-                    rdma_client.cuMemObjGetDescriptor(args.buf, size) == 0;
+    // Process-wide RDMA client — see client.h. A buffer larger than one RDMA
+    // descriptor can describe (kRDMAMaxMemoryRegSize) cannot be named to the
+    // server; skip straight to the HTTP path rather than issue a registration
+    // that is guaranteed to fail.
+    minio::rdma::Client& rdma_client = SharedRDMAClient();
+    bool use_rdma =
+        size <= kRDMAMaxMemoryRegSize && rdma_client.Register(args.buf, size);
 
     if (use_rdma) {
-      s3_rdma_client_ctx getCtx = {
+      minio::rdma::ClientCtx getCtx = {
           .provider = provider_,
           .bucket = args.bucket,
           .object = args.object,
           .url = base_url_,
           .region = region,
-          .op = CUOBJ_GET,
       };
 
       ssize_t ret =
           rdmaGetWithRetry(&rdma_client, &getCtx, args.buf, size, range_offset);
-      rdma_client.cuMemObjPutDescriptor(args.buf);
+      rdma_client.Deregister(args.buf);
 
       if (ret > 0) {
         GetObjectResponse go_result;
@@ -922,8 +911,8 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args,
     up_args.part_size = part_size;
 #ifdef MINIO_CPP_RDMA
     up_args.rdmaclient = args.rdmaclient;
-    if (buf != nullptr &&
-        cuObjClient::getMemoryType(buf) == CUOBJ_MEMORY_SYSTEM) {
+    if (buf != nullptr && minio::rdma::Client::GetMemoryType(buf) ==
+                              minio::rdma::MemoryType::kSystem) {
       const std::string crc = utils::Crc64NvmeBase64(buf, part_size);
       up_args.checksum_crc64nvme = crc;
       up_args.headers.Add("x-amz-checksum-crc64nvme", crc);
@@ -1232,25 +1221,24 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
 
     const size_t size = *args.size;
 
-    // A buffer larger than a single cuObject registration
-    // (kCuObjMaxMemoryRegSize, 4 GiB) cannot be pinned for RDMA; skip straight
+    // A buffer larger than one RDMA descriptor can describe
+    // (kRDMAMaxMemoryRegSize) cannot be named to the server; skip straight
     // to the single HTTP PUT below.
-    cuObjClient& rdma_client = SharedRDMAClient();
-    bool use_rdma = size <= kCuObjMaxMemoryRegSize &&
-                    rdma_client.cuMemObjGetDescriptor(args.buf, size) == 0;
+    minio::rdma::Client& rdma_client = SharedRDMAClient();
+    bool use_rdma =
+        size <= kRDMAMaxMemoryRegSize && rdma_client.Register(args.buf, size);
 
     if (use_rdma) {
-      s3_rdma_client_ctx putCtx = {
+      minio::rdma::ClientCtx putCtx = {
           .provider = provider_,
           .bucket = args.bucket,
           .object = args.object,
           .url = base_url_,
           .region = region,
-          .op = CUOBJ_PUT,
       };
 
       ssize_t ret = rdmaPutWithRetry(&rdma_client, &putCtx, args.buf, size);
-      rdma_client.cuMemObjPutDescriptor(args.buf);
+      rdma_client.Deregister(args.buf);
 
       if (ret > 0) {
         PutObjectResponse resp;
@@ -1295,7 +1283,7 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
     // Single PUT of the whole buffer via the request body — not multipart. The
     // buffer is already fully resident (host, or staged from device above), so
     // re-chunking it into parts buys nothing; AIStor accepts a single PUT up to
-    // kMaxObjectSize (5 TiB), far beyond kCuObjMaxMemoryRegSize (the 4 GiB RDMA
+    // kMaxObjectSize (5 TiB), far beyond kRDMAMaxMemoryRegSize (the 4 GiB RDMA
     // registration ceiling that routed an oversized buffer here) and beyond
     // anything a client can pin or allocate.
     PutObjectApiArgs api_args;
@@ -1344,14 +1332,14 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
 
 #ifdef MINIO_CPP_RDMA
     // Register each pool buffer for RDMA, indexed by buffer slot.
-    cuObjClient& rdma_client = SharedRDMAClient();
+    minio::rdma::Client& rdma_client = SharedRDMAClient();
     std::vector<ScopedRDMARegistration> rdma_regs(max_inflight);
-    bool rdma_connected = rdma_client.isConnected();
+    bool rdma_connected = rdma_client.Ready();
     if (rdma_connected) {
       for (unsigned int i = 0; i < max_inflight; i++) {
         char* pool_buf = static_cast<char*>(buf_pool[i].ptr);
-        if (args.part_size <= kCuObjMaxMemoryRegSize &&
-            rdma_client.cuMemObjGetDescriptor(pool_buf, args.part_size) == 0) {
+        if (args.part_size <= kRDMAMaxMemoryRegSize &&
+            rdma_client.Register(pool_buf, args.part_size)) {
           rdma_regs[i] = ScopedRDMARegistration(&rdma_client, pool_buf);
         }
       }
@@ -1531,8 +1519,8 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
       if (rdma_regs[buf_idx].client != nullptr) {
         up_args.rdmaclient = &rdma_client;
       }
-      if (buf != nullptr &&
-          cuObjClient::getMemoryType(buf) == CUOBJ_MEMORY_SYSTEM) {
+      if (buf != nullptr && minio::rdma::Client::GetMemoryType(buf) ==
+                                minio::rdma::MemoryType::kSystem) {
         const std::string crc = utils::Crc64NvmeBase64(buf, part_size);
         up_args.checksum_crc64nvme = crc;
         up_args.headers.Add("x-amz-checksum-crc64nvme", crc);
@@ -1632,19 +1620,19 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
 
 #ifdef MINIO_CPP_RDMA
   // Reuse the process-wide SharedRDMAClient() rather than constructing
-  // per-call; see client.h for the race rationale. `buf` here is the
+  // per-call; see client.h. `buf` here is the
   // multipart part buffer, registered once for the whole multipart
   // upload and deregistered when scope exits.
   //
-  // If the cuObj layer is connected but declines to register this buffer
-  // (e.g. nvidia_peermem.ko not loaded, IB device unhealthy, GPUDirect
-  // misconfigured), fall back to the plain HTTP multipart path instead of
-  // failing the whole call — BaseClient::PutObject keys off args.rdmaclient
-  // being non-null to even attempt the RDMA path.
-  cuObjClient& rdma_client = SharedRDMAClient();
+  // If the device is present but declines to register this buffer (e.g.
+  // nvidia_peermem.ko not loaded for a GPU buffer, or the HCA is unhealthy),
+  // fall back to the plain HTTP multipart path instead of failing the whole
+  // call — BaseClient::PutObject keys off args.rdmaclient being non-null to
+  // even attempt the RDMA path.
+  minio::rdma::Client& rdma_client = SharedRDMAClient();
   ScopedRDMARegistration rdma_reg;
-  if (rdma_client.isConnected() && args.part_size <= kCuObjMaxMemoryRegSize &&
-      rdma_client.cuMemObjGetDescriptor(buf, args.part_size) == 0) {
+  if (rdma_client.Ready() && args.part_size <= kRDMAMaxMemoryRegSize &&
+      rdma_client.Register(buf, args.part_size)) {
     rdma_reg = ScopedRDMARegistration(&rdma_client, buf);
     args.rdmaclient = &rdma_client;
   }

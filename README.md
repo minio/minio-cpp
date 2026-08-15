@@ -196,39 +196,41 @@ int main(int argc, char* argv[]) {
 }
 ```
 
-## RDMA / GPU Direct Storage (optional)
+## RDMA (optional)
 
 This SDK has optional support for RDMA-direct S3 PUT/GET against MinIO
-servers, including GPUDirect Storage (cuFile) for transfers directly to
-and from CUDA device buffers. Build with:
+servers. Build with:
 
 ```
 cmake -DMINIO_CPP_ENABLE_RDMA=ON ...
 ```
 
-This requires NVIDIA cuFile, cuObj client/server, libibverbs, and
-librdmacm. Pre-built NVIDIA binaries are vendored under `vendor/cuobj/`
-for convenience; see `vendor/cuobj/NOTICE` for the applicable NVIDIA
-license terms. The default build (`MINIO_CPP_ENABLE_RDMA=OFF`) omits
-the entire RDMA stack and has no dependency on any of those libraries.
+The transport is `libs3rdma`, vendored under `vendor/s3rdma/` for both
+`x86_64` and `aarch64`. It is plain IBTA verbs, so it supports RoCE and
+native InfiniBand HCAs, and any memory `ibv_reg_mr` accepts: page-aligned
+host memory, hugepages, and CUDA device buffers alike. It resolves the RDMA
+stack itself at runtime, so building the SDK needs no RDMA packages on the
+host, and the default build (`MINIO_CPP_ENABLE_RDMA=OFF`) omits the RDMA API
+surface entirely.
+
+CUDA is an application concern throughout: the SDK links no CUDA library and
+calls no CUDA symbol. An application that allocates GPU buffers links CUDA
+itself; one that passes pinned host memory needs no CUDA at all.
 
 ### Buffer size limit
 
-A single cuObject registration (`cuMemObjGetDescriptor`) can pin at most
-**4 GiB** (`kCuObjMaxMemoryRegSize`). `PutObject`/`GetObject` therefore use
-RDMA only for buffers up to that size; a larger buffer is transferred over a
-single ordinary HTTP request instead (AIStor accepts a single PUT up to 5 TiB,
-far beyond the RDMA registration ceiling and beyond anything a client can
-realistically pin or allocate). The SDK does not chunk registrations — sizing
-the buffer you hand to the RDMA API is the caller's responsibility; supply a
-buffer &le; 4 GiB to keep the transfer on the RDMA fast path.
+An `x-amz-rdma-token` carries the transfer size in a 32-bit field, so a single
+RDMA transfer can describe at most **4 GiB - 1** (`kRDMAMaxMemoryRegSize`).
+`PutObject`/`GetObject` therefore use RDMA only for buffers up to that size; a
+larger buffer is transferred over a single ordinary HTTP request instead
+(AIStor accepts a single PUT up to 5 TiB, far beyond this ceiling and beyond
+anything a client can realistically pin or allocate). The SDK does not chunk
+registrations — sizing the buffer you hand to the RDMA API is the caller's
+responsibility.
 
 ## License
 
 This SDK is distributed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0), see [LICENSE](https://github.com/minio/minio-cpp/blob/master/LICENSE) for more information.
 
-The artifacts under `vendor/cuobj/` and the NVIDIA-derived headers
-(`include/miniocpp/cuda.h`, `nvidia-cufile.h`, `nvidia-cuobjclient.h`)
-are NOT covered by this Apache 2.0 grant — they originate from NVIDIA
-Corporation and are subject to NVIDIA's software license agreements.
-See [`vendor/cuobj/NOTICE`](vendor/cuobj/NOTICE) for details.
+The `libs3rdma` binaries under `vendor/s3rdma/` are NOT covered by this
+Apache 2.0 grant — they are distributed under MinIO's own license terms.

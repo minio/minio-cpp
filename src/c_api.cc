@@ -27,8 +27,8 @@
 #include "miniocpp/client.h"
 #include "miniocpp/credentials.h"
 #include "miniocpp/http.h"
-#include "miniocpp/nvidia-cuobjclient.h"
 #include "miniocpp/providers.h"
+#include "miniocpp/rdma_client.h"
 #include "miniocpp/response.h"
 
 namespace {
@@ -198,9 +198,7 @@ void miniocpp_free_aligned(void* p) { std::free(p); }
 
 int miniocpp_rdma_available(void) {
   try {
-    CUObjIOOps ops{};
-    cuObjClient probe(ops, CUOBJ_PROTO_RDMA_DC_V1);
-    return probe.isConnected() ? 1 : 0;
+    return minio::rdma::Shared().Ready() ? 1 : 0;
   } catch (...) {
     return 0;
   }
