@@ -79,8 +79,12 @@ if (MINIO_CPP_ENABLE_RDMA)
   endif()
   # libs3rdma resolves the RDMA stack itself, at runtime, so nothing else is
   # linked here and the SDK builds on a host with no RDMA packages installed.
+  #
+  # No -rpath here: this list is exported to consumers, and a source-tree path
+  # baked into an installed library only resolves on the machine that built it.
+  # The rpath is set per-target below, build tree and install tree separately.
   list(APPEND MINIO_CPP_INCLUDES ${CMAKE_SOURCE_DIR}/vendor/s3rdma/include)
-  list(APPEND MINIO_CPP_LIBS "-Bdynamic -L${MINIO_CPP_RDMA_LIBDIR} -Wl,-rpath,${MINIO_CPP_RDMA_LIBDIR} -ls3rdma")
+  list(APPEND MINIO_CPP_LIBS "-Bdynamic -L${MINIO_CPP_RDMA_LIBDIR} -ls3rdma")
 endif()
 
 # Dependencies
@@ -295,6 +299,20 @@ configure_package_config_file(
   NO_SET_AND_CHECK_MACRO
   NO_CHECK_REQUIRED_COMPONENTS_MACRO
 )
+
+if (MINIO_CPP_ENABLE_RDMA)
+  # Ship the vendored transport alongside the library and resolve it relative
+  # to whatever installed thing loads it, so an installed libminiocpp does not
+  # depend on this source tree still being present. Both names go in: the
+  # soname is what the loader asks for, the link name is what -ls3rdma finds.
+  install(FILES
+          "${MINIO_CPP_RDMA_LIBDIR}/libs3rdma.so.0"
+          "${MINIO_CPP_RDMA_LIBDIR}/libs3rdma.so"
+          DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+  set_target_properties(miniocpp PROPERTIES
+                        BUILD_RPATH "${MINIO_CPP_RDMA_LIBDIR}"
+                        INSTALL_RPATH "$ORIGIN")
+endif()
 
 install(TARGETS miniocpp
         EXPORT miniocpp-targets

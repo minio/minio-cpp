@@ -83,7 +83,7 @@ class Token {
 };
 
 /// An RDMA device context and its DCT endpoint. One per process; see
-/// Client::SharedRDMAClient().
+/// minio::rdma::Shared() below.
 class Client {
  public:
   Client() : handle_(s3rdma_client_init(nullptr, nullptr, 0)) {}

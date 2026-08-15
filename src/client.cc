@@ -222,7 +222,9 @@ class ScopedCudaContext {
   bool ok_ = false;
 };
 // True when buf is not ordinary host memory, i.e. the HTTP fallbacks cannot
-// touch it directly.
+// touch it directly. An unclassifiable pointer counts as device memory on
+// purpose: staging it through CUDA costs a failed copy and a clear error,
+// whereas memcpy on a device pointer that we guessed was host segfaults.
 bool IsDeviceBuffer(void* buf) {
   return buf != nullptr && minio::rdma::Client::GetMemoryType(buf) !=
                                minio::rdma::MemoryType::kSystem;
