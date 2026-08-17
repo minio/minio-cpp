@@ -50,11 +50,13 @@ namespace minio::rdma {
 // Per-request state the RDMA control plane needs to build and sign the S3
 // request that carries the token.
 struct ClientCtx {
-  // All members carry explicit in-class defaults so designated-initializer
-  // construction (e.g. `ClientCtx{.bucket=...}`) does not trip
-  // -Wmissing-field-initializers for the std::string fields we leave
-  // unspecified at single-shot Put/Get call sites (uploadId/partNumber for
-  // non-multipart paths, etag/checksum for fields populated by the callee).
+  // All members carry explicit in-class defaults so aggregate initialization
+  // can omit trailing members (and spell skipped ones as {}/std::nullopt)
+  // without tripping -Wmissing-field-initializers for the std::string fields
+  // left unspecified at single-shot Put/Get call sites (uploadId/partNumber
+  // for non-multipart paths, etag/checksum populated by the callee). Positional
+  // init is used rather than C++20 designated initializers so the library
+  // keeps building under the default C++17 standard.
   minio::creds::Provider* const provider = nullptr;
   std::string bucket = {};
   std::string object = {};

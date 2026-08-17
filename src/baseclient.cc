@@ -1446,13 +1446,9 @@ Result<PutObjectResponse> BaseClient::PutObject(PutObjectApiArgs args) {
 
 #ifdef MINIO_CPP_RDMA
   if (args.rdmaclient != nullptr && args.rdmaclient->Ready()) {
-    minio::rdma::ClientCtx putCtx = {
-        .provider = provider_,
-        .bucket = args.bucket,
-        .object = args.object,
-        .url = base_url_,
-        .region = region,
-    };
+    minio::rdma::ClientCtx putCtx = {provider_, args.bucket,  args.object,
+                                     {},        std::nullopt, {},
+                                     base_url_, region};
 
     ssize_t ret =
         rdmaPutWithRetry(args.rdmaclient, &putCtx, args.buf, args.size);
@@ -2100,14 +2096,9 @@ Result<UploadPartResponse> BaseClient::UploadPart(UploadPartArgs args) {
     }
 
     minio::rdma::ClientCtx putCtx = {
-        .provider = provider_,
-        .bucket = args.bucket,
-        .object = args.object,
-        .uploadId = args.upload_id,
-        .partNumber = args.part_number,
-        .url = base_url_,
-        .region = region,
-        .checksum = args.checksum_crc64nvme,
+        provider_,      args.bucket,      args.object,
+        args.upload_id, args.part_number, {},
+        base_url_,      region,           args.checksum_crc64nvme,
     };
 
     ssize_t ret =

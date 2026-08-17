@@ -371,7 +371,12 @@ class Tests {
 
     std::string object_name = RandObjectName();
 
-    std::string data = "DownloadObject()";
+    // Binary-safe round-trip: a newline, the Windows text-mode EOF byte
+    // (0x1A / Ctrl-Z), and a NUL byte must survive download byte-for-byte.
+    std::string data = "DownloadObject()\n";
+    data += static_cast<char>(0x1A);
+    data += '\0';
+    data += "binary-tail";
     std::stringstream ss(data);
     minio::s3::PutObjectArgs args(ss, static_cast<uint64_t>(data.length()), 0);
     args.bucket = bucket_name_;
@@ -392,7 +397,7 @@ class Tests {
         throw std::runtime_error("DownloadObject(): " + resp.error().String());
       }
 
-      std::ifstream file(filename);
+      std::ifstream file(filename, std::ios::binary);
       file.seekg(0, std::ios::end);
       size_t length = file.tellg();
       file.seekg(0, std::ios::beg);
@@ -401,8 +406,9 @@ class Tests {
       file.close();
 
       if (data != std::string(buf, length)) {
-        throw std::runtime_error("DownloadObject(): expected: " + data +
-                                 "; got: " + buf);
+        throw std::runtime_error(
+            "DownloadObject(): expected " + std::to_string(data.length()) +
+            " bytes; got " + std::to_string(length) + " bytes");
       }
       std::filesystem::remove(filename);
       RemoveObject(bucket_name_, object_name);
