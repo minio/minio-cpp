@@ -114,7 +114,9 @@ std::string PutUint32BigEndian(unsigned int v) {
 }
 
 // Build a single S3 Select protocol frame (prelude + prelude CRC + headers
-// + payload + message CRC) for the given event headers and XML payload.
+// + payload + message CRC) for the given event headers and XML payload. The
+// headers section is exactly the encoded headers: the wire format (AWS S3 and
+// MinIO) has no terminator byte, the prelude's headers-length is the boundary.
 std::string MakeSelectFrame(const std::map<std::string, std::string>& headers,
                             const std::string& payload) {
   std::string headerdata;
@@ -126,7 +128,6 @@ std::string MakeSelectFrame(const std::map<std::string, std::string>& headers,
     headerdata += static_cast<char>(value.length() & 0xFF);
     headerdata += value;
   }
-  headerdata += static_cast<char>(0);  // header terminator
 
   std::string data = headerdata + payload;
   unsigned int total_length = 16 + static_cast<unsigned int>(data.length());
