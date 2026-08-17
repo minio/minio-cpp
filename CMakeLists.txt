@@ -22,7 +22,7 @@ cmake_policy(SET CMP0091 NEW)
 # -----------------
 
 set(MINIO_CPP_MAJOR_VERSION "0")
-set(MINIO_CPP_MINOR_VERSION "4")
+set(MINIO_CPP_MINOR_VERSION "6")
 set(MINIO_CPP_PATCH_VERSION "0")
 set(MINIO_CPP_VERSION_STRING "${MINIO_CPP_MAJOR_VERSION}.${MINIO_CPP_MINOR_VERSION}.${MINIO_CPP_PATCH_VERSION}")
 
@@ -41,12 +41,11 @@ endif()
 
 option(MINIO_CPP_TEST "Build tests" OFF)
 option(MINIO_CPP_MAKE_DOC "Build documentation" OFF)
-# RDMA / GPU Direct Storage support. OFF by default so consumers without
-# NVIDIA cuFile + cuObj + ibverbs + rdmacm do not need those libraries on
-# the host. When ON, links against the vendored NVIDIA blobs in
-# vendor/cuobj/ and defines MINIO_CPP_RDMA so headers expose the
-# GetObjectRDMAArgs / PutObjectRDMAArgs API surface.
-option(MINIO_CPP_ENABLE_RDMA "Enable RDMA and GPU Direct Storage support" OFF)
+# RDMA support. OFF by default so consumers with no RDMA hardware do not
+# need the library on the host. When ON, links against the vendored
+# libs3rdma in vendor/s3rdma/ and defines MINIO_CPP_RDMA so headers expose
+# the GetObjectRDMAArgs / PutObjectRDMAArgs API surface.
+option(MINIO_CPP_ENABLE_RDMA "Enable RDMA support" OFF)
 
 set(MINIO_CPP_CFLAGS)
 set(MINIO_CPP_INCLUDES)
@@ -74,12 +73,18 @@ if (MINIO_CPP_ENABLE_RDMA)
   else()
     message(FATAL_ERROR "MINIO_CPP_ENABLE_RDMA: unsupported CMAKE_SYSTEM_PROCESSOR '${CMAKE_SYSTEM_PROCESSOR}'")
   endif()
-  set(MINIO_CPP_RDMA_LIBDIR "${CMAKE_SOURCE_DIR}/vendor/cuobj/lib/${MINIO_CPP_RDMA_ARCH}")
-  if (NOT EXISTS "${MINIO_CPP_RDMA_LIBDIR}/libcuobjclient.so")
-    message(FATAL_ERROR "MINIO_CPP_ENABLE_RDMA: ${MINIO_CPP_RDMA_ARCH} cuObj client libs not vendored at ${MINIO_CPP_RDMA_LIBDIR}")
+  set(MINIO_CPP_RDMA_LIBDIR "${CMAKE_SOURCE_DIR}/vendor/s3rdma/lib/${MINIO_CPP_RDMA_ARCH}")
+  if (NOT EXISTS "${MINIO_CPP_RDMA_LIBDIR}/libs3rdma.so")
+    message(FATAL_ERROR "MINIO_CPP_ENABLE_RDMA: libs3rdma not vendored for ${MINIO_CPP_RDMA_ARCH} at ${MINIO_CPP_RDMA_LIBDIR}. Run ./build-libs.sh in the s3rdma repo to build and vendor both arches.")
   endif()
-  list(APPEND MINIO_CPP_INCLUDES ${CMAKE_SOURCE_DIR}/vendor/cuobj/include)
-  list(APPEND MINIO_CPP_LIBS "-Bdynamic -L${MINIO_CPP_RDMA_LIBDIR} -lcufile -lpthread -lnuma -ldl -libverbs -lrdmacm -lrt -lcuobjclient")
+  # libs3rdma resolves the RDMA stack itself, at runtime, so nothing else is
+  # linked here and the SDK builds on a host with no RDMA packages installed.
+  #
+  # No -rpath here: this list is exported to consumers, and a source-tree path
+  # baked into an installed library only resolves on the machine that built it.
+  # The rpath is set per-target below, build tree and install tree separately.
+  list(APPEND MINIO_CPP_INCLUDES ${CMAKE_SOURCE_DIR}/vendor/s3rdma/include)
+  list(APPEND MINIO_CPP_LIBS "-Bdynamic -L${MINIO_CPP_RDMA_LIBDIR} -ls3rdma")
 endif()
 
 # Dependencies
@@ -137,6 +142,7 @@ set(MINIO_CPP_HEADERS
   include/miniocpp/providers.h
   include/miniocpp/request.h
   include/miniocpp/response.h
+  include/miniocpp/result.h
   include/miniocpp/select.h
   include/miniocpp/signer.h
   include/miniocpp/sse.h
@@ -147,9 +153,8 @@ set(MINIO_CPP_HEADERS
 if (MINIO_CPP_ENABLE_RDMA)
   list(APPEND MINIO_CPP_HEADERS
     include/miniocpp/c_api.h
-    include/miniocpp/nvidia-cufile.h
-    include/miniocpp/nvidia-cuobjclient.h
     include/miniocpp/rdma.h
+    include/miniocpp/rdma_client.h
   )
   list(APPEND MINIO_CPP_SOURCES src/c_api.cc)
 endif()
@@ -295,6 +300,20 @@ configure_package_config_file(
   NO_CHECK_REQUIRED_COMPONENTS_MACRO
 )
 
+if (MINIO_CPP_ENABLE_RDMA)
+  # Ship the vendored transport alongside the library and resolve it relative
+  # to whatever installed thing loads it, so an installed libminiocpp does not
+  # depend on this source tree still being present. Both names go in: the
+  # soname is what the loader asks for, the link name is what -ls3rdma finds.
+  install(FILES
+          "${MINIO_CPP_RDMA_LIBDIR}/libs3rdma.so.0"
+          "${MINIO_CPP_RDMA_LIBDIR}/libs3rdma.so"
+          DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+  set_target_properties(miniocpp PROPERTIES
+                        BUILD_RPATH "${MINIO_CPP_RDMA_LIBDIR}"
+                        INSTALL_RPATH "$ORIGIN")
+endif()
+
 install(TARGETS miniocpp
         EXPORT miniocpp-targets
         RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
@@ -312,6 +331,10 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/miniocpp-config.cmake"
 
 install(FILES
         ${MINIO_CPP_HEADERS} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/miniocpp")
+
+# Vendored headers referenced by public miniocpp headers must ship too.
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/tl"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
 configure_file(miniocpp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/miniocpp.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/miniocpp.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)

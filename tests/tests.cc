@@ -340,6 +340,9 @@ class Tests {
             "StatObject(): expected: " + std::to_string(data.length()) +
             "; got: " + std::to_string(resp->size));
       }
+      if (resp->delete_marker) {
+        throw std::runtime_error("StatObject(): expected: false; got: true");
+      }
       RemoveObject(bucket_name_, object_name);
     } catch (const std::runtime_error&) {
       RemoveObject(bucket_name_, object_name);
@@ -1628,9 +1631,84 @@ class Tests {
           "SelectStatsMetrics(): Stats result was not delivered");
     }
   }
+
+  // Issue #205 regression: a failed AssumeRoleProvider::Fetch() leaves
+  // access_key/secret_key/session_token empty. The failure must be surfaced
+  // via creds.err instead of silently printing empty fields; on success all
+  // three temporary credentials must be non-empty.
+  void AssumeRoleProvider() {
+    std::cout << "AssumeRoleProvider()" << std::endl;
+
+    const minio::s3::BaseUrl& base_url = client_.GetBaseUrl();
+    minio::http::Url sts_endpoint(base_url.https, base_url.host, base_url.port);
+
+    std::string access_key;
+    std::string secret_key;
+    minio::utils::GetEnv(access_key, "ACCESS_KEY");
+    minio::utils::GetEnv(secret_key, "SECRET_KEY");
+
+    std::string region =
+        base_url.region.empty() ? "us-east-1" : base_url.region;
+    minio::creds::AssumeRoleProvider provider(sts_endpoint, access_key,
+                                              secret_key, 900, "", region);
+    minio::creds::Credentials creds = provider.Fetch();
+
+    if (!creds.err.String().empty()) {
+      // Failure path (issue #205): empty credential fields must be
+      // accompanied by a diagnosable error.
+      throw std::runtime_error(
+          "AssumeRoleProvider(): Fetch() failed with an error" +
+          creds.err.String());
+      return;
+    }
+
+    if (creds.access_key.empty() || creds.secret_key.empty() ||
+        creds.session_token.empty()) {
+      throw std::runtime_error(
+          "AssumeRoleProvider(): temporary credentials are empty");
+    }
+  }
 };  // class Tests
 
+// Regression test for the host/port parsing guard in http::Url::Parse():
+// bare IPv4/hostname keep the whole string as host with port 0; only an
+// explicit ":port" suffix is split off.
+void TestUrlParse() noexcept(false) {
+  std::cout << "TestUrlParse()" << std::endl;
+
+  struct UrlParseCase {
+    std::string input;
+    std::string host;
+    unsigned int port;
+  };
+
+  const std::array<UrlParseCase, 4> cases = {{
+      {"10.0.0.1", "10.0.0.1", 0},
+      {"example.com", "example.com", 0},
+      {"example.com:8080", "example.com", 8080},
+      {"10.0.0.1:9000", "10.0.0.1", 9000},
+  }};
+
+  for (const auto& c : cases) {
+    const minio::http::Url url = minio::http::Url::Parse(c.input);
+    if (url.host != c.host || url.port != c.port) {
+      throw std::runtime_error(
+          "TestUrlParse(): Url::Parse(\"" + c.input + "\"): expected host='" +
+          c.host + "' port=" + std::to_string(c.port) + "; got host='" +
+          url.host + "' port=" + std::to_string(url.port));
+    }
+  }
+}
+
 int main(int /*argc*/, char* /*argv*/[]) {
+  // Unit check first so a parsing regression fails fast without a server.
+  try {
+    TestUrlParse();
+  } catch (const std::runtime_error& e) {
+    std::cerr << e.what() << std::endl;
+    return EXIT_FAILURE;
+  }
+
   std::string host;
   if (!minio::utils::GetEnv(host, "SERVER_ENDPOINT")) {
     std::cerr << "SERVER_ENDPOINT environment variable must be set"
@@ -1688,6 +1766,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
   tests.ListenBucketNotification();
   tests.TestAsyncOperations();
   tests.SelectStatsMetrics();
+  tests.AssumeRoleProvider();
 
   return EXIT_SUCCESS;
 }

@@ -57,7 +57,6 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get -qy update
-        sudo apt-get -qy install libibverbs-dev librdmacm-dev libnuma-dev
         cmake --version
 
     - name: Configure and Build

@@ -87,10 +87,21 @@ MINIOCPP_API ssize_t miniocpp_get_object(miniocpp_client* client,
 MINIOCPP_API void* miniocpp_alloc_aligned(size_t size);
 MINIOCPP_API void miniocpp_free_aligned(void* ptr);
 
-// Returns 1 if the process-wide cuObjClient is currently connected to a
-// cuObjServer (i.e. an RDMA transfer is likely to succeed), 0 otherwise.
-// Safe to call before any IO. Does not require an existing miniocpp_client.
+// Returns 1 if this host has a usable RDMA device (i.e. an RDMA transfer is
+// worth attempting), 0 otherwise. Safe to call before any IO. Does not
+// require an existing miniocpp_client.
 MINIOCPP_API int miniocpp_rdma_available(void);
+
+// RDMA rails this host can carry traffic on, and how many are usable right
+// now. A healthy count below the total means a rail failed a transfer or lost
+// its port and transfers are going out on what is left; both are 0 when RDMA
+// is unavailable.
+//
+// Transfers spread across rails on their own -- a buffer is registered on all
+// of them and each token names one, chosen round-robin -- so these are for
+// reporting what the host has, not for driving it.
+MINIOCPP_API int miniocpp_rdma_nic_count(void);
+MINIOCPP_API int miniocpp_rdma_healthy_nic_count(void);
 
 // Thread-local last-error message from the most recent failing call on the
 // calling thread. Returns NULL when no error has been recorded. The returned

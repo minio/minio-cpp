@@ -35,8 +35,8 @@
 #include "utils.h"
 
 #ifdef MINIO_CPP_RDMA
-#include "nvidia-cuobjclient.h"
 #include "rdma.h"
+#include "rdma_client.h"
 #endif
 
 #if defined(_WIN32) && defined(GetObject)

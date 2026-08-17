@@ -47,8 +47,8 @@
 #include "miniocpp/utils.h"
 
 #ifdef MINIO_CPP_RDMA
-#include "miniocpp/nvidia-cuobjclient.h"
 #include "miniocpp/rdma.h"
+#include "miniocpp/rdma_client.h"
 #endif
 
 // We want exactly `minio::s3::BaseClient::GetObject()` symbol and nothing else.
@@ -1445,14 +1445,13 @@ Result<PutObjectResponse> BaseClient::PutObject(PutObjectApiArgs args) {
   }
 
 #ifdef MINIO_CPP_RDMA
-  if (args.rdmaclient != nullptr && args.rdmaclient->isConnected()) {
-    s3_rdma_client_ctx putCtx = {
+  if (args.rdmaclient != nullptr && args.rdmaclient->Ready()) {
+    minio::rdma::ClientCtx putCtx = {
         .provider = provider_,
         .bucket = args.bucket,
         .object = args.object,
         .url = base_url_,
         .region = region,
-        .op = CUOBJ_PUT,
     };
 
     ssize_t ret =
@@ -2091,7 +2090,7 @@ Result<UploadPartResponse> BaseClient::UploadPart(UploadPartArgs args) {
   }
 
 #ifdef MINIO_CPP_RDMA
-  if (args.rdmaclient != nullptr && args.rdmaclient->isConnected()) {
+  if (args.rdmaclient != nullptr && args.rdmaclient->Ready()) {
     std::string region;
     auto get_resp = GetRegion(args.bucket, args.region);
     if (get_resp) {
@@ -2100,7 +2099,7 @@ Result<UploadPartResponse> BaseClient::UploadPart(UploadPartArgs args) {
       return tl::make_unexpected(get_resp.error());
     }
 
-    s3_rdma_client_ctx putCtx = {
+    minio::rdma::ClientCtx putCtx = {
         .provider = provider_,
         .bucket = args.bucket,
         .object = args.object,
@@ -2108,7 +2107,6 @@ Result<UploadPartResponse> BaseClient::UploadPart(UploadPartArgs args) {
         .partNumber = args.part_number,
         .url = base_url_,
         .region = region,
-        .op = CUOBJ_PUT,
         .checksum = args.checksum_crc64nvme,
     };
 

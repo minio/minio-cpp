@@ -28,7 +28,7 @@
 #include "error.h"
 #include "http.h"
 #ifdef MINIO_CPP_RDMA
-#include "nvidia-cuobjclient.h"
+#include "rdma_client.h"
 #endif
 #include "sse.h"
 #include "types.h"
@@ -165,7 +165,7 @@ struct PutObjectApiArgs : public PutObjectBaseArgs {
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
 #ifdef MINIO_CPP_RDMA
-  cuObjClient* rdmaclient = nullptr;
+  minio::rdma::Client* rdmaclient = nullptr;
 #endif
   std::string checksum_crc64nvme;  // CRC64NVME checksum for multipart uploads
 
@@ -182,7 +182,7 @@ struct UploadPartArgs : public ObjectWriteArgs {
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
 #ifdef MINIO_CPP_RDMA
-  cuObjClient* rdmaclient = nullptr;
+  minio::rdma::Client* rdmaclient = nullptr;
 #endif
   std::string checksum_crc64nvme;  // CRC64NVME checksum for multipart uploads
 
@@ -346,7 +346,7 @@ struct PutObjectArgs : public PutObjectBaseArgs {
   http::ProgressFunction progressfunc = nullptr;
   void* progress_userdata = nullptr;
 #ifdef MINIO_CPP_RDMA
-  cuObjClient* rdmaclient = nullptr;
+  minio::rdma::Client* rdmaclient = nullptr;
 #endif
   std::string checksum_crc64nvme;  // CRC64NVME checksum for multipart uploads
   std::optional<unsigned int>

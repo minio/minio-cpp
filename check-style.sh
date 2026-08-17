@@ -28,7 +28,7 @@ function do_clang_format() {
 }
 
 tmpfile="tmpfile.$RANDOM"
-find src include examples tests -iname "*.cc" -o -iname "*.h" | grep -v 'cuda\.h$' | grep -v 'cufile\.h$' | grep -v 'cufile_info\.h$' > "$tmpfile"
+find src include examples tests -iname "*.cc" -o -iname "*.h" > "$tmpfile"
 ec=0
 while read -r file; do
     if ! do_clang_format "$file"; then
