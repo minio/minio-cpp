@@ -1,10 +1,10 @@
 @PACKAGE_INIT@
 
-find_package(OpenSSL REQUIRED)
-find_package(unofficial-curlpp CONFIG REQUIRED)
-find_package(unofficial-inih CONFIG REQUIRED)
-find_package(nlohmann_json CONFIG REQUIRED)
-find_package(pugixml CONFIG REQUIRED)
-find_package(ZLIB REQUIRED)
-
+# The exported miniocpp::miniocpp_inih target must be visible to the
+# dependency resolver, so it can be reused instead of re-fetched.
 include("${CMAKE_CURRENT_LIST_DIR}/miniocpp-targets.cmake")
+
+include("${CMAKE_CURRENT_LIST_DIR}/miniocpp-deps.cmake")
+
+# The link interface is not exported; re-apply it.
+target_link_libraries(miniocpp::miniocpp INTERFACE ${MINIO_CPP_DEPS_LINK_LIBS})

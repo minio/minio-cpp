@@ -130,6 +130,23 @@ $ cd minio-cpp
 $ ./configure.sh -DMINIO_CPP_TEST=ON
 ```
 
+### Building on Alpine Linux (musl)
+
+`vcpkg` can run on Alpine, but its default setup downloads glibc-linked tools
+such as CMake, which do not run on musl (setting `VCPKG_FORCE_SYSTEM_BINARIES`
+forces use of the apk-installed tools instead). Alpine also has no packages
+for `curlpp` or the C++ `INIReader`. The dependency resolver
+(`cmake/miniocpp-deps.cmake`) therefore falls back to `pkg-config` and then
+to fetching those two libraries from source, so a plain system-package build
+works:
+
+```bash
+$ apk add build-base cmake git ninja pkgconf \
+    curl-dev inih-dev nlohmann-json openssl-dev pugixml-dev zlib-dev
+$ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMINIO_CPP_TEST=ON
+$ cmake --build build
+```
+
 ## Example:: file-uploader.cc
 
 ```c++
