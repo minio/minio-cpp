@@ -10,7 +10,7 @@ MinIO C++ SDK is an S3-compatible object storage client library. This fork exten
 
 ### Prerequisites
 
-- CMake 3.10+
+- CMake 3.13.4+
 - C++17 compiler
 - vcpkg package manager (set `VCPKG_ROOT` environment variable)
 - `libs3rdma` vendored under `vendor/s3rdma/` (for RDMA support). Build and

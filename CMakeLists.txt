@@ -15,7 +15,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.13.4)
 if (POLICY CMP0091)
   cmake_policy(SET CMP0091 NEW)
 endif()
@@ -92,7 +92,7 @@ endif()
 # Dependencies
 # ------------
 #
-# Resolution (vcpkg -> pkg-config -> FetchContent) lives in
+# Resolution (vcpkg -> pkg-config -> upstream source) lives in
 # cmake/miniocpp-deps.cmake, shared with the installed miniocpp-config.cmake.
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/miniocpp-deps.cmake)

@@ -200,7 +200,7 @@ jobs:
 
   # Alpine/musl: vcpkg's default setup downloads glibc-linked tools, and
   # Alpine lacks curlpp / INIReader packages -- exercises the pkg-config +
-  # FetchContent fallback path.
+  # upstream source fallback path.
   build-alpine:
     name: Alpine_Latest_GCC
     runs-on: ubuntu-latest

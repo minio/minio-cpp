@@ -6,7 +6,7 @@ For a complete list of APIs and examples, please take a look at the [MinIO C++ C
 
 ## Build Requirements
 
-* [cmake](https://cmake.org/) 3.10 or higher.
+* [cmake](https://cmake.org/) 3.13.4 or higher.
 * [vcpkg](https://vcpkg.io/en/index.html) package manager.
 * A working C++ compiler that supports at least C++17.
 
@@ -69,7 +69,7 @@ from every pushed `v*` tag (and can also be built on demand from the
 MinIO C++ cliend SDK can be consumed as a dependency in CMakeLists.txt, the following can be used as an example:
 
 ```cmake
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.13.4)
 
 project(miniocpp_example LANGUAGES C CXX)
 

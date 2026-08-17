@@ -5,7 +5,7 @@
 # upstream source.  The source branch is for distros where vcpkg is
 # impractical (its default setup downloads glibc-linked tools that do not run
 # on musl) and no curlpp / C++ INIReader packages exist.  It clones at
-# configure time with plain git, so it works on the CMake 3.10 floor (no
+# configure time with plain git, so it works on the CMake 3.13.4 floor (no
 # FetchContent); vcpkg builds never reach it.
 #
 # Defines for the caller:
@@ -43,13 +43,15 @@ else()
       if (NOT _curlpp_clone STREQUAL "0")
         message(FATAL_ERROR "curlpp: git clone failed")
       endif()
-      execute_process(COMMAND git checkout --quiet
-                      ec1b66e699557cd9d608d322c013a1ebda16bd08
-                      WORKING_DIRECTORY "${MINIO_CPP_CURLPP_SRC}"
-                      RESULT_VARIABLE _curlpp_checkout)
-      if (NOT _curlpp_checkout STREQUAL "0")
-        message(FATAL_ERROR "curlpp: git checkout of pinned commit failed")
-      endif()
+    endif()
+    # Also reset a cached checkout to the pinned commit, not just a fresh
+    # clone.
+    execute_process(COMMAND git checkout --quiet
+                    ec1b66e699557cd9d608d322c013a1ebda16bd08
+                    WORKING_DIRECTORY "${MINIO_CPP_CURLPP_SRC}"
+                    RESULT_VARIABLE _curlpp_checkout)
+    if (NOT _curlpp_checkout STREQUAL "0")
+      message(FATAL_ERROR "curlpp: git checkout of pinned commit failed")
     endif()
     set(CURLPP_BUILD_SHARED_LIBS OFF CACHE BOOL "Build curlpp shared library" FORCE)
     add_subdirectory("${MINIO_CPP_CURLPP_SRC}"
@@ -85,13 +87,15 @@ else()
         if (NOT _inih_clone STREQUAL "0")
           message(FATAL_ERROR "inih: git clone failed")
         endif()
-        execute_process(COMMAND git checkout --quiet
-                        5cc5e2c24642513aaa5b19126aad42d0e4e0923e # r58
-                        WORKING_DIRECTORY "${MINIO_CPP_INIH_SRC}"
-                        RESULT_VARIABLE _inih_checkout)
-        if (NOT _inih_checkout STREQUAL "0")
-          message(FATAL_ERROR "inih: git checkout of pinned commit failed")
-        endif()
+      endif()
+      # Also reset a cached checkout to the pinned commit, not just a fresh
+      # clone.
+      execute_process(COMMAND git checkout --quiet
+                      5cc5e2c24642513aaa5b19126aad42d0e4e0923e # r58
+                      WORKING_DIRECTORY "${MINIO_CPP_INIH_SRC}"
+                      RESULT_VARIABLE _inih_checkout)
+      if (NOT _inih_checkout STREQUAL "0")
+        message(FATAL_ERROR "inih: git checkout of pinned commit failed")
       endif()
       add_library(miniocpp_inih STATIC
         "${MINIO_CPP_INIH_SRC}/ini.c"
