@@ -26,6 +26,12 @@
 
 #include <httplib.h>
 
+// windows.h (via httplib) maps GetObject to GetObjectA; undo it so the
+// Client::GetObject members keep their real names.
+#ifdef _WIN32
+#undef GetObject
+#endif
+
 #include <deque>
 #include <filesystem>
 #include <fstream>
