@@ -294,8 +294,8 @@ Response Request::execute() {
     bytes_downloaded = current;
     if (progressfunc == nullptr) return true;
     ProgressFunctionArgs args;
-    args.download_total_bytes = total;
-    args.downloaded_bytes = current;
+    args.download_total_bytes = static_cast<double>(total);
+    args.downloaded_bytes = static_cast<double>(current);
     args.userdata = progress_userdata;
     return progressfunc(args);
   };
@@ -304,8 +304,8 @@ Response Request::execute() {
     bytes_uploaded = current;
     if (progressfunc == nullptr) return true;
     ProgressFunctionArgs args;
-    args.upload_total_bytes = total;
-    args.uploaded_bytes = current;
+    args.upload_total_bytes = static_cast<double>(total);
+    args.uploaded_bytes = static_cast<double>(current);
     args.userdata = progress_userdata;
     return progressfunc(args);
   };
