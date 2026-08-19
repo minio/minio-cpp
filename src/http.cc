@@ -279,8 +279,7 @@ Response Request::execute() {
   httplib::ContentReceiver content_receiver =
       [this, &response, &datafunc_canceled](const char* data,
                                             size_t length) -> bool {
-    DataFunctionArgs args(nullptr, &response, std::string(data, length),
-                          userdata);
+    DataFunctionArgs args(&response, std::string(data, length), userdata);
     const bool cont = datafunc(args);
     if (!cont) datafunc_canceled = true;
     return cont;

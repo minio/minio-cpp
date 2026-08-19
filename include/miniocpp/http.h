@@ -75,20 +75,15 @@ using ProgressFunction = std::function<bool(ProgressFunctionArgs)>;
 struct Response;
 
 struct DataFunctionArgs {
-  // Transfer handle is not exposed by the httplib backend; kept as void* for
-  // API stability (always nullptr).
-  void* handle = nullptr;
   Response* response = nullptr;
   std::string datachunk;
   void* userdata = nullptr;
 
   DataFunctionArgs() = default;
-  DataFunctionArgs(void* handle, Response* response, void* userdata)
-      : handle(handle), response(response), userdata(userdata) {}
-  DataFunctionArgs(void* handle, Response* response, std::string datachunk,
-                   void* userdata)
-      : handle(handle),
-        response(response),
+  DataFunctionArgs(Response* response, void* userdata)
+      : response(response), userdata(userdata) {}
+  DataFunctionArgs(Response* response, std::string datachunk, void* userdata)
+      : response(response),
         datachunk(std::move(datachunk)),
         userdata(userdata) {}
 
