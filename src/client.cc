@@ -315,7 +315,7 @@ void ListObjectsResult::StartPrefetch() {
         std::shared_future<std::shared_ptr<ListObjectsResponse>>>(std::async(
         std::launch::async,
         [client = client_, next_args = std::move(next_args)]() mutable
-        -> std::shared_ptr<ListObjectsResponse> {
+            -> std::shared_ptr<ListObjectsResponse> {
           try {
             auto resp = client->GetRegion(next_args.bucket, next_args.region);
             if (resp) {
