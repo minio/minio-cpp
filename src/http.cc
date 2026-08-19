@@ -214,7 +214,7 @@ Response Request::execute() {
   httplib::Client& cli = *client;
 
   // httplib's default 5s read/write timeout is too short for S3 transfers;
-  // use the 60s stall guard unless the caller set an explicit timeout.
+  // use the 60s stall guard unless the caller set an explicit total timeout.
   cli.set_keep_alive(true);
   cli.set_follow_location(false);
   // Paths are pre-encoded by the caller (EncodePath).
@@ -223,11 +223,18 @@ Response Request::execute() {
     cli.set_connection_timeout(connect_timeout_secs, 0);
   }
   if (timeout_secs > 0) {
-    cli.set_read_timeout(timeout_secs, 0);
-    cli.set_write_timeout(timeout_secs, 0);
+    // Total transfer deadline, like the old CURLOPT_TIMEOUT.
+    cli.set_max_timeout(static_cast<time_t>(timeout_secs) * 1000);
   } else {
     cli.set_read_timeout(kStallTimeoutSecs, 0);
     cli.set_write_timeout(kStallTimeoutSecs, 0);
+  }
+  if (debug) {
+    cli.set_logger(
+        [](const httplib::Request& req, const httplib::Response& res) {
+          std::cerr << req.method << " " << req.path << " -> " << res.status
+                    << std::endl;
+        });
   }
   if (!nic_interface.empty()) cli.set_interface(nic_interface);
   if (url.https) {
@@ -248,8 +255,10 @@ Response Request::execute() {
     }
   }
   // httplib sets Host itself when absent and derives Content-Length from the
-  // body; the SigV4-signed Host must be sent verbatim.
+  // body; the SigV4-signed Host must be sent verbatim.  An empty Expect
+  // disables the 100-continue handshake, as the curl backend did.
   request_headers.erase("Content-Length");
+  request_headers.emplace("Expect", "");
   std::string content_type = headers.GetFront("Content-Type");
   request_headers.erase("Content-Type");
 
@@ -261,7 +270,28 @@ Response Request::execute() {
   }
   if (!url.query_string.empty()) path += "?" + url.query_string;
 
-  auto download_progress = [this](size_t current, size_t total) -> bool {
+  // Track bytes and elapsed time to report average speeds in the final
+  // progress call, as the curl backend did.
+  auto start_time = std::chrono::steady_clock::now();
+  size_t bytes_downloaded = 0;
+  size_t bytes_uploaded = 0;
+  auto report_speed = [&, this]() {
+    if (progressfunc == nullptr) return;
+    const double elapsed = std::chrono::duration<double>(
+                               std::chrono::steady_clock::now() - start_time)
+                               .count();
+    ProgressFunctionArgs args;
+    if (elapsed > 0) {
+      args.download_speed = static_cast<double>(bytes_downloaded) / elapsed;
+      args.upload_speed = static_cast<double>(bytes_uploaded) / elapsed;
+    }
+    args.userdata = progress_userdata;
+    progressfunc(args);
+  };
+
+  auto download_progress = [this, &bytes_downloaded](size_t current,
+                                                     size_t total) -> bool {
+    bytes_downloaded = current;
     if (progressfunc == nullptr) return true;
     ProgressFunctionArgs args;
     args.download_total_bytes = total;
@@ -269,7 +299,9 @@ Response Request::execute() {
     args.userdata = progress_userdata;
     return progressfunc(args);
   };
-  auto upload_progress = [this](size_t current, size_t total) -> bool {
+  auto upload_progress = [this, &bytes_uploaded](size_t current,
+                                                 size_t total) -> bool {
+    bytes_uploaded = current;
     if (progressfunc == nullptr) return true;
     ProgressFunctionArgs args;
     args.upload_total_bytes = total;
@@ -340,9 +372,11 @@ Response Request::execute() {
     // the caller ended the transfer itself.
     if (res.error() == httplib::Error::Canceled && datafunc_canceled) {
       if (response.status_code == 0) response.status_code = 200;
+      report_speed();
       return response;
     }
     response.error = httplib::to_string(res.error());
+    report_speed();
     return response;
   }
 
@@ -354,6 +388,7 @@ Response Request::execute() {
   // buffered response body (including error payloads for non-2xx statuses).
   if (datafunc == nullptr) response.body = res->body;
 
+  report_speed();
   return response;
 }
 
