@@ -34,7 +34,7 @@ else()
   else()
     message(STATUS "cpp-httplib: no package found, building from source")
     set(MINIO_CPP_HTTPLIB_SRC "${CMAKE_CURRENT_BINARY_DIR}/_deps/cpp-httplib-src")
-    set(MINIO_CPP_HTTPLIB_PINNED_TAG "v0.18.3")
+    set(MINIO_CPP_HTTPLIB_PINNED_TAG "v0.53.1")
     if (NOT EXISTS "${MINIO_CPP_HTTPLIB_SRC}/CMakeLists.txt")
       execute_process(COMMAND git clone --quiet
               https://github.com/yhirose/cpp-httplib.git
