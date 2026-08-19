@@ -103,6 +103,13 @@ if (WIN32)
   list(APPEND MINIO_CPP_LIBS wsock32)
   list(APPEND MINIO_CPP_LIBS ws2_32)
 endif()
+if (APPLE)
+  # httplib loads macOS system certificates from the Keychain
+  # (SecTrustSettingsCopyCertificates); the vcpkg httplib target does not
+  # link the Security framework, so add it here.
+  list(APPEND MINIO_CPP_LIBS
+    "-framework CFNetwork" "-framework CoreFoundation" "-framework Security")
+endif()
 
 # Minio C++ Library
 # -----------------
