@@ -24,7 +24,8 @@
 #include <unistd.h>
 #endif
 
-#include <curlpp/cURLpp.hpp>
+#include <httplib.h>
+
 #include <deque>
 #include <filesystem>
 #include <fstream>
@@ -1156,7 +1157,7 @@ Result<DownloadObjectResponse> Client::DownloadObject(DownloadObjectArgs args) {
   }
 
   std::string temp_filename =
-      args.filename + "." + curlpp::escape(etag) + ".part.minio";
+      args.filename + "." + httplib::decode_uri_component(etag) + ".part.minio";
   std::ofstream fout(temp_filename,
                      std::ios::trunc | std::ios::out | std::ios::binary);
   if (!fout.is_open()) {

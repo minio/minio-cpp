@@ -31,6 +31,7 @@
 #include <unistd.h>
 #endif
 
+#include <httplib.h>
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 #include <openssl/crypto.h>
@@ -50,7 +51,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
-#include <curlpp/cURLpp.hpp>
 #include <exception>
 #include <iomanip>
 #include <ios>
@@ -218,7 +218,7 @@ std::string EncodePath(const std::string& path) {
   while (std::getline(str_stream, token, '/')) {
     if (!token.empty()) {
       if (!out.empty()) out += "/";
-      out += curlpp::escape(token);
+      out += httplib::encode_uri_component(token);
     }
   }
 
@@ -608,9 +608,9 @@ std::string Multimap::GetCanonicalQueryString() const {
   for (auto& [key, values] : map_) {
     for (auto& value : values) {
       if (!query_string.empty()) query_string += "&";
-      query_string += curlpp::escape(key);
+      query_string += httplib::encode_uri_component(key);
       query_string += '=';
-      query_string += curlpp::escape(value);
+      query_string += httplib::encode_uri_component(value);
     }
   }
   return query_string;
