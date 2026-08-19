@@ -5,7 +5,7 @@
   "homepage": "https://github.com/minio/minio-cpp",
   "license": "Apache-2.0",
   "dependencies": [
-    { "name": "cpp-httplib" },
+    { "name": "cpp-httplib", "features": ["openssl"] },
     { "name": "inih", "features": ["cpp"] },
     { "name": "nlohmann-json" },
     { "name": "openssl" },

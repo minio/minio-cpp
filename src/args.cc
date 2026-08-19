@@ -17,8 +17,6 @@
 
 #include "miniocpp/args.h"
 
-#include <httplib.h>
-
 #include <exception>
 #include <filesystem>
 #include <iostream>

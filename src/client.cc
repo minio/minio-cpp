@@ -716,10 +716,8 @@ Result<GetObjectResponse> Client::GetObject(GetObjectArgs args) {
                                        {},        std::nullopt, {},
                                        base_url_, region};
 
-      // RAII, matching the multipart paths below. rdmaGetWithRetry signs and
-      // sends an HTTP request, so a manual Deregister after the call is
-      // skipped on that path and the buffer stays pinned for the life of the
-      // process.
+      // Keep the buffer registered through rdmaGetWithRetry. The RAII guard
+      // deregisters it when this block exits, including on early returns.
       ScopedRDMARegistration reg(&rdma_client, args.buf);
 
       ssize_t ret =

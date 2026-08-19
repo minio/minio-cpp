@@ -17,8 +17,6 @@
 
 #include "miniocpp/response.h"
 
-#include <httplib.h>
-
 #include <cstring>
 #include <list>
 #include <map>

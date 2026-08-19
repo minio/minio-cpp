@@ -313,10 +313,19 @@ Response Request::execute() {
   // Stream the response body to the data function; a false return aborts the
   // transfer, recorded so a caller-initiated abort is not reported as an
   // error below (e.g. ListenBucketNotification stops once it has its records).
+  // Non-2xx bodies are buffered instead so error payloads reach the caller
+  // (the GET response handler gates this on the status; the POST overloads
+  // have no response handler, so Select always streams and surfaces errors
+  // through the event stream).
   bool datafunc_canceled = false;
+  bool stream_to_datafunc = true;
   httplib::ContentReceiver content_receiver =
-      [this, &response, &datafunc_canceled](const char* data,
-                                            size_t length) -> bool {
+      [this, &response, &datafunc_canceled,
+       &stream_to_datafunc](const char* data, size_t length) -> bool {
+    if (!stream_to_datafunc) {
+      response.body.append(data, length);
+      return true;
+    }
     DataFunctionArgs args(&response, std::string(data, length), userdata);
     const bool cont = datafunc(args);
     if (!cont) datafunc_canceled = true;
@@ -324,12 +333,12 @@ Response Request::execute() {
   };
 
   httplib::Result res;
-  std::string body_str(body.data(), body.size());
   httplib::ResponseHandler response_handler =
-      [&response](const httplib::Response& res) -> bool {
+      [&response, &stream_to_datafunc](const httplib::Response& res) -> bool {
     // Status is known here, before any body is streamed, so a caller-
     // initiated cancel still yields a response with the correct status.
     response.status_code = res.status;
+    stream_to_datafunc = res.status >= 200 && res.status <= 299;
     return true;
   };
   switch (method) {
@@ -347,17 +356,18 @@ Response Request::execute() {
     case Method::kPost:
       if (datafunc != nullptr) {
         // Stream the response body to the data function (e.g. the S3 Select
-        // event stream); without this the buffered body is dropped.
-        res = cli.Post(path, request_headers, body_str, content_type,
+        // event stream); the request body here is small, so a copy is fine.
+        res = cli.Post(path, request_headers,
+                       std::string(body.data(), body.size()), content_type,
                        content_receiver, download_progress);
       } else {
-        res = cli.Post(path, request_headers, body_str, content_type,
-                       upload_progress);
+        res = cli.Post(path, request_headers, body.data(), body.size(),
+                       content_type, upload_progress);
       }
       break;
     case Method::kPut:
-      res = cli.Put(path, request_headers, body_str, content_type,
-                    upload_progress);
+      res = cli.Put(path, request_headers, body.data(), body.size(),
+                    content_type, upload_progress);
       break;
     case Method::kDelete:
       res = cli.Delete(path, request_headers, download_progress);

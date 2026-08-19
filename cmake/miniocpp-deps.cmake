@@ -20,18 +20,31 @@ find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 
-# cpp-httplib -- header-only; vcpkg -> pkg-config -> upstream source (pinned tag).
+# cpp-httplib -- header-only; vcpkg -> pkg-config -> upstream source (pinned
+# tag).  The code needs the progress overloads and set_max_timeout added in
+# 0.19; require 0.51 (the current vcpkg port) so ancient distro packages
+# cannot be selected.
 find_package(httplib CONFIG QUIET)
+if (httplib_FOUND AND DEFINED httplib_VERSION AND
+    httplib_VERSION VERSION_LESS "0.51")
+  message(STATUS "cpp-httplib ${httplib_VERSION} is too old; falling back")
+  set(httplib_FOUND FALSE)
+endif()
 if (httplib_FOUND)
   set(MINIO_CPP_HTTPLIB_TARGET httplib::httplib)
 else()
   if (PkgConfig_FOUND)
     pkg_check_modules(MINIO_CPP_HTTPLIB QUIET IMPORTED_TARGET cpp-httplib)
   endif()
+  if (MINIO_CPP_HTTPLIB_FOUND AND DEFINED MINIO_CPP_HTTPLIB_VERSION AND
+      MINIO_CPP_HTTPLIB_VERSION VERSION_LESS "0.51")
+    message(STATUS "cpp-httplib ${MINIO_CPP_HTTPLIB_VERSION} is too old")
+    set(MINIO_CPP_HTTPLIB_FOUND FALSE)
+  endif()
   if (MINIO_CPP_HTTPLIB_FOUND)
     set(MINIO_CPP_HTTPLIB_TARGET PkgConfig::MINIO_CPP_HTTPLIB)
   else()
-    message(STATUS "cpp-httplib: no package found, building from source")
+    message(STATUS "cpp-httplib: no usable package found, building from source")
     set(MINIO_CPP_HTTPLIB_SRC "${CMAKE_CURRENT_BINARY_DIR}/_deps/cpp-httplib-src")
     set(MINIO_CPP_HTTPLIB_PINNED_TAG "v0.53.1")
     if (NOT EXISTS "${MINIO_CPP_HTTPLIB_SRC}/CMakeLists.txt")
@@ -42,6 +55,13 @@ else()
       if (NOT _httplib_clone STREQUAL "0")
         message(FATAL_ERROR "cpp-httplib: git clone failed")
       endif()
+    endif()
+    # Fetch tags so a cached clone can resolve the pinned tag.
+    execute_process(COMMAND git fetch --quiet --tags origin
+            WORKING_DIRECTORY "${MINIO_CPP_HTTPLIB_SRC}"
+            RESULT_VARIABLE _httplib_fetch)
+    if (NOT _httplib_fetch STREQUAL "0")
+      message(FATAL_ERROR "cpp-httplib: git fetch failed")
     endif()
     execute_process(COMMAND git checkout --quiet
             ${MINIO_CPP_HTTPLIB_PINNED_TAG}
