@@ -135,7 +135,7 @@ $ ./configure.sh -DMINIO_CPP_TEST=ON
 `vcpkg` can run on Alpine, but its default setup downloads glibc-linked tools
 such as CMake, which do not run on musl (setting `VCPKG_FORCE_SYSTEM_BINARIES`
 forces use of the apk-installed tools instead). Alpine also has no packages
-for `curlpp` or the C++ `INIReader`. The dependency resolver
+for `cpp-httplib` or the C++ `INIReader`. The dependency resolver
 (`cmake/miniocpp-deps.cmake`) therefore falls back to `pkg-config` and then
 to fetching those two libraries from source, so a plain system-package build
 works:

@@ -62,7 +62,7 @@ Examples are built when `MINIO_CPP_TEST=ON`. Run individual examples:
 - **`args.h`** - Argument structs for each S3 operation (e.g., `PutObjectArgs`, `GetObjectArgs`)
 - **`response.h`** - Response types returned by operations
 - **`request.h`** - HTTP request construction
-- **`http.h`** - HTTP client abstraction using curlpp
+- **`http.h`** - HTTP client abstraction using httplib
 
 ### Authentication
 
@@ -85,7 +85,7 @@ RDMA and the caller falls back to HTTP.
 
 ## Dependencies (vcpkg)
 
-- curlpp - HTTP client
+- cpp-httplib - HTTP client
 - inih - INI file parsing for config
 - nlohmann-json - JSON handling
 - openssl - TLS/crypto

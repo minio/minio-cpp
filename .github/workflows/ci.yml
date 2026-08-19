@@ -199,7 +199,7 @@ jobs:
         ctest -C ${{ matrix.config.build_type }}
 
   # Alpine/musl: vcpkg's default setup downloads glibc-linked tools, and
-  # Alpine lacks curlpp / INIReader packages -- exercises the pkg-config +
+  # Alpine lacks httplib / INIReader packages -- exercises the pkg-config +
   # upstream source fallback path.
   build-alpine:
     name: Alpine_Latest_GCC
