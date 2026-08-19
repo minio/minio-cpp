@@ -19,9 +19,46 @@ find_package(PkgConfig QUIET)
 find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
-find_package(httplib CONFIG REQUIRED)
 
-set(MINIO_CPP_HTTPLIB_TARGET httplib::httplib)
+# cpp-httplib -- header-only library with optional SSL support.
+# Resolution order: vcpkg -> pkg-config -> upstream source (pinned tag).
+find_package(httplib CONFIG QUIET)
+if (httplib_FOUND)
+  set(MINIO_CPP_HTTPLIB_TARGET httplib::httplib)
+else()
+  if (PkgConfig_FOUND)
+    pkg_check_modules(MINIO_CPP_HTTPLIB QUIET IMPORTED_TARGET cpp-httplib)
+  endif()
+  if (MINIO_CPP_HTTPLIB_FOUND)
+    set(MINIO_CPP_HTTPLIB_TARGET PkgConfig::MINIO_CPP_HTTPLIB)
+  else()
+    message(STATUS "cpp-httplib: no package found, building from source")
+    set(MINIO_CPP_HTTPLIB_SRC "${CMAKE_CURRENT_BINARY_DIR}/_deps/cpp-httplib-src")
+    set(MINIO_CPP_HTTPLIB_PINNED_TAG "v0.18.3")
+    if (NOT EXISTS "${MINIO_CPP_HTTPLIB_SRC}/CMakeLists.txt")
+      execute_process(COMMAND git clone --quiet
+              https://github.com/yhirose/cpp-httplib.git
+              "${MINIO_CPP_HTTPLIB_SRC}"
+              RESULT_VARIABLE _httplib_clone)
+      if (NOT _httplib_clone STREQUAL "0")
+        message(FATAL_ERROR "cpp-httplib: git clone failed")
+      endif()
+    endif()
+    execute_process(COMMAND git checkout --quiet
+            ${MINIO_CPP_HTTPLIB_PINNED_TAG}
+            WORKING_DIRECTORY "${MINIO_CPP_HTTPLIB_SRC}"
+            RESULT_VARIABLE _httplib_checkout)
+    if (NOT _httplib_checkout STREQUAL "0")
+      message(FATAL_ERROR "cpp-httplib: git checkout of pinned tag failed")
+    endif()
+    # cpp-httplib is header-only; enable its CMake install target so that
+    # find_package(httplib) works for downstream consumers after install.
+    set(HTTPLIB_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    add_subdirectory("${MINIO_CPP_HTTPLIB_SRC}"
+            "${CMAKE_CURRENT_BINARY_DIR}/_deps/cpp-httplib-build")
+    set(MINIO_CPP_HTTPLIB_TARGET httplib::httplib)
+  endif()
+endif()
 
 # curlpp -- pinned master commit, no patches needed: CURLOPT_CLOSEPOLICY is
 # gone upstream (dropped in curl 8.10) and the build is target-based and
