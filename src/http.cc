@@ -231,8 +231,14 @@ Response Request::execute() {
   }
   if (!nic_interface.empty()) cli.set_interface(nic_interface);
   if (url.https) {
-    cli.enable_server_certificate_verification(!ignore_cert_check);
-    if (!ssl_cert_file.empty()) cli.set_ca_cert_path(ssl_cert_file);
+    // An explicit CA bundle overrides IGNORE_CERT_CHECK, matching the curl
+    // backend: verification is enabled against the given CA file.
+    if (!ssl_cert_file.empty()) {
+      cli.set_ca_cert_path(ssl_cert_file);
+      cli.enable_server_certificate_verification(true);
+    } else {
+      cli.enable_server_certificate_verification(!ignore_cert_check);
+    }
   }
 
   httplib::Headers request_headers;
