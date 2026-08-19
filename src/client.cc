@@ -705,13 +705,9 @@ Result<GetObjectResponse> Client::GetObject(GetObjectArgs args) {
         size <= kRDMAMaxMemoryRegSize && rdma_client.Register(args.buf, size);
 
     if (use_rdma) {
-      minio::rdma::ClientCtx getCtx = {
-          .provider = provider_,
-          .bucket = args.bucket,
-          .object = args.object,
-          .url = base_url_,
-          .region = region,
-      };
+      minio::rdma::ClientCtx getCtx = {provider_, args.bucket,  args.object,
+                                       {},        std::nullopt, {},
+                                       base_url_, region};
 
       // RAII, matching the multipart paths below. rdmaGetWithRetry signs and
       // sends an HTTP request, and curlpp throws, so a manual Deregister after
@@ -1161,7 +1157,8 @@ Result<DownloadObjectResponse> Client::DownloadObject(DownloadObjectArgs args) {
 
   std::string temp_filename =
       args.filename + "." + curlpp::escape(etag) + ".part.minio";
-  std::ofstream fout(temp_filename, std::ios::trunc | std::ios::out);
+  std::ofstream fout(temp_filename,
+                     std::ios::trunc | std::ios::out | std::ios::binary);
   if (!fout.is_open()) {
     return error::make<DownloadObjectResponse>("unable to open file " +
                                                temp_filename);
@@ -1236,13 +1233,9 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
         size <= kRDMAMaxMemoryRegSize && rdma_client.Register(args.buf, size);
 
     if (use_rdma) {
-      minio::rdma::ClientCtx putCtx = {
-          .provider = provider_,
-          .bucket = args.bucket,
-          .object = args.object,
-          .url = base_url_,
-          .region = region,
-      };
+      minio::rdma::ClientCtx putCtx = {provider_, args.bucket,  args.object,
+                                       {},        std::nullopt, {},
+                                       base_url_, region};
 
       // RAII, matching the multipart paths below -- see the GET path for why
       // a manual Deregister after the call is not enough.
