@@ -329,8 +329,15 @@ Response Request::execute() {
       res = cli->Head(path, request_headers);
       break;
     case Method::kPost:
-      res = cli->Post(path, request_headers, body_str, content_type,
-                      upload_progress);
+      if (datafunc != nullptr) {
+        // Stream the response body to the data function (e.g. the S3 Select
+        // event stream); without this the buffered body is dropped.
+        res = cli->Post(path, request_headers, body_str, content_type,
+                        content_receiver, download_progress);
+      } else {
+        res = cli->Post(path, request_headers, body_str, content_type,
+                        upload_progress);
+      }
       break;
     case Method::kPut:
       res = cli->Put(path, request_headers, body_str, content_type,
@@ -343,8 +350,13 @@ Response Request::execute() {
 
   if (!res) {
     // A false return from the data function cancels the transfer; for
-    // streaming callers that is a normal completion, not an error.
+    // streaming callers that is a normal completion, not an error.  GET
+    // captures the real status via the response handler; httplib discards
+    // the response when a POST receiver cancels, so the status may be
+    // unavailable there -- report success since the caller ended the
+    // transfer itself.
     if (res.error() == httplib::Error::Canceled && datafunc_canceled) {
+      if (response.status_code == 0) response.status_code = 200;
       return response;
     }
     response.error = httplib::to_string(res.error());
