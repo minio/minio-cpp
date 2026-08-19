@@ -31,9 +31,8 @@
 #include <unistd.h>
 #endif
 
-// cpp-httplib's OpenSSL backend is enabled target-wide in CMakeLists.txt; the
-// header-only library's class layout depends on it, so every translation unit
-// must compile httplib.h with the same macro set.
+// CPPHTTPLIB_OPENSSL_SUPPORT is set target-wide in CMakeLists.txt so every
+// translation unit compiles httplib.h with the same macro set.
 #include <httplib.h>
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
@@ -214,10 +213,9 @@ std::string Join(const std::vector<std::string>& values,
   return result;
 }
 
-// AWS SigV4 percent-encoding for canonical URIs and query strings: keep only
-// RFC 3986 unreserved characters and percent-encode everything else (including
-// '*', which httplib::encode_uri_component leaves unescaped and would make the
-// server compute a different canonical request, failing signature check).
+// AWS SigV4 percent-encoding: RFC 3986 unreserved characters are kept,
+// everything else is percent-encoded ('*' must not survive, unlike
+// httplib::encode_uri_component).
 std::string UriEncode(const std::string& value) {
   static const char* kHex = "0123456789ABCDEF";
   std::string out;

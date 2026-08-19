@@ -200,46 +200,39 @@ Response Request::execute() {
   response.datafunc = datafunc;
   response.userdata = userdata;
 
-  // httplib::Client is bound to one endpoint and keeps its connection pool
-  // (connections, TLS sessions, DNS results) alive across requests; reuse a
-  // thread-local client per endpoint. httplib::Client is not thread-safe, so
-  // each thread gets its own, mirroring the per-thread libcurl share it
-  // replaces. Client certificates are fixed at construction time, hence part
-  // of the cache key.
+  // httplib::Client is bound to one endpoint and not thread-safe; build a
+  // fresh one per request.
   std::string endpoint = (url.https ? "https://" : "http://") + url.host;
   if (url.port) endpoint += ":" + std::to_string(url.port);
 
-  httplib::Client* cli = nullptr;
   auto client =
       std::make_unique<httplib::Client>(endpoint, cert_file, key_file);
   if (!client->is_valid()) {
     response.error = "unable to create HTTP client for " + endpoint;
     return response;
   }
-  cli = client.get();
+  httplib::Client& cli = *client;
 
-  // Options. httplib defaults to a 5s read/write timeout, far too short for
-  // S3 transfers; without an explicit timeout keep the 60s stall guard libcurl
-  // used, aborting only transfers that make no progress for that long.
-  cli->set_keep_alive(true);
-  cli->set_follow_location(false);
-  // Paths are pre-encoded by the caller (EncodePath); never let httplib
-  // encode them a second time.
-  cli->set_path_encode(false);
+  // httplib's default 5s read/write timeout is too short for S3 transfers;
+  // use the 60s stall guard unless the caller set an explicit timeout.
+  cli.set_keep_alive(true);
+  cli.set_follow_location(false);
+  // Paths are pre-encoded by the caller (EncodePath).
+  cli.set_path_encode(false);
   if (connect_timeout_secs > 0) {
-    cli->set_connection_timeout(connect_timeout_secs, 0);
+    cli.set_connection_timeout(connect_timeout_secs, 0);
   }
   if (timeout_secs > 0) {
-    cli->set_read_timeout(timeout_secs, 0);
-    cli->set_write_timeout(timeout_secs, 0);
+    cli.set_read_timeout(timeout_secs, 0);
+    cli.set_write_timeout(timeout_secs, 0);
   } else {
-    cli->set_read_timeout(kStallTimeoutSecs, 0);
-    cli->set_write_timeout(kStallTimeoutSecs, 0);
+    cli.set_read_timeout(kStallTimeoutSecs, 0);
+    cli.set_write_timeout(kStallTimeoutSecs, 0);
   }
-  if (!nic_interface.empty()) cli->set_interface(nic_interface);
+  if (!nic_interface.empty()) cli.set_interface(nic_interface);
   if (url.https) {
-    cli->enable_server_certificate_verification(!ignore_cert_check);
-    if (!ssl_cert_file.empty()) cli->set_ca_cert_path(ssl_cert_file);
+    cli.enable_server_certificate_verification(!ignore_cert_check);
+    if (!ssl_cert_file.empty()) cli.set_ca_cert_path(ssl_cert_file);
   }
 
   httplib::Headers request_headers;
@@ -248,9 +241,8 @@ Response Request::execute() {
       request_headers.insert({key, value});
     }
   }
-  // httplib sets Host itself from the endpoint when absent; a caller-provided
-  // Host (the SigV4-signed value) takes precedence and must be sent verbatim.
-  // Content-Length is derived from the body by httplib.
+  // httplib sets Host itself when absent and derives Content-Length from the
+  // body; the SigV4-signed Host must be sent verbatim.
   request_headers.erase("Content-Length");
   std::string content_type = headers.GetFront("Content-Type");
   request_headers.erase("Content-Type");
@@ -263,7 +255,6 @@ Response Request::execute() {
   }
   if (!url.query_string.empty()) path += "?" + url.query_string;
 
-  // httplib reports either upload or download progress per call.
   auto download_progress = [this](size_t current, size_t total) -> bool {
     if (progressfunc == nullptr) return true;
     ProgressFunctionArgs args;
@@ -281,11 +272,9 @@ Response Request::execute() {
     return progressfunc(args);
   };
 
-  // Streaming receive into the caller's data function, mirroring the old curl
-  // write callback. A false return aborts the transfer; record that so a
-  // caller-initiated abort is not reported as an error below (streaming
-  // consumers such as ListenBucketNotification cancel once they have all the
-  // records they need).
+  // Stream the response body to the data function; a false return aborts the
+  // transfer, recorded so a caller-initiated abort is not reported as an
+  // error below (e.g. ListenBucketNotification stops once it has its records).
   bool datafunc_canceled = false;
   httplib::ContentReceiver content_receiver =
       [this, &response, &datafunc_canceled](const char* data,
@@ -297,64 +286,53 @@ Response Request::execute() {
     return cont;
   };
 
-  // Stream the request body from the caller's buffer instead of copying it:
-  // single-request PUTs can be multi-GiB (RDMA fallback path).
-  httplib::ContentProvider content_provider =
-      [this](size_t offset, size_t length, httplib::DataSink& sink) -> bool {
-    if (offset >= body.size()) return true;
-    const size_t n = std::min(length, body.size() - offset);
-    return sink.write(body.data() + offset, n);
-  };
-
   httplib::Result res;
   std::string body_str(body.data(), body.size());
   httplib::ResponseHandler response_handler =
       [&response](const httplib::Response& res) -> bool {
-    // Headers (and therefore the status code) are known here, before any body
-    // is streamed; fill it in so a caller-initiated cancel still yields a
-    // response with the correct status.
+    // Status is known here, before any body is streamed, so a caller-
+    // initiated cancel still yields a response with the correct status.
     response.status_code = res.status;
     return true;
   };
   switch (method) {
     case Method::kGet:
       if (datafunc != nullptr) {
-        res = cli->Get(path, request_headers, response_handler,
-                       content_receiver, download_progress);
+        res = cli.Get(path, request_headers, response_handler, content_receiver,
+                      download_progress);
       } else {
-        res = cli->Get(path, request_headers, download_progress);
+        res = cli.Get(path, request_headers, download_progress);
       }
       break;
     case Method::kHead:
-      res = cli->Head(path, request_headers);
+      res = cli.Head(path, request_headers);
       break;
     case Method::kPost:
       if (datafunc != nullptr) {
         // Stream the response body to the data function (e.g. the S3 Select
         // event stream); without this the buffered body is dropped.
-        res = cli->Post(path, request_headers, body_str, content_type,
-                        content_receiver, download_progress);
+        res = cli.Post(path, request_headers, body_str, content_type,
+                       content_receiver, download_progress);
       } else {
-        res = cli->Post(path, request_headers, body_str, content_type,
-                        upload_progress);
+        res = cli.Post(path, request_headers, body_str, content_type,
+                       upload_progress);
       }
       break;
     case Method::kPut:
-      res = cli->Put(path, request_headers, body_str, content_type,
-                     upload_progress);
+      res = cli.Put(path, request_headers, body_str, content_type,
+                    upload_progress);
       break;
     case Method::kDelete:
-      res = cli->Delete(path, request_headers, download_progress);
+      res = cli.Delete(path, request_headers, download_progress);
       break;
   }
 
   if (!res) {
     // A false return from the data function cancels the transfer; for
     // streaming callers that is a normal completion, not an error.  GET
-    // captures the real status via the response handler; httplib discards
-    // the response when a POST receiver cancels, so the status may be
-    // unavailable there -- report success since the caller ended the
-    // transfer itself.
+    // captures the status via the response handler; httplib discards the
+    // response when a POST receiver cancels, so report success there since
+    // the caller ended the transfer itself.
     if (res.error() == httplib::Error::Canceled && datafunc_canceled) {
       if (response.status_code == 0) response.status_code = 200;
       return response;

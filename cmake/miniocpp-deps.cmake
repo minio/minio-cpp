@@ -20,8 +20,7 @@ find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 
-# cpp-httplib -- header-only library with optional SSL support.
-# Resolution order: vcpkg -> pkg-config -> upstream source (pinned tag).
+# cpp-httplib -- header-only; vcpkg -> pkg-config -> upstream source (pinned tag).
 find_package(httplib CONFIG QUIET)
 if (httplib_FOUND)
   set(MINIO_CPP_HTTPLIB_TARGET httplib::httplib)

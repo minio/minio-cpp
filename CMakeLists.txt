@@ -179,9 +179,8 @@ target_include_directories(miniocpp PUBLIC
   $<BUILD_INTERFACE:${MINIO_CPP_INCLUDES}>
 )
 target_link_libraries(miniocpp PUBLIC ${MINIO_CPP_LIBS})
-# cpp-httplib is header-only and its class layout depends on the OpenSSL
-# macro; define it once, target-wide, so every translation unit that includes
-# httplib.h compiles it identically (see src/http.cc).
+# httplib's class layout depends on CPPHTTPLIB_OPENSSL_SUPPORT; define it once
+# target-wide so every translation unit compiles httplib.h identically.
 target_compile_definitions(miniocpp PRIVATE CPPHTTPLIB_OPENSSL_SUPPORT)
 if (MINIO_CPP_ENABLE_RDMA)
   target_compile_definitions(miniocpp PUBLIC MINIO_CPP_RDMA)
