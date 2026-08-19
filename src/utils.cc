@@ -31,6 +31,9 @@
 #include <unistd.h>
 #endif
 
+// cpp-httplib's OpenSSL backend is enabled target-wide in CMakeLists.txt; the
+// header-only library's class layout depends on it, so every translation unit
+// must compile httplib.h with the same macro set.
 #include <httplib.h>
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
@@ -158,8 +161,10 @@ bool StringToBool(const std::string& str) {
 
 std::string Trim(std::string_view str, char ch) {
   std::size_t start, len;
-  for (start = 0; start < str.size() && str[start] == ch; start++);
-  for (len = str.size() - start; len > 0 && str[start + len - 1] == ch; len--);
+  for (start = 0; start < str.size() && str[start] == ch; start++)
+    ;
+  for (len = str.size() - start; len > 0 && str[start + len - 1] == ch; len--)
+    ;
   return std::string(str.substr(start, len));
 }
 
@@ -211,6 +216,51 @@ std::string Join(const std::vector<std::string>& values,
   return result;
 }
 
+// AWS SigV4 percent-encoding for canonical URIs and query strings: keep only
+// RFC 3986 unreserved characters and percent-encode everything else (including
+// '*', which httplib::encode_uri_component leaves unescaped and would make the
+// server compute a different canonical request, failing signature check).
+std::string UriEncode(const std::string& value) {
+  static const char* kHex = "0123456789ABCDEF";
+  std::string out;
+  out.reserve(value.size());
+  for (unsigned char c : value) {
+    if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+        (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.' ||
+        c == '~') {
+      out += static_cast<char>(c);
+    } else {
+      out += '%';
+      out += kHex[c >> 4];
+      out += kHex[c & 0xF];
+    }
+  }
+  return out;
+}
+
+std::string UriDecode(const std::string& value) {
+  auto hex_value = [](char c) -> int {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    return c - 'A' + 10;
+  };
+
+  std::string out;
+  out.reserve(value.size());
+  for (size_t i = 0; i < value.size(); i++) {
+    if (value[i] == '%' && i + 2 < value.size() &&
+        std::isxdigit(static_cast<unsigned char>(value[i + 1])) &&
+        std::isxdigit(static_cast<unsigned char>(value[i + 2]))) {
+      out += static_cast<char>((hex_value(value[i + 1]) << 4) |
+                               hex_value(value[i + 2]));
+      i += 2;
+    } else {
+      out += value[i];
+    }
+  }
+  return out;
+}
+
 std::string EncodePath(const std::string& path) {
   std::stringstream str_stream(path);
   std::string token;
@@ -218,7 +268,7 @@ std::string EncodePath(const std::string& path) {
   while (std::getline(str_stream, token, '/')) {
     if (!token.empty()) {
       if (!out.empty()) out += "/";
-      out += httplib::encode_uri_component(token);
+      out += UriEncode(token);
     }
   }
 
@@ -608,9 +658,9 @@ std::string Multimap::GetCanonicalQueryString() const {
   for (auto& [key, values] : map_) {
     for (auto& value : values) {
       if (!query_string.empty()) query_string += "&";
-      query_string += httplib::encode_uri_component(key);
+      query_string += UriEncode(key);
       query_string += '=';
-      query_string += httplib::encode_uri_component(value);
+      query_string += UriEncode(value);
     }
   }
   return query_string;

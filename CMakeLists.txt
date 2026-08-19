@@ -172,6 +172,10 @@ target_include_directories(miniocpp PUBLIC
   $<BUILD_INTERFACE:${MINIO_CPP_INCLUDES}>
 )
 target_link_libraries(miniocpp PUBLIC ${MINIO_CPP_LIBS})
+# cpp-httplib is header-only and its class layout depends on the OpenSSL
+# macro; define it once, target-wide, so every translation unit that includes
+# httplib.h compiles it identically (see src/http.cc).
+target_compile_definitions(miniocpp PRIVATE CPPHTTPLIB_OPENSSL_SUPPORT)
 if (MINIO_CPP_ENABLE_RDMA)
   target_compile_definitions(miniocpp PUBLIC MINIO_CPP_RDMA)
 endif()
@@ -315,7 +319,7 @@ install(TARGETS miniocpp
         INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
 # Source-built deps must be in an export set for install(EXPORT) to resolve
-# them (curlpp exports itself; miniocpp_inih does not).
+# them (miniocpp_inih does not export itself).
 if (MINIO_CPP_DEPS_EXPORT_TARGETS)
   install(TARGETS ${MINIO_CPP_DEPS_EXPORT_TARGETS}
           EXPORT miniocpp-targets

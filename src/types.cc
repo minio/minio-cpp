@@ -340,8 +340,10 @@ std::string ReplicationConfig::ToXML() const {
 
   auto tag_xml = [](std::string key, std::string value) -> std::string {
     std::stringstream ss;
-    ss << "<Tag>" << "<Key>" << key << "</Key>" << "<Value>" << value
-       << "</Value>" << "</Tag>";
+    ss << "<Tag>"
+       << "<Key>" << key << "</Key>"
+       << "<Value>" << value << "</Value>"
+       << "</Tag>";
     return ss.str();
   };
 
@@ -371,7 +373,8 @@ std::string ReplicationConfig::ToXML() const {
       ss << "</EncryptionConfiguration>";
     }
     if (rule.destination.metrics) {
-      ss << "<Metrics>" << "<EventThreshold>";
+      ss << "<Metrics>"
+         << "<EventThreshold>";
       if (rule.destination.metrics.event_threshold_minutes > 0) {
         ss << minutes_xml(rule.destination.metrics.event_threshold_minutes);
       }
@@ -379,7 +382,8 @@ std::string ReplicationConfig::ToXML() const {
          << "</Metrics>";
     }
     if (rule.destination.replication_time) {
-      ss << "<ReplicationTime>" << "<Time>";
+      ss << "<ReplicationTime>"
+         << "<Time>";
       if (rule.destination.replication_time.time_minutes > 0) {
         ss << minutes_xml(rule.destination.replication_time.time_minutes);
       }
@@ -539,8 +543,10 @@ std::string LifecycleConfig::ToXML() const {
       }
       if (!rule.filter.and_operator.tags.empty()) {
         for (auto& [key, value] : rule.filter.and_operator.tags) {
-          ss << "<Tag>" << "<Key>" << key << "</Key>" << "<Value>" << value
-             << "</Value>" << "</Tag>";
+          ss << "<Tag>"
+             << "<Key>" << key << "</Key>"
+             << "<Value>" << value << "</Value>"
+             << "</Tag>";
         }
       }
       ss << "</And>";
@@ -549,8 +555,10 @@ std::string LifecycleConfig::ToXML() const {
       ss << "<Prefix>" << rule.filter.prefix << "</Prefix>";
     }
     if (rule.filter.tag) {
-      ss << "<Tag>" << "<Key>" << rule.filter.tag.key << "</Key>" << "<Value>"
-         << rule.filter.tag.value << "</Value>" << "</Tag>";
+      ss << "<Tag>"
+         << "<Key>" << rule.filter.tag.key << "</Key>"
+         << "<Value>" << rule.filter.tag.value << "</Value>"
+         << "</Tag>";
     }
     ss << "</Filter>";
 

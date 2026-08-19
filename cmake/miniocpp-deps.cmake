@@ -4,7 +4,7 @@
 # Resolution order per dependency: vcpkg CONFIG package -> pkg-config ->
 # upstream source.  The source branch is for distros where vcpkg is
 # impractical (its default setup downloads glibc-linked tools that do not run
-# on musl) and no curlpp / C++ INIReader packages exist.  It clones at
+# on musl) and no C++ INIReader packages exist.  It clones at
 # configure time with plain git, so it works on the CMake 3.13.4 floor (no
 # FetchContent); vcpkg builds never reach it.
 #
@@ -57,47 +57,6 @@ else()
     add_subdirectory("${MINIO_CPP_HTTPLIB_SRC}"
             "${CMAKE_CURRENT_BINARY_DIR}/_deps/cpp-httplib-build")
     set(MINIO_CPP_HTTPLIB_TARGET httplib::httplib)
-  endif()
-endif()
-
-# curlpp -- pinned master commit, no patches needed: CURLOPT_CLOSEPOLICY is
-# gone upstream (dropped in curl 8.10) and the build is target-based and
-# self-exporting.  Static target keeps BUILD_SHARED_LIBS=OFF builds working.
-find_package(unofficial-curlpp CONFIG QUIET)
-if (unofficial-curlpp_FOUND)
-  set(MINIO_CPP_CURLPP_TARGET unofficial::curlpp::curlpp)
-else()
-  if (PkgConfig_FOUND)
-    pkg_check_modules(MINIO_CPP_CURLPP QUIET IMPORTED_TARGET curlpp)
-  endif()
-  if (MINIO_CPP_CURLPP_FOUND)
-    set(MINIO_CPP_CURLPP_TARGET PkgConfig::MINIO_CPP_CURLPP)
-  else()
-    message(STATUS "curlpp: no package found, building from source")
-    set(MINIO_CPP_CURLPP_SRC "${CMAKE_CURRENT_BINARY_DIR}/_deps/curlpp-src")
-    if (NOT EXISTS "${MINIO_CPP_CURLPP_SRC}/CMakeLists.txt")
-      execute_process(COMMAND git clone --quiet
-                      https://github.com/jpbarrette/curlpp.git
-                      "${MINIO_CPP_CURLPP_SRC}"
-                      RESULT_VARIABLE _curlpp_clone)
-      if (NOT _curlpp_clone STREQUAL "0")
-        message(FATAL_ERROR "curlpp: git clone failed")
-      endif()
-    endif()
-    # Also reset a cached checkout to the pinned commit, not just a fresh
-    # clone.
-    execute_process(COMMAND git checkout --quiet
-                    ec1b66e699557cd9d608d322c013a1ebda16bd08
-                    WORKING_DIRECTORY "${MINIO_CPP_CURLPP_SRC}"
-                    RESULT_VARIABLE _curlpp_checkout)
-    if (NOT _curlpp_checkout STREQUAL "0")
-      message(FATAL_ERROR "curlpp: git checkout of pinned commit failed")
-    endif()
-    set(CURLPP_BUILD_SHARED_LIBS OFF CACHE BOOL "Build curlpp shared library" FORCE)
-    add_subdirectory("${MINIO_CPP_CURLPP_SRC}"
-                     "${CMAKE_CURRENT_BINARY_DIR}/_deps/curlpp-build")
-    set(MINIO_CPP_CURLPP_TARGET curlpp_static)
-    set_target_properties(curlpp_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
   endif()
 endif()
 
@@ -167,7 +126,6 @@ endif()
 
 set(MINIO_CPP_DEPS_LINK_LIBS
   ${MINIO_CPP_HTTPLIB_TARGET}
-  ${MINIO_CPP_CURLPP_TARGET}
   ${MINIO_CPP_INIH_TARGET}
   nlohmann_json::nlohmann_json
   ${MINIO_CPP_PUGIXML_TARGET}

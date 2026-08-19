@@ -63,8 +63,7 @@ utils::Multimap ObjectWriteArgs::Headers() const {
 
   std::string tagging;
   for (auto& [key, value] : tags) {
-    std::string tag = httplib::encode_uri_component(key) + "=" +
-                      httplib::encode_uri_component(value);
+    std::string tag = utils::UriEncode(key) + "=" + utils::UriEncode(value);
     if (!tagging.empty()) {
       tagging += "&";
     }
@@ -128,10 +127,9 @@ utils::Multimap ObjectConditionalReadArgs::Headers() const {
 utils::Multimap ObjectConditionalReadArgs::CopyHeaders() const {
   utils::Multimap result_headers;
 
-  std::string copy_source =
-      httplib::encode_uri_component("/" + bucket + "/" + object);
+  std::string copy_source = utils::UriEncode("/" + bucket + "/" + object);
   if (!version_id.empty()) {
-    copy_source += "?versionId=" + httplib::encode_uri_component(version_id);
+    copy_source += "?versionId=" + utils::UriEncode(version_id);
   }
 
   result_headers.Add("x-amz-copy-source", copy_source);

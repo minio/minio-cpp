@@ -378,8 +378,11 @@ Result<CompleteMultipartUploadResponse> BaseClient::CompleteMultipartUpload(
   std::stringstream ss;
   ss << "<CompleteMultipartUpload>";
   for (auto& part : args.parts) {
-    ss << "<Part>" << "<PartNumber>" << part.number << "</PartNumber>"
-       << "<ETag>" << "\"" << part.etag << "\"" << "</ETag>";
+    ss << "<Part>"
+       << "<PartNumber>" << part.number << "</PartNumber>"
+       << "<ETag>"
+       << "\"" << part.etag << "\""
+       << "</ETag>";
     if (!part.checksum_crc64nvme.empty()) {
       ss << "<ChecksumCRC64NVME>" << part.checksum_crc64nvme
          << "</ChecksumCRC64NVME>";
@@ -1416,8 +1419,9 @@ Result<MakeBucketResponse> BaseClient::MakeBucket(MakeBucketArgs args) {
   std::string body;
   if (region != "us-east-1") {
     std::stringstream ss;
-    ss << "<CreateBucketConfiguration>" << "<LocationConstraint>" << region
-       << "</LocationConstraint>" << "</CreateBucketConfiguration>";
+    ss << "<CreateBucketConfiguration>"
+       << "<LocationConstraint>" << region << "</LocationConstraint>"
+       << "</CreateBucketConfiguration>";
     body = ss.str();
     req.body = body;
   }
@@ -1804,8 +1808,10 @@ Result<SetBucketTagsResponse> BaseClient::SetBucketTags(
   if (!args.tags.empty()) {
     ss << "<TagSet>";
     for (auto& [key, value] : args.tags) {
-      ss << "<Tag>" << "<Key>" << key << "</Key>" << "<Value>" << value
-         << "</Value>" << "</Tag>";
+      ss << "<Tag>"
+         << "<Key>" << key << "</Key>"
+         << "<Value>" << value << "</Value>"
+         << "</Tag>";
     }
     ss << "</TagSet>";
   }
@@ -1934,9 +1940,10 @@ Result<SetObjectRetentionResponse> BaseClient::SetObjectRetention(
   }
 
   std::stringstream ss;
-  ss << "<Retention>" << "<Mode>" << RetentionModeToString(args.retention_mode)
-     << "</Mode>" << "<RetainUntilDate>"
-     << args.retain_until_date.ToISO8601UTC() << "</RetainUntilDate>"
+  ss << "<Retention>"
+     << "<Mode>" << RetentionModeToString(args.retention_mode) << "</Mode>"
+     << "<RetainUntilDate>" << args.retain_until_date.ToISO8601UTC()
+     << "</RetainUntilDate>"
      << "</Retention>";
 
   std::string body = ss.str();
@@ -1978,8 +1985,10 @@ Result<SetObjectTagsResponse> BaseClient::SetObjectTags(
   if (!args.tags.empty()) {
     ss << "<TagSet>";
     for (auto& [key, value] : args.tags) {
-      ss << "<Tag>" << "<Key>" << key << "</Key>" << "<Value>" << value
-         << "</Value>" << "</Tag>";
+      ss << "<Tag>"
+         << "<Key>" << key << "</Key>"
+         << "<Value>" << value << "</Value>"
+         << "</Tag>";
     }
     ss << "</TagSet>";
   }

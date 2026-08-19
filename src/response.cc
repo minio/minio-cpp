@@ -169,7 +169,7 @@ Result<ListObjectsResponse> ListObjectsResponse::ParseXML(std::string_view data,
                                   const char* raw,
                                   std::string_view& target) -> void {
     if (encoding_type == "url") {
-      resp.owned_.emplace_back(httplib::decode_uri_component(raw));
+      resp.owned_.emplace_back(utils::UriDecode(raw));
       target = resp.owned_.back();
     } else {
       target = raw;
@@ -261,7 +261,7 @@ Result<ListObjectsResponse> ListObjectsResponse::ParseXML(std::string_view data,
       text = content.node().select_node("Key/text()");
       raw = text.node().value();
       if (resp.encoding_type == "url") {
-        resp.owned_.emplace_back(httplib::decode_uri_component(raw));
+        resp.owned_.emplace_back(utils::UriDecode(raw));
         item.name = resp.owned_.back();
       } else {
         item.name = raw;
@@ -318,7 +318,7 @@ Result<ListObjectsResponse> ListObjectsResponse::ParseXML(std::string_view data,
     text = common_prefix.node().select_node("Prefix/text()");
     raw = text.node().value();
     if (resp.encoding_type == "url") {
-      resp.owned_.emplace_back(httplib::decode_uri_component(raw));
+      resp.owned_.emplace_back(utils::UriDecode(raw));
       item.name = resp.owned_.back();
     } else {
       item.name = raw;

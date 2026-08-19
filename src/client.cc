@@ -315,7 +315,7 @@ void ListObjectsResult::StartPrefetch() {
         std::shared_future<std::shared_ptr<ListObjectsResponse>>>(std::async(
         std::launch::async,
         [client = client_, next_args = std::move(next_args)]() mutable
-            -> std::shared_ptr<ListObjectsResponse> {
+        -> std::shared_ptr<ListObjectsResponse> {
           try {
             auto resp = client->GetRegion(next_args.bucket, next_args.region);
             if (resp) {
@@ -711,9 +711,9 @@ Result<GetObjectResponse> Client::GetObject(GetObjectArgs args) {
                                        base_url_, region};
 
       // RAII, matching the multipart paths below. rdmaGetWithRetry signs and
-      // sends an HTTP request, and curlpp throws, so a manual Deregister after
-      // the call is skipped on that path and the buffer stays pinned for the
-      // life of the process.
+      // sends an HTTP request, so a manual Deregister after the call is
+      // skipped on that path and the buffer stays pinned for the life of the
+      // process.
       ScopedRDMARegistration reg(&rdma_client, args.buf);
 
       ssize_t ret =
@@ -1157,7 +1157,7 @@ Result<DownloadObjectResponse> Client::DownloadObject(DownloadObjectArgs args) {
   }
 
   std::string temp_filename =
-      args.filename + "." + httplib::encode_uri_component(etag) + ".part.minio";
+      args.filename + "." + utils::UriEncode(etag) + ".part.minio";
   std::ofstream fout(temp_filename,
                      std::ios::trunc | std::ios::out | std::ios::binary);
   if (!fout.is_open()) {

@@ -17,28 +17,24 @@
 
 #include "miniocpp/http.h"
 
-#include <curl/curl.h>
+// cpp-httplib's OpenSSL backend is enabled once, target-wide, via
+// target_compile_definitions(miniocpp PRIVATE CPPHTTPLIB_OPENSSL_SUPPORT): the
+// header-only library's class layout depends on that macro, so every
+// translation unit must agree on it.
+#include <httplib.h>
 
 #include <algorithm>
-#include <cerrno>
-#include <chrono>
-#include <curlpp/Easy.hpp>
-#include <curlpp/Exception.hpp>
-#include <curlpp/Infos.hpp>
-#include <curlpp/Multi.hpp>
-#include <curlpp/Options.hpp>
-#include <curlpp/cURLpp.hpp>
 #include <exception>
 #include <functional>
 #include <iosfwd>
 #include <iostream>
 #include <list>
-#include <mutex>
+#include <map>
+#include <memory>
 #include <ostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <thread>
 #include <type_traits>
 
 #include "miniocpp/error.h"
@@ -59,67 +55,9 @@ namespace {
 
 // Abort a transfer that makes no progress for this long. Guards against a
 // connection that drops mid-transfer without a clean close (TCP never RSTs),
-// which would otherwise keep the request alive indefinitely.
+// which would otherwise keep the request alive indefinitely. cpp-httplib
+// enforces it as a read/write timeout, since it has no low-speed limit.
 constexpr long kStallTimeoutSecs = 60;
-
-// curl_global_init() is documented as not thread-safe and is expensive
-// (OpenSSL init etc). Run it exactly once per process via a function-local
-// static (Meyers singleton; C++11 [stmt.dcl]/4 guarantees thread-safe
-// initialization), instead of paying the cost — and the race — on every
-// request via a stack-local curlpp::Cleanup.
-void EnsureGlobalCurlInit() {
-  static const curlpp::Cleanup kCleanup;
-  (void)kCleanup;
-}
-
-// Connection, DNS and TLS-session caches, kept per thread.
-//
-// These were once a single process-wide CURLSH with per-slot mutexes, which
-// libcurl's own documentation warns against: a shared connection cache is not
-// safe to use from several threads at once, and this crashed reliably under
-// concurrent PUTs -- a wild pointer read inside curl_multi_perform, with the
-// mutexes held exactly as documented. Bisecting the slots on libcurl 8.5:
-//
-//   none                  clean          CONNECT only          crashes
-//   DNS only              clean          CONNECT + SSL_SESSION crashes
-//   DNS + SSL_SESSION     crashes
-//
-// So the sharing itself is the problem, not one slot. Giving each thread its
-// own share keeps what the share was for -- a connection and TLS session
-// surviving past one Easy handle, so a signed S3 call does not pay a fresh
-// handshake every time -- while removing the cross-thread access entirely.
-// Nothing is shared between threads, so no lock callbacks are needed.
-//
-// The handle is destroyed when its thread exits. Every Easy that used it is
-// stack-local to Request::execute() and long gone by then.
-class ThreadCurlShare {
- public:
-  ThreadCurlShare() : share_(curl_share_init()) {
-    if (share_ == nullptr) {
-      std::cerr << "curl_share_init failed" << std::endl;
-      std::terminate();
-    }
-    curl_share_setopt(share_, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
-    curl_share_setopt(share_, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
-    curl_share_setopt(share_, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
-  }
-  ~ThreadCurlShare() {
-    if (share_ != nullptr) curl_share_cleanup(share_);
-  }
-  ThreadCurlShare(const ThreadCurlShare&) = delete;
-  ThreadCurlShare& operator=(const ThreadCurlShare&) = delete;
-
-  CURLSH* get() const { return share_; }
-
- private:
-  CURLSH* share_;
-};
-
-CURLSH* CurlShare() {
-  EnsureGlobalCurlInit();
-  static thread_local ThreadCurlShare share;
-  return share.get();
-}
 
 }  // namespace
 
@@ -239,65 +177,6 @@ Url Url::Parse(std::string value) {
              std::move(query_string));
 }
 
-error::Error Response::ReadStatusCode() {
-  size_t pos = response_.find("\r\n");
-  if (pos == std::string::npos) {
-    // Not yet received the first line.
-    return error::SUCCESS;
-  }
-
-  std::string line = response_.substr(0, pos);
-  response_.erase(0, pos + 2);
-
-  if (continue100_) {
-    if (!line.empty()) {
-      // After '100 Continue', next line must be empty new line.
-      return error::Error("invalid HTTP response");
-    }
-
-    continue100_ = false;
-
-    pos = response_.find("\r\n");
-    if (pos == std::string::npos) {
-      // Not yet received the first line after '100 Continue'.
-      return error::SUCCESS;
-    }
-
-    line = response_.substr(0, pos);
-    response_.erase(0, pos + 2);
-  }
-
-  // Skip HTTP/1.x.
-  pos = line.find(" ");
-  if (pos == std::string::npos) {
-    // First token must be HTTP/1.x
-    return error::Error("invalid HTTP response");
-  }
-  line = line.substr(pos + 1);
-
-  // Read status code.
-  pos = line.find(" ");
-  if (pos == std::string::npos) {
-    // The line must contain second token.
-    return error::Error("invalid HTTP response");
-  }
-  std::string code = line.substr(0, pos);
-  std::string::size_type st;
-  status_code = std::stoi(code, &st);
-  if (st == std::string::npos) {
-    // Code must be a number.
-    return error::Error("invalid HTTP response code " + code);
-  }
-
-  if (status_code == 100) {
-    continue100_ = true;
-  } else {
-    status_code_read_ = true;
-  }
-
-  return error::SUCCESS;
-}
-
 error::Error Response::Error() const {
   if (!error.empty()) return error::Error(error);
   if (status_code && (status_code < 200 || status_code > 299)) {
@@ -305,99 +184,6 @@ error::Error Response::Error() const {
                         std::to_string(status_code));
   }
   return error::SUCCESS;
-}
-
-error::Error Response::ReadHeaders() {
-  size_t pos = response_.find("\r\n\r\n");
-  if (pos == std::string::npos) {
-    // Not yet received the headers.
-    return error::SUCCESS;
-  }
-
-  headers_read_ = true;
-
-  std::string lines = response_.substr(0, pos);
-  response_.erase(0, pos + 4);
-
-  auto add_header = [&headers = headers](std::string line) -> error::Error {
-    size_t pos = line.find(": ");
-    if (pos != std::string::npos) {
-      headers.Add(line.substr(0, pos), line.substr(pos + 2));
-      return error::SUCCESS;
-    }
-
-    return error::Error("invalid HTTP header: " + line);
-  };
-
-  while ((pos = lines.find("\r\n")) != std::string::npos) {
-    std::string line = lines.substr(0, pos);
-    lines.erase(0, pos + 2);
-    if (error::Error err = add_header(line)) return err;
-  }
-
-  if (!lines.empty()) {
-    if (error::Error err = add_header(lines)) return err;
-  }
-
-  return error::SUCCESS;
-}
-
-size_t Response::ResponseCallback(curlpp::Multi* const requests,
-                                  curlpp::Easy* const request,
-                                  const char* const buffer, size_t size,
-                                  size_t length) {
-  size_t realsize = size * length;
-
-  // If error occurred previously, just cancel the request.
-  if (!error.empty()) {
-    requests->remove(request);
-    return realsize;
-  }
-
-  if (!status_code_read_ || !headers_read_) {
-    response_.append(buffer, length);
-  }
-
-  if (!status_code_read_) {
-    if (error::Error err = ReadStatusCode()) {
-      error = err.String();
-      requests->remove(request);
-      return realsize;
-    }
-
-    if (!status_code_read_) return realsize;
-  }
-
-  if (!headers_read_) {
-    if (error::Error err = ReadHeaders()) {
-      error = err.String();
-      requests->remove(request);
-      return realsize;
-    }
-
-    if (!headers_read_ || response_.empty()) return realsize;
-
-    // If data function is set and the request is successful, send data.
-    if (datafunc != nullptr && status_code >= 200 && status_code <= 299) {
-      DataFunctionArgs args(request, this, std::string(this->response_),
-                            userdata);
-      if (!datafunc(args)) requests->remove(request);
-    } else {
-      body = response_;
-    }
-
-    return realsize;
-  }
-
-  // If data function is set and the request is successful, send data.
-  if (datafunc != nullptr && status_code >= 200 && status_code <= 299) {
-    DataFunctionArgs args(request, this, std::string(buffer, length), userdata);
-    if (!datafunc(args)) requests->remove(request);
-  } else {
-    body.append(buffer, length);
-  }
-
-  return realsize;
 }
 
 Request::Request(Method method, Url url) {
@@ -410,183 +196,168 @@ Request::Request(Method method, Url url) {
 }
 
 Response Request::execute() {
-  EnsureGlobalCurlInit();
-  curlpp::Easy request;
-  curlpp::Multi requests;
-
-  // Attach this thread's share so connections, DNS resolutions and TLS
-  // sessions survive past this Easy handle's lifetime. Per thread rather than
-  // per process: see CurlShare() for why sharing these across threads
-  // corrupts libcurl's state. Also enable TCP keep-alive so the kernel keeps
-  // pooled sockets healthy across idle gaps between S3 calls. curlpp doesn't
-  // wrap either option, so set via libcurl.
-  CURL* const raw_handle = request.getHandle();
-  curl_easy_setopt(raw_handle, CURLOPT_SHARE, CurlShare());
-  curl_easy_setopt(raw_handle, CURLOPT_TCP_KEEPALIVE, 1L);
-
-  // Fail a stalled transfer instead of hanging forever. Skipped when the caller
-  // set an explicit total timeout (RDMA control plane) — that already bounds
-  // it.
-  if (timeout_secs <= 0) {
-    curl_easy_setopt(raw_handle, CURLOPT_LOW_SPEED_LIMIT, 1L);
-    curl_easy_setopt(raw_handle, CURLOPT_LOW_SPEED_TIME, kStallTimeoutSecs);
-  }
-
-  // Request settings.
-  request.setOpt(new curlpp::options::CustomRequest{MethodToString(method)});
-  std::string urlstring = url.String();
-  request.setOpt(new curlpp::Options::Url(urlstring));
-  if (debug) request.setOpt(new curlpp::Options::Verbose(true));
-  if (ignore_cert_check) {
-    request.setOpt(new curlpp::Options::SslVerifyPeer(false));
-    request.setOpt(new curlpp::Options::SslVerifyHost(0L));
-  }
-
-  if (url.https) {
-    if (!ssl_cert_file.empty()) {
-      request.setOpt(new curlpp::Options::SslVerifyPeer(true));
-      request.setOpt(new curlpp::Options::CaInfo(ssl_cert_file));
-    }
-    if (!key_file.empty()) {
-      request.setOpt(new curlpp::Options::SslKey(key_file));
-    }
-    if (!cert_file.empty()) {
-      request.setOpt(new curlpp::Options::SslCert(cert_file));
-    }
-  }
-
-  if (!nic_interface.empty()) {
-    request.setOpt(new curlpp::Options::Interface(nic_interface));
-  }
-  if (connect_timeout_secs > 0) {
-    request.setOpt(new curlpp::Options::ConnectTimeout(connect_timeout_secs));
-  }
-  if (timeout_secs > 0) {
-    request.setOpt(new curlpp::Options::Timeout(timeout_secs));
-  }
-
-  utils::CharBuffer charbuf((char*)body.data(), body.size());
-  std::istream body_stream(&charbuf);
-
-  switch (method) {
-    case Method::kDelete:
-    case Method::kGet:
-      break;
-    case Method::kHead:
-      request.setOpt(new curlpp::options::NoBody(true));
-      break;
-    case Method::kPut:
-    case Method::kPost:
-      if (!headers.Contains("Content-Length")) {
-        headers.Add("Content-Length", std::to_string(body.size()));
-      }
-      request.setOpt(new curlpp::Options::ReadStream(&body_stream));
-      // CURLOPT_INFILESIZE_LARGE (curl_off_t), not CURLOPT_INFILESIZE (long):
-      // the latter is documented to be capped at 2 GiB and silently truncates
-      // the upload for larger single-request bodies (e.g. a >4 GiB buffer that
-      // could not be RDMA-registered and falls back to a single PUT).
-      request.setOpt(new curlpp::Options::InfileSizeLarge(
-          static_cast<curl_off_t>(body.size())));
-      request.setOpt(new curlpp::Options::Upload(true));
-      break;
-  }
-
-  std::list<std::string> headerlist = headers.ToHttpHeaders();
-  headerlist.push_back("Expect:");  // Disable 100 continue from server.
-  request.setOpt(new curlpp::Options::HttpHeader(headerlist));
-
-  // Response settings.
-  request.setOpt(new curlpp::options::Header(true));
-
   Response response;
   response.datafunc = datafunc;
   response.userdata = userdata;
 
-  using namespace std::placeholders;
-  request.setOpt(new curlpp::options::WriteFunction(
-      std::bind(&Response::ResponseCallback, &response, &requests, &request, _1,
-                _2, _3)));
+  // httplib::Client is bound to one endpoint and keeps its connection pool
+  // (connections, TLS sessions, DNS results) alive across requests; reuse a
+  // thread-local client per endpoint. httplib::Client is not thread-safe, so
+  // each thread gets its own, mirroring the per-thread libcurl share it
+  // replaces. Client certificates are fixed at construction time, hence part
+  // of the cache key.
+  std::string endpoint = (url.https ? "https://" : "http://") + url.host;
+  if (url.port) endpoint += ":" + std::to_string(url.port);
 
-  auto progress =
-      [&progressfunc = progressfunc, &progress_userdata = progress_userdata](
-          double dltotal, double dlnow, double ultotal, double ulnow) -> int {
-    ProgressFunctionArgs args;
-    args.download_total_bytes = dltotal;
-    args.downloaded_bytes = dlnow;
-    args.upload_total_bytes = ultotal;
-    args.uploaded_bytes = ulnow;
-    args.userdata = progress_userdata;
-    if (progressfunc(args)) {
-      return CURL_PROGRESSFUNC_CONTINUE;
+  httplib::Client* cli = nullptr;
+  auto client =
+      std::make_unique<httplib::Client>(endpoint, cert_file, key_file);
+  if (!client->is_valid()) {
+    response.error = "unable to create HTTP client for " + endpoint;
+    return response;
+  }
+  cli = client.get();
+
+  // Options. httplib defaults to a 5s read/write timeout, far too short for
+  // S3 transfers; without an explicit timeout keep the 60s stall guard libcurl
+  // used, aborting only transfers that make no progress for that long.
+  cli->set_keep_alive(true);
+  cli->set_follow_location(false);
+  // Paths are pre-encoded by the caller (EncodePath); never let httplib
+  // encode them a second time.
+  cli->set_path_encode(false);
+  if (connect_timeout_secs > 0) {
+    cli->set_connection_timeout(connect_timeout_secs, 0);
+  }
+  if (timeout_secs > 0) {
+    cli->set_read_timeout(timeout_secs, 0);
+    cli->set_write_timeout(timeout_secs, 0);
+  } else {
+    cli->set_read_timeout(kStallTimeoutSecs, 0);
+    cli->set_write_timeout(kStallTimeoutSecs, 0);
+  }
+  if (!nic_interface.empty()) cli->set_interface(nic_interface);
+  if (url.https) {
+    cli->enable_server_certificate_verification(!ignore_cert_check);
+    if (!ssl_cert_file.empty()) cli->set_ca_cert_path(ssl_cert_file);
+  }
+
+  httplib::Headers request_headers;
+  for (const auto& key : headers.Keys()) {
+    for (const auto& value : headers.Get(key)) {
+      request_headers.insert({key, value});
     }
-    return 1;
+  }
+  // httplib sets Host itself from the endpoint when absent; a caller-provided
+  // Host (the SigV4-signed value) takes precedence and must be sent verbatim.
+  // Content-Length is derived from the body by httplib.
+  request_headers.erase("Content-Length");
+  std::string content_type = headers.GetFront("Content-Type");
+  request_headers.erase("Content-Type");
+
+  std::string path = url.path;
+  if (path.empty()) {
+    path = "/";
+  } else if (path.front() != '/') {
+    path = "/" + path;
+  }
+  if (!url.query_string.empty()) path += "?" + url.query_string;
+
+  // httplib reports either upload or download progress per call.
+  auto download_progress = [this](size_t current, size_t total) -> bool {
+    if (progressfunc == nullptr) return true;
+    ProgressFunctionArgs args;
+    args.download_total_bytes = total;
+    args.downloaded_bytes = current;
+    args.userdata = progress_userdata;
+    return progressfunc(args);
   };
-  if (progressfunc != nullptr) {
-    request.setOpt(new curlpp::options::NoProgress(false));
-    request.setOpt(new curlpp::options::ProgressFunction(progress));
-  }
-
-  int left = 0;
-  requests.add(&request);
-
-  // Execute.
-  while (!requests.perform(&left)) {
-  }
-  while (left) {
-    fd_set fdread{};
-    fd_set fdwrite{};
-    fd_set fdexcep{};
-    int maxfd = -1;
-
-    FD_ZERO(&fdread);
-    FD_ZERO(&fdwrite);
-    FD_ZERO(&fdexcep);
-
-    requests.fdset(&fdread, &fdwrite, &fdexcep, &maxfd);
-
-    // Bound the wait so the loop keeps pumping libcurl even when no socket ever
-    // becomes ready — otherwise a dropped/stalled connection blocks select()
-    // forever and this (synchronous) call hangs the calling thread. The bounded
-    // poll lets libcurl enforce its own timeouts (e.g. the low-speed limit set
-    // above) and abort the dead transfer.
-    if (maxfd < 0) {
-      // libcurl has no fd to wait on yet; select() with empty sets errors out
-      // on Windows, so just poll again shortly.
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    } else {
-      timeval timeout{};
-      timeout.tv_sec = 1;
-      timeout.tv_usec = 0;
-      if (select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &timeout) < 0) {
-#ifndef _WIN32
-        if (errno == EINTR) continue;  // interrupted by a signal; retry
-#endif
-        std::cerr << "select() failed; this should not happen" << std::endl;
-        std::terminate();
-      }
-    }
-    while (!requests.perform(&left)) {
-    }
-  }
-
-  // The loop exits once libcurl has no running transfers left. If the transfer
-  // aborted before delivering a single byte (e.g. the low-speed limit or
-  // connect timeout fired on a dropped/stalled connection), the write callback
-  // never ran, so neither status_code nor error was set. Surface a diagnostic
-  // instead of returning a silently-empty failure.
-  if (response.error.empty() && response.status_code == 0) {
-    response.error =
-        "transfer ended without a response (connection dropped, timed out, or "
-        "was aborted before any data was received)";
-  }
-
-  if (progressfunc != nullptr) {
+  auto upload_progress = [this](size_t current, size_t total) -> bool {
+    if (progressfunc == nullptr) return true;
     ProgressFunctionArgs args;
+    args.upload_total_bytes = total;
+    args.uploaded_bytes = current;
     args.userdata = progress_userdata;
-    curlpp::infos::SpeedUpload::get(request, args.upload_speed);
-    curlpp::infos::SpeedDownload::get(request, args.download_speed);
-    progressfunc(args);
+    return progressfunc(args);
+  };
+
+  // Streaming receive into the caller's data function, mirroring the old curl
+  // write callback. A false return aborts the transfer; record that so a
+  // caller-initiated abort is not reported as an error below (streaming
+  // consumers such as ListenBucketNotification cancel once they have all the
+  // records they need).
+  bool datafunc_canceled = false;
+  httplib::ContentReceiver content_receiver =
+      [this, &response, &datafunc_canceled](const char* data,
+                                            size_t length) -> bool {
+    DataFunctionArgs args(nullptr, &response, std::string(data, length),
+                          userdata);
+    const bool cont = datafunc(args);
+    if (!cont) datafunc_canceled = true;
+    return cont;
+  };
+
+  // Stream the request body from the caller's buffer instead of copying it:
+  // single-request PUTs can be multi-GiB (RDMA fallback path).
+  httplib::ContentProvider content_provider =
+      [this](size_t offset, size_t length, httplib::DataSink& sink) -> bool {
+    if (offset >= body.size()) return true;
+    const size_t n = std::min(length, body.size() - offset);
+    return sink.write(body.data() + offset, n);
+  };
+
+  httplib::Result res;
+  std::string body_str(body.data(), body.size());
+  httplib::ResponseHandler response_handler =
+      [&response](const httplib::Response& res) -> bool {
+    // Headers (and therefore the status code) are known here, before any body
+    // is streamed; fill it in so a caller-initiated cancel still yields a
+    // response with the correct status.
+    response.status_code = res.status;
+    return true;
+  };
+  switch (method) {
+    case Method::kGet:
+      if (datafunc != nullptr) {
+        res = cli->Get(path, request_headers, response_handler,
+                       content_receiver, download_progress);
+      } else {
+        res = cli->Get(path, request_headers, download_progress);
+      }
+      break;
+    case Method::kHead:
+      res = cli->Head(path, request_headers);
+      break;
+    case Method::kPost:
+      res = cli->Post(path, request_headers, body_str, content_type,
+                      upload_progress);
+      break;
+    case Method::kPut:
+      res = cli->Put(path, request_headers, body_str, content_type,
+                     upload_progress);
+      break;
+    case Method::kDelete:
+      res = cli->Delete(path, request_headers, download_progress);
+      break;
   }
+
+  if (!res) {
+    // A false return from the data function cancels the transfer; for
+    // streaming callers that is a normal completion, not an error.
+    if (res.error() == httplib::Error::Canceled && datafunc_canceled) {
+      return response;
+    }
+    response.error = httplib::to_string(res.error());
+    return response;
+  }
+
+  response.status_code = res->status;
+  for (const auto& [key, value] : res->headers) {
+    response.headers.Add(key, value);
+  }
+  // With a data function the body is streamed to it; otherwise keep the
+  // buffered response body (including error payloads for non-2xx statuses).
+  if (datafunc == nullptr) response.body = res->body;
 
   return response;
 }
@@ -594,13 +365,9 @@ Response Request::execute() {
 Response Request::Execute() {
   try {
     return execute();
-  } catch (curlpp::LogicError& e) {
+  } catch (const std::exception& e) {
     Response response;
-    response.error = std::string("curlpp::LogicError: ") + e.what();
-    return response;
-  } catch (curlpp::RuntimeError& e) {
-    Response response;
-    response.error = std::string("curlpp::RuntimeError: ") + e.what();
+    response.error = std::string("HTTP error: ") + e.what();
     return response;
   }
 }
