@@ -197,3 +197,47 @@ jobs:
       run: |
         cd minio-cpp/build
         ctest -C ${{ matrix.config.build_type }}
+
+  # Alpine/musl: vcpkg's default setup downloads glibc-linked tools, and
+  # Alpine lacks curlpp / INIReader packages -- exercises the pkg-config +
+  # upstream source fallback path.
+  build-alpine:
+    name: Alpine_Latest_GCC
+    runs-on: ubuntu-latest
+    container: alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
+    steps:
+    - name: Install dependencies
+      run: |
+        apk add --no-cache build-base cmake git ninja pkgconf \
+          curl-dev inih-dev nlohmann-json openssl-dev pugixml-dev zlib-dev
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      with:
+        persist-credentials: false
+    - name: Configure and Build
+      run: |
+        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMINIO_CPP_TEST=ON
+        cmake --build build
+    - name: Start MinIO server
+      run: |
+        MINIO_RELEASE=RELEASE.2025-09-07T16-13-09Z
+        wget --quiet https://dl.min.io/server/minio/release/linux-amd64/archive/minio.${MINIO_RELEASE}
+        wget --quiet https://dl.min.io/server/minio/release/linux-amd64/archive/minio.${MINIO_RELEASE}.sha256sum
+        sha256sum -c minio.${MINIO_RELEASE}.sha256sum
+        mv minio.${MINIO_RELEASE} minio
+        chmod +x minio
+        mkdir -p /data
+        MINIO_CI_CD=true ./minio server /data --address 127.0.0.1:9000 &
+        MINIO_PID=$!
+        for i in $(seq 1 30); do
+          if wget -q -O /dev/null http://127.0.0.1:9000/minio/health/live; then
+            exit 0
+          fi
+          kill -0 $MINIO_PID 2>/dev/null || { echo "MinIO server exited"; exit 1; }
+          sleep 1
+        done
+        echo "MinIO server did not become ready"
+        exit 1
+    - name: Run tests
+      run: |
+        SERVER_ENDPOINT=127.0.0.1:9000 ACCESS_KEY=minioadmin SECRET_KEY=minioadmin \
+          ./build/tests

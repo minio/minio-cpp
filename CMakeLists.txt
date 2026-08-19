@@ -15,8 +15,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-cmake_minimum_required(VERSION 3.10)
-cmake_policy(SET CMP0091 NEW)
+cmake_minimum_required(VERSION 3.13.4)
+if (POLICY CMP0091)
+  cmake_policy(SET CMP0091 NEW)
+endif()
 
 # Minio C++ Project
 # -----------------
@@ -89,22 +91,13 @@ endif()
 
 # Dependencies
 # ------------
+#
+# Resolution (vcpkg -> pkg-config -> upstream source) lives in
+# cmake/miniocpp-deps.cmake, shared with the installed miniocpp-config.cmake.
 
-find_package(OpenSSL REQUIRED)
-find_package(unofficial-curlpp CONFIG REQUIRED)
-find_package(unofficial-inih CONFIG REQUIRED)
-find_package(nlohmann_json CONFIG REQUIRED)
-find_package(pugixml CONFIG REQUIRED)
-find_package(ZLIB REQUIRED)
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/miniocpp-deps.cmake)
 
-list(APPEND MINIO_CPP_LIBS
-  unofficial::curlpp::curlpp
-  unofficial::inih::inireader
-  nlohmann_json::nlohmann_json
-  pugixml
-  OpenSSL::SSL OpenSSL::Crypto
-  ZLIB::ZLIB
-)
+list(APPEND MINIO_CPP_LIBS ${MINIO_CPP_DEPS_LINK_LIBS})
 
 if (WIN32)
   list(APPEND MINIO_CPP_LIBS wsock32)
@@ -321,12 +314,26 @@ install(TARGETS miniocpp
         LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
         INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
+# Source-built deps must be in an export set for install(EXPORT) to resolve
+# them (curlpp exports itself; miniocpp_inih does not).
+if (MINIO_CPP_DEPS_EXPORT_TARGETS)
+  install(TARGETS ${MINIO_CPP_DEPS_EXPORT_TARGETS}
+          EXPORT miniocpp-targets
+          RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+          LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+          ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+endif()
+
+# The link interface is not exported; miniocpp-config.cmake re-applies it.
 install(EXPORT miniocpp-targets
         NAMESPACE miniocpp::
-        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/miniocpp"
-        EXPORT_LINK_INTERFACE_LIBRARIES)
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/miniocpp")
 
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/miniocpp-config.cmake"
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/miniocpp")
+
+# The consumer config includes the dependency resolver.
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/cmake/miniocpp-deps.cmake"
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/miniocpp")
 
 install(FILES

@@ -6,7 +6,7 @@ For a complete list of APIs and examples, please take a look at the [MinIO C++ C
 
 ## Build Requirements
 
-* [cmake](https://cmake.org/) 3.10 or higher.
+* [cmake](https://cmake.org/) 3.13.4 or higher.
 * [vcpkg](https://vcpkg.io/en/index.html) package manager.
 * A working C++ compiler that supports at least C++17.
 
@@ -69,7 +69,7 @@ from every pushed `v*` tag (and can also be built on demand from the
 MinIO C++ cliend SDK can be consumed as a dependency in CMakeLists.txt, the following can be used as an example:
 
 ```cmake
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.13.4)
 
 project(miniocpp_example LANGUAGES C CXX)
 
@@ -128,6 +128,23 @@ We recommend the setup with `VCPKG_ROOT` for development. In that case there is 
 $ git clone https://github.com/minio/minio-cpp
 $ cd minio-cpp
 $ ./configure.sh -DMINIO_CPP_TEST=ON
+```
+
+### Building on Alpine Linux (musl)
+
+`vcpkg` can run on Alpine, but its default setup downloads glibc-linked tools
+such as CMake, which do not run on musl (setting `VCPKG_FORCE_SYSTEM_BINARIES`
+forces use of the apk-installed tools instead). Alpine also has no packages
+for `curlpp` or the C++ `INIReader`. The dependency resolver
+(`cmake/miniocpp-deps.cmake`) therefore falls back to `pkg-config` and then
+to fetching those two libraries from source, so a plain system-package build
+works:
+
+```bash
+$ apk add build-base cmake git ninja pkgconf \
+    curl-dev inih-dev nlohmann-json openssl-dev pugixml-dev zlib-dev
+$ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMINIO_CPP_TEST=ON
+$ cmake --build build
 ```
 
 ## Example:: file-uploader.cc

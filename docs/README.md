@@ -6,7 +6,7 @@ For a complete list of APIs and examples, please take a look at the [MinIO C++ C
 
 ## Build requirements
 * A working C++ development environment supporting C++17 standards.
-* CMake 3.10 or higher.
+* CMake 3.13.4 or higher.
 * [vcpkg](https://vcpkg.io/en/index.html).
 
 ## Install from vcpkg
