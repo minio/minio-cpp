@@ -1157,7 +1157,7 @@ Result<DownloadObjectResponse> Client::DownloadObject(DownloadObjectArgs args) {
   }
 
   std::string temp_filename =
-      args.filename + "." + httplib::decode_uri_component(etag) + ".part.minio";
+      args.filename + "." + httplib::encode_uri_component(etag) + ".part.minio";
   std::ofstream fout(temp_filename,
                      std::ios::trunc | std::ios::out | std::ios::binary);
   if (!fout.is_open()) {
