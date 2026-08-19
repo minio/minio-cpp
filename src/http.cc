@@ -320,8 +320,8 @@ Response Request::execute() {
   bool datafunc_canceled = false;
   bool stream_to_datafunc = true;
   httplib::ContentReceiver content_receiver =
-      [this, &response, &datafunc_canceled,
-       &stream_to_datafunc](const char* data, size_t length) -> bool {
+      [this, &response, &datafunc_canceled, &stream_to_datafunc](
+          const char* data, size_t length) -> bool {
     if (!stream_to_datafunc) {
       response.body.append(data, length);
       return true;
