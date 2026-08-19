@@ -19,6 +19,9 @@ find_package(PkgConfig QUIET)
 find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(httplib CONFIG REQUIRED)
+
+set(MINIO_CPP_HTTPLIB_TARGET httplib::httplib)
 
 # curlpp -- pinned master commit, no patches needed: CURLOPT_CLOSEPOLICY is
 # gone upstream (dropped in curl 8.10) and the build is target-based and
@@ -126,6 +129,7 @@ else()
 endif()
 
 set(MINIO_CPP_DEPS_LINK_LIBS
+  ${MINIO_CPP_HTTPLIB_TARGET}
   ${MINIO_CPP_CURLPP_TARGET}
   ${MINIO_CPP_INIH_TARGET}
   nlohmann_json::nlohmann_json
