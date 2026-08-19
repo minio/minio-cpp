@@ -142,7 +142,7 @@ works:
 
 ```bash
 $ apk add build-base cmake git ninja pkgconf \
-    curl-dev inih-dev nlohmann-json openssl-dev pugixml-dev zlib-dev
+    inih-dev nlohmann-json openssl-dev pugixml-dev zlib-dev
 $ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMINIO_CPP_TEST=ON
 $ cmake --build build
 ```
