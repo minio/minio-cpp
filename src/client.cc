@@ -1160,13 +1160,15 @@ Result<DownloadObjectResponse> Client::DownloadObject(DownloadObjectArgs args) {
     etag = resp->etag;
   }
 
-  std::string temp_filename =
-      args.filename + "." + utils::UriEncode(etag) + ".part.minio";
+  // Keep the temporary name a path so non-ASCII names survive on Windows
+  // (ofstream's path overload uses the wide API there).
+  std::filesystem::path temp_filename = args.filename;
+  temp_filename += "." + utils::UriEncode(etag) + ".part.minio";
   std::ofstream fout(temp_filename,
                      std::ios::trunc | std::ios::out | std::ios::binary);
   if (!fout.is_open()) {
-    return error::make<DownloadObjectResponse>("unable to open file " +
-                                               temp_filename);
+    return error::make<DownloadObjectResponse>(
+        "unable to open file " + utils::PathToUtf8(temp_filename));
   }
 
   std::string region;
@@ -1671,8 +1673,9 @@ Result<UploadObjectResponse> Client::UploadObject(UploadObjectArgs args) {
   try {
     file.open(args.filename);
   } catch (std::system_error& err) {
-    return error::make<UploadObjectResponse>(
-        "unable to open file " + args.filename + "; " + err.code().message());
+    return error::make<UploadObjectResponse>("unable to open file " +
+                                             utils::PathToUtf8(args.filename) +
+                                             "; " + err.code().message());
   }
 
   PutObjectArgs po_args(file, args.object_size, 0);

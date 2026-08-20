@@ -25,6 +25,7 @@
 #endif
 
 #include <ctime>
+#include <filesystem>
 #include <ios>
 #include <list>
 #include <map>
@@ -37,6 +38,17 @@
 #include "error.h"
 
 namespace minio::utils {
+
+// path::u8string() returns std::string in C++17 but std::u8string in C++20;
+// normalize to std::string so callers work under both standards.
+inline std::string PathToUtf8(const std::filesystem::path& p) {
+#ifdef __cpp_lib_char8_t
+  const std::u8string u8 = p.u8string();
+  return std::string(reinterpret_cast<const char*>(u8.data()), u8.size());
+#else
+  return p.u8string();
+#endif
+}
 
 inline constexpr unsigned int kMaxMultipartCount = 10000;        // 10000 parts
 inline constexpr unsigned int kOptPartSize = 64 * 1024 * 1024;   // 64MiB
