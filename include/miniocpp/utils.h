@@ -94,6 +94,13 @@ std::string Join(const std::list<std::string>& values,
 std::string Join(const std::vector<std::string>& values,
                  const std::string& delimiter);
 
+// AWS SigV4 percent-encoding: RFC 3986 unreserved characters are kept,
+// everything else is percent-encoded with uppercase hex.
+std::string UriEncode(const std::string& value);
+
+// UriDecode reverses percent-encoding; '+' is not treated as space.
+std::string UriDecode(const std::string& value);
+
 // EncodePath does URL encoding of path. It also normalizes multiple slashes.
 std::string EncodePath(const std::string& path);
 

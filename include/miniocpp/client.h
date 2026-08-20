@@ -30,6 +30,11 @@
 #include "response.h"
 #include "result.h"
 
+// windows.h maps GetObject to GetObjectA; keep the member function names.
+#ifdef _WIN32
+#undef GetObject
+#endif
+
 namespace minio::s3 {
 
 class Client;

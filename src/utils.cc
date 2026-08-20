@@ -31,6 +31,9 @@
 #include <unistd.h>
 #endif
 
+// CPPHTTPLIB_OPENSSL_SUPPORT is set target-wide in CMakeLists.txt so every
+// translation unit compiles httplib.h with the same macro set.
+#include <httplib.h>
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 #include <openssl/crypto.h>
@@ -50,7 +53,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
-#include <curlpp/cURLpp.hpp>
 #include <exception>
 #include <iomanip>
 #include <ios>
@@ -211,6 +213,50 @@ std::string Join(const std::vector<std::string>& values,
   return result;
 }
 
+// AWS SigV4 percent-encoding: RFC 3986 unreserved characters are kept,
+// everything else is percent-encoded ('*' must not survive, unlike
+// httplib::encode_uri_component).
+std::string UriEncode(const std::string& value) {
+  static const char* kHex = "0123456789ABCDEF";
+  std::string out;
+  out.reserve(value.size());
+  for (unsigned char c : value) {
+    if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+        (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.' ||
+        c == '~') {
+      out += static_cast<char>(c);
+    } else {
+      out += '%';
+      out += kHex[c >> 4];
+      out += kHex[c & 0xF];
+    }
+  }
+  return out;
+}
+
+std::string UriDecode(const std::string& value) {
+  auto hex_value = [](char c) -> int {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    return c - 'A' + 10;
+  };
+
+  std::string out;
+  out.reserve(value.size());
+  for (size_t i = 0; i < value.size(); i++) {
+    if (value[i] == '%' && i + 2 < value.size() &&
+        std::isxdigit(static_cast<unsigned char>(value[i + 1])) &&
+        std::isxdigit(static_cast<unsigned char>(value[i + 2]))) {
+      out += static_cast<char>((hex_value(value[i + 1]) << 4) |
+                               hex_value(value[i + 2]));
+      i += 2;
+    } else {
+      out += value[i];
+    }
+  }
+  return out;
+}
+
 std::string EncodePath(const std::string& path) {
   std::stringstream str_stream(path);
   std::string token;
@@ -218,7 +264,7 @@ std::string EncodePath(const std::string& path) {
   while (std::getline(str_stream, token, '/')) {
     if (!token.empty()) {
       if (!out.empty()) out += "/";
-      out += curlpp::escape(token);
+      out += UriEncode(token);
     }
   }
 
@@ -608,9 +654,9 @@ std::string Multimap::GetCanonicalQueryString() const {
   for (auto& [key, values] : map_) {
     for (auto& value : values) {
       if (!query_string.empty()) query_string += "&";
-      query_string += curlpp::escape(key);
+      query_string += UriEncode(key);
       query_string += '=';
-      query_string += curlpp::escape(value);
+      query_string += UriEncode(value);
     }
   }
   return query_string;

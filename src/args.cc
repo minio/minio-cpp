@@ -17,7 +17,6 @@
 
 #include "miniocpp/args.h"
 
-#include <curlpp/cURLpp.hpp>
 #include <exception>
 #include <filesystem>
 #include <iostream>
@@ -62,7 +61,7 @@ utils::Multimap ObjectWriteArgs::Headers() const {
 
   std::string tagging;
   for (auto& [key, value] : tags) {
-    std::string tag = curlpp::escape(key) + "=" + curlpp::escape(value);
+    std::string tag = utils::UriEncode(key) + "=" + utils::UriEncode(value);
     if (!tagging.empty()) {
       tagging += "&";
     }
@@ -126,9 +125,9 @@ utils::Multimap ObjectConditionalReadArgs::Headers() const {
 utils::Multimap ObjectConditionalReadArgs::CopyHeaders() const {
   utils::Multimap result_headers;
 
-  std::string copy_source = curlpp::escape("/" + bucket + "/" + object);
+  std::string copy_source = utils::UriEncode("/" + bucket + "/" + object);
   if (!version_id.empty()) {
-    copy_source += "?versionId=" + curlpp::escape(version_id);
+    copy_source += "?versionId=" + utils::UriEncode(version_id);
   }
 
   result_headers.Add("x-amz-copy-source", copy_source);

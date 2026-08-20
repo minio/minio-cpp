@@ -40,7 +40,8 @@ int main() {
   if (resp) {
     std::cout << "Object tags: " << std::endl;
     for (auto& [key, value] : resp->tags) {
-      std::cout << "Key: " << key << ", " << "Value: " << value << std::endl;
+      std::cout << "Key: " << key << ", "
+                << "Value: " << value << std::endl;
     }
   } else {
     std::cout << "unable to get object tags; " << resp.error().String()

@@ -24,7 +24,14 @@
 #include <unistd.h>
 #endif
 
-#include <curlpp/cURLpp.hpp>
+#include <httplib.h>
+
+// windows.h (via httplib) maps GetObject to GetObjectA; undo it so the
+// Client::GetObject members keep their real names.
+#ifdef _WIN32
+#undef GetObject
+#endif
+
 #include <deque>
 #include <filesystem>
 #include <fstream>
@@ -709,10 +716,8 @@ Result<GetObjectResponse> Client::GetObject(GetObjectArgs args) {
                                        {},        std::nullopt, {},
                                        base_url_, region};
 
-      // RAII, matching the multipart paths below. rdmaGetWithRetry signs and
-      // sends an HTTP request, and curlpp throws, so a manual Deregister after
-      // the call is skipped on that path and the buffer stays pinned for the
-      // life of the process.
+      // Keep the buffer registered through rdmaGetWithRetry. The RAII guard
+      // deregisters it when this block exits, including on early returns.
       ScopedRDMARegistration reg(&rdma_client, args.buf);
 
       ssize_t ret =
@@ -1156,7 +1161,7 @@ Result<DownloadObjectResponse> Client::DownloadObject(DownloadObjectArgs args) {
   }
 
   std::string temp_filename =
-      args.filename + "." + curlpp::escape(etag) + ".part.minio";
+      args.filename + "." + utils::UriEncode(etag) + ".part.minio";
   std::ofstream fout(temp_filename,
                      std::ios::trunc | std::ios::out | std::ios::binary);
   if (!fout.is_open()) {

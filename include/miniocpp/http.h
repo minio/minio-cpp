@@ -18,8 +18,6 @@
 #ifndef MINIO_CPP_HTTP_H_INCLUDED
 #define MINIO_CPP_HTTP_H_INCLUDED
 
-#include <curlpp/Easy.hpp>
-#include <curlpp/Multi.hpp>
 #include <exception>
 #include <functional>
 #include <iostream>
@@ -77,18 +75,15 @@ using ProgressFunction = std::function<bool(ProgressFunctionArgs)>;
 struct Response;
 
 struct DataFunctionArgs {
-  curlpp::Easy* handle = nullptr;
   Response* response = nullptr;
   std::string datachunk;
   void* userdata = nullptr;
 
   DataFunctionArgs() = default;
-  DataFunctionArgs(curlpp::Easy* handle, Response* response, void* userdata)
-      : handle(handle), response(response), userdata(userdata) {}
-  DataFunctionArgs(curlpp::Easy* handle, Response* response,
-                   std::string datachunk, void* userdata)
-      : handle(handle),
-        response(response),
+  DataFunctionArgs(Response* response, void* userdata)
+      : response(response), userdata(userdata) {}
+  DataFunctionArgs(Response* response, std::string datachunk, void* userdata)
+      : response(response),
         datachunk(std::move(datachunk)),
         userdata(userdata) {}
 
@@ -164,24 +159,11 @@ struct Response {
   Response() = default;
   ~Response() = default;
 
-  size_t ResponseCallback(curlpp::Multi* const requests,
-                          curlpp::Easy* const request, const char* const buffer,
-                          size_t size, size_t length);
-
   explicit operator bool() const {
     return error.empty() && status_code >= 200 && status_code <= 299;
   }
 
   error::Error Error() const;
-
- private:
-  std::string response_;
-  bool continue100_ = false;
-  bool status_code_read_ = false;
-  bool headers_read_ = false;
-
-  error::Error ReadStatusCode();
-  error::Error ReadHeaders();
 };  // struct Response
 
 }  // namespace minio::http

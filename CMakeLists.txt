@@ -103,6 +103,13 @@ if (WIN32)
   list(APPEND MINIO_CPP_LIBS wsock32)
   list(APPEND MINIO_CPP_LIBS ws2_32)
 endif()
+if (APPLE)
+  # httplib loads macOS system certificates from the Keychain
+  # (SecTrustSettingsCopyCertificates); the vcpkg httplib target does not
+  # link the Security framework, so add it here.
+  list(APPEND MINIO_CPP_LIBS
+    "-framework CFNetwork" "-framework CoreFoundation" "-framework Security")
+endif()
 
 # Minio C++ Library
 # -----------------
@@ -172,6 +179,9 @@ target_include_directories(miniocpp PUBLIC
   $<BUILD_INTERFACE:${MINIO_CPP_INCLUDES}>
 )
 target_link_libraries(miniocpp PUBLIC ${MINIO_CPP_LIBS})
+# httplib's class layout depends on CPPHTTPLIB_OPENSSL_SUPPORT; define it once
+# target-wide so every translation unit compiles httplib.h identically.
+target_compile_definitions(miniocpp PRIVATE CPPHTTPLIB_OPENSSL_SUPPORT)
 if (MINIO_CPP_ENABLE_RDMA)
   target_compile_definitions(miniocpp PUBLIC MINIO_CPP_RDMA)
 endif()
@@ -315,7 +325,7 @@ install(TARGETS miniocpp
         INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
 # Source-built deps must be in an export set for install(EXPORT) to resolve
-# them (curlpp exports itself; miniocpp_inih does not).
+# them (miniocpp_inih does not export itself).
 if (MINIO_CPP_DEPS_EXPORT_TARGETS)
   install(TARGETS ${MINIO_CPP_DEPS_EXPORT_TARGETS}
           EXPORT miniocpp-targets
