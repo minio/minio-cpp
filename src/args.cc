@@ -211,12 +211,21 @@ error::Error DownloadObjectArgs::Validate() const {
   if (error::Error err = ObjectReadArgs::Validate()) {
     return err;
   }
-  if (!utils::CheckNonEmptyString(filename)) {
+  if (!utils::CheckNonEmptyString(utils::PathToUtf8(filename))) {
     return error::Error("filename cannot be empty");
   }
 
-  if (!overwrite && std::filesystem::exists(filename)) {
-    return error::Error("file " + filename + " already exists");
+  if (!overwrite) {
+    std::error_code ec;
+    const bool exists = std::filesystem::exists(filename, ec);
+    if (ec) {
+      return error::Error("unable to check " + utils::PathToUtf8(filename) +
+                          ": " + ec.message());
+    }
+    if (exists) {
+      return error::Error("file " + utils::PathToUtf8(filename) +
+                          " already exists");
+    }
   }
 
   return error::SUCCESS;
@@ -433,16 +442,21 @@ error::Error UploadObjectArgs::Validate() {
   if (error::Error err = ObjectArgs::Validate()) {
     return err;
   }
-  if (!utils::CheckNonEmptyString(filename)) {
+  if (!utils::CheckNonEmptyString(utils::PathToUtf8(filename))) {
     return error::Error("filename cannot be empty");
   }
 
-  if (!std::filesystem::exists(filename)) {
-    return error::Error("file " + filename + " does not exist");
+  std::error_code ec;
+  const std::uintmax_t obj_size = std::filesystem::file_size(filename, ec);
+  if (ec) {
+    if (ec == std::errc::no_such_file_or_directory) {
+      return error::Error("file " + utils::PathToUtf8(filename) +
+                          " does not exist");
+    }
+    return error::Error("unable to stat " + utils::PathToUtf8(filename) + ": " +
+                        ec.message());
   }
-
-  std::filesystem::path file_path = filename;
-  object_size = static_cast<uint64_t>(std::filesystem::file_size(file_path));
+  object_size = static_cast<uint64_t>(obj_size);
   return utils::CalcPartInfo(object_size, part_size, part_count);
 }
 
