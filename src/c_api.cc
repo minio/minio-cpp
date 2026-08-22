@@ -15,6 +15,7 @@
 
 #include <unistd.h>
 
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <istream>
@@ -173,9 +174,14 @@ ssize_t miniocpp_put_object(miniocpp_client* c, const char* bucket,
   return static_cast<ssize_t>(size);
 }
 
-ssize_t miniocpp_get_object(miniocpp_client* c, const char* bucket,
-                            const char* object, void* buf, size_t size,
-                            miniocpp_write_cb write_cb, void* userdata) {
+namespace {
+
+// Body shared by miniocpp_get_object and miniocpp_get_object_range.
+// `offset` < 0 reads the whole object; >= 0 selects a byte range.
+ssize_t GetObjectImpl(miniocpp_client* c, const char* bucket,
+                      const char* object, void* buf, size_t size,
+                      miniocpp_write_cb write_cb, void* userdata,
+                      int64_t offset) {
   if (c == nullptr || bucket == nullptr || object == nullptr) {
     SetLastError("client, bucket, object are required");
     return MINIOCPP_ERR_INVALID_ARG;
@@ -190,6 +196,7 @@ ssize_t miniocpp_get_object(miniocpp_client* c, const char* bucket,
   args.bucket = bucket;
   args.object = object;
   args.region = holder->base_url.region;
+  if (offset >= 0) args.offset = static_cast<size_t>(offset);
 
   ssize_t bytes_seen = 0;
 
@@ -212,6 +219,31 @@ ssize_t miniocpp_get_object(miniocpp_client* c, const char* bucket,
     return MINIOCPP_ERR_GENERIC;
   }
   return buf != nullptr ? static_cast<ssize_t>(size) : bytes_seen;
+}
+
+}  // namespace
+
+ssize_t miniocpp_get_object(miniocpp_client* c, const char* bucket,
+                            const char* object, void* buf, size_t size,
+                            miniocpp_write_cb write_cb, void* userdata) {
+  return GetObjectImpl(c, bucket, object, buf, size, write_cb, userdata, -1);
+}
+
+ssize_t miniocpp_get_object_range(miniocpp_client* c, const char* bucket,
+                                  const char* object, void* buf, size_t size,
+                                  uint64_t offset) {
+  if (buf == nullptr) {
+    SetLastError("buf is required for a ranged get");
+    return MINIOCPP_ERR_INVALID_ARG;
+  }
+  // GetObjectArgs::offset is a size_t and the range header is built from a
+  // signed value; refuse anything that would not survive the round trip.
+  if (offset > static_cast<uint64_t>(INT64_MAX)) {
+    SetLastError("offset out of range");
+    return MINIOCPP_ERR_INVALID_ARG;
+  }
+  return GetObjectImpl(c, bucket, object, buf, size, nullptr, nullptr,
+                       static_cast<int64_t>(offset));
 }
 
 void* miniocpp_alloc_aligned(size_t size) {

@@ -22,6 +22,7 @@
 #ifdef MINIO_CPP_RDMA
 
 #include <stddef.h>
+#include <stdint.h>
 #include <sys/types.h>  // ssize_t
 
 #ifdef __cplusplus
@@ -81,6 +82,25 @@ MINIOCPP_API ssize_t miniocpp_get_object(miniocpp_client* client,
                                          void* buf, size_t size,
                                          miniocpp_write_cb write_cb,
                                          void* userdata);
+
+// Ranged GET: read `size` bytes starting at `offset` in the object into `buf`.
+// Transport behaviour matches miniocpp_get_object (RDMA into the caller's
+// buffer, HTTP-into-buf on decline); AIStor answers a ranged RDMA transfer with
+// x-amz-rdma-reply: 206.
+//
+// GetObjectArgs already carries an offset and Client::GetObject already turns
+// it into a ranged RDMA GET, but the C ABI had no way to set it, so bindings
+// could only ever fetch whole objects. Two things that needs:
+//
+//   - reading part of a large object without transferring all of it;
+//   - letting several threads cooperate on one buffer, each filling a disjoint
+//     window of it, instead of every thread needing a buffer of its own.
+//
+// Returns bytes transferred, or MINIOCPP_ERR_*. `buf` is required.
+MINIOCPP_API ssize_t miniocpp_get_object_range(miniocpp_client* client,
+                                               const char* bucket,
+                                               const char* object, void* buf,
+                                               size_t size, uint64_t offset);
 
 // Page-aligned host allocator suitable for RDMA registration. Caller must
 // release with miniocpp_free_aligned. Returns NULL on allocation failure.
