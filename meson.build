@@ -61,7 +61,7 @@ if build_module
   else
     module_cpp_args = []
   endif
-  miniocpp_module_lib = static_library('miniocpp_module', 'modules/miniocpp.cc',
+  miniocpp_module_lib = static_library('miniocpp_module', 'modules/minio.cc',
     include_directories : miniocpp_include,
     dependencies : all_deps,
     cpp_args : module_cpp_args,

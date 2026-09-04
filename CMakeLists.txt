@@ -184,7 +184,7 @@ target_include_directories(miniocpp PUBLIC
 )
 target_link_libraries(miniocpp PUBLIC ${MINIO_CPP_LIBS})
 
-# Optional C++20 module interface for the public API (modules/miniocpp.cc).
+# Optional C++20 module interface for the public API (modules/minio.cc).
 # FILE_SET CXX_MODULES (CMake 3.28+) attaches it as a real part of the miniocpp
 # target's build - the compiler gets whatever flags it needs for a module
 # interface unit (e.g. /interface for MSVC) based on this declaration, not on
@@ -250,7 +250,7 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.28" AND MINIO_CPP_STD STREQUAL "20")
       PUBLIC
         FILE_SET CXX_MODULES
         BASE_DIRS modules
-        FILES modules/miniocpp.cc
+        FILES modules/minio.cc
     )
   endif()
 endif()

@@ -64,9 +64,9 @@ jobs:
         echo "CC=gcc-14" >> "$GITHUB_ENV"
         echo "CXX=g++-14" >> "$GITHUB_ENV"
 
-    # clang-tools-18 надає clang-scan-deps - Meson шукає бінарник тієї ж
-    # версії, що й сам компілятор, щоб просканувати modules/miniocpp.cc на
-    # залежності для Ninja dyndep.
+    # clang-tools-18 provides clang-scan-deps - Meson looks for the binary
+    # matching the same version as the compiler itself, to scan
+    # modules/minio.cc for dependencies for Ninja dyndep.
     - name: Install Clang 18 if Ubuntu Clang
       if: matrix.config.name == 'Ubuntu_Latest_Clang_Meson'
       run: |

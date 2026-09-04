@@ -2,7 +2,7 @@ module;
 
 #include <miniocpp/client.h>
 
-export module miniocpp;
+export module minio;
 
 // Re-exporting the public API through the module requires an EXPLICIT using-
 // declaration per symbol (using ns::Symbol;) - not a using-directive (using
