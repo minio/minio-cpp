@@ -189,7 +189,7 @@ target_link_libraries(miniocpp PUBLIC ${MINIO_CPP_LIBS})
 # target's build - the compiler gets whatever flags it needs for a module
 # interface unit (e.g. /interface for MSVC) based on this declaration, not on
 # the file's extension, so any CMake/MSBuild/Meson (via cmake.subproject())
-# consumer of this target picks up `import miniocpp;` automatically. Requires
+# consumer of this target picks up `import minio;` automatically. Requires
 # C++20 (MINIO_CPP_STD=20); silently skipped otherwise for older setups.
 #
 # CMake's module dependency scanning is only implemented for the Ninja,
@@ -424,7 +424,7 @@ endif()
 # installed package (via find_package(miniocpp) + CMake, as opposed to
 # consuming subprojects/miniocpp source directly, or via pkg-config/vcpkg)
 # is missing the generated module metadata CMake needs to let a downstream
-# CMake consumer `import miniocpp;` - see
+# CMake consumer `import minio;` - see
 # https://cmake.org/cmake/help/latest/command/install.html#exporting-c-modules.
 # Separately, installing module interfaces is not supported at all with
 # the Visual Studio generator (independent of the MINIO_CPP_HAS_CXX_MODULE
