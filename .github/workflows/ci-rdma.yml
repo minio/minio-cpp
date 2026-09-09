@@ -54,10 +54,13 @@ jobs:
     - name: Install recent CMake and Ninja
       uses: lukka/get-cmake@fffaaafeea488556c2c12dad60690008bc1caacb # v4.4.2
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get -qy update
-        cmake --version
+    # No apt package is installed in this job -- vcpkg brings the dependencies
+    # and the RDMA headers -- so there is nothing here to refresh an index for.
+    # It used to run `apt-get update` anyway, which fails the whole job when the
+    # runner image's third-party lists serve a bad index: a green build lost to
+    # a chrome-repo hash mismatch.
+    - name: Show CMake version
+      run: cmake --version
 
     - name: Configure and Build
       shell: bash

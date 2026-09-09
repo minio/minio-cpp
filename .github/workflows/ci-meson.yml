@@ -59,18 +59,32 @@ jobs:
     - name: Install GCC 14 if Ubuntu
       if: startsWith(matrix.config.name, 'Ubuntu_Latest_GCC')
       run: |
-        sudo apt-get update
+        # The runner image ships third-party apt lists -- chrome, microsoft --
+        # that nothing here installs from, and whose indexes intermittently fail
+        # their hash check and take the job down with them. Drop those lists and
+        # retry once; the install below is the real gate, and still fails loudly
+        # if the index is genuinely unusable.
+        sudo rm -f /etc/apt/sources.list.d/google-chrome.list \
+                   /etc/apt/sources.list.d/microsoft-prod.list
+        sudo apt-get update || sudo apt-get update || true
         sudo apt-get install -y gcc-14 g++-14
         echo "CC=gcc-14" >> "$GITHUB_ENV"
         echo "CXX=g++-14" >> "$GITHUB_ENV"
 
-    # clang-tools-18 надає clang-scan-deps - Meson шукає бінарник тієї ж
-    # версії, що й сам компілятор, щоб просканувати modules/miniocpp.cc на
-    # залежності для Ninja dyndep.
+    # clang-tools-18 provides clang-scan-deps - Meson looks for the binary
+    # matching the same version as the compiler itself, to scan
+    # modules/minio.cc for dependencies for Ninja dyndep.
     - name: Install Clang 18 if Ubuntu Clang
       if: matrix.config.name == 'Ubuntu_Latest_Clang_Meson'
       run: |
-        sudo apt-get update
+        # The runner image ships third-party apt lists -- chrome, microsoft --
+        # that nothing here installs from, and whose indexes intermittently fail
+        # their hash check and take the job down with them. Drop those lists and
+        # retry once; the install below is the real gate, and still fails loudly
+        # if the index is genuinely unusable.
+        sudo rm -f /etc/apt/sources.list.d/google-chrome.list \
+                   /etc/apt/sources.list.d/microsoft-prod.list
+        sudo apt-get update || sudo apt-get update || true
         sudo apt-get install -y clang-18 clang-tools-18
         echo "CC=clang-18" >> "$GITHUB_ENV"
         echo "CXX=clang++-18" >> "$GITHUB_ENV"

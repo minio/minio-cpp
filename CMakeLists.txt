@@ -23,8 +23,8 @@ endif()
 # Minio C++ Project
 # -----------------
 
-set(MINIO_CPP_MAJOR_VERSION "0")
-set(MINIO_CPP_MINOR_VERSION "6")
+set(MINIO_CPP_MAJOR_VERSION "1")
+set(MINIO_CPP_MINOR_VERSION "0")
 set(MINIO_CPP_PATCH_VERSION "0")
 set(MINIO_CPP_VERSION_STRING "${MINIO_CPP_MAJOR_VERSION}.${MINIO_CPP_MINOR_VERSION}.${MINIO_CPP_PATCH_VERSION}")
 
@@ -184,12 +184,12 @@ target_include_directories(miniocpp PUBLIC
 )
 target_link_libraries(miniocpp PUBLIC ${MINIO_CPP_LIBS})
 
-# Optional C++20 module interface for the public API (modules/miniocpp.cc).
+# Optional C++20 module interface for the public API (modules/minio.cc).
 # FILE_SET CXX_MODULES (CMake 3.28+) attaches it as a real part of the miniocpp
 # target's build - the compiler gets whatever flags it needs for a module
 # interface unit (e.g. /interface for MSVC) based on this declaration, not on
 # the file's extension, so any CMake/MSBuild/Meson (via cmake.subproject())
-# consumer of this target picks up `import miniocpp;` automatically. Requires
+# consumer of this target picks up `import minio;` automatically. Requires
 # C++20 (MINIO_CPP_STD=20); silently skipped otherwise for older setups.
 #
 # CMake's module dependency scanning is only implemented for the Ninja,
@@ -250,7 +250,7 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.28" AND MINIO_CPP_STD STREQUAL "20")
       PUBLIC
         FILE_SET CXX_MODULES
         BASE_DIRS modules
-        FILES modules/miniocpp.cc
+        FILES modules/minio.cc
     )
   endif()
 endif()
@@ -261,7 +261,16 @@ target_compile_definitions(miniocpp PRIVATE CPPHTTPLIB_OPENSSL_SUPPORT)
 if (MINIO_CPP_ENABLE_RDMA)
   target_compile_definitions(miniocpp PUBLIC MINIO_CPP_RDMA)
 endif()
+# The artifact is libminio, matching the `minio` C++20 module. The CMake
+# package, the exported target and the header directory stay `miniocpp`, so
+# existing find_package() and #include lines keep working.
+set_target_properties(miniocpp PROPERTIES OUTPUT_NAME minio)
 set_target_properties(miniocpp PROPERTIES VERSION "${MINIO_CPP_VERSION_STRING}")
+# SOVERSION carries the major alone, so the soname is libminio.so.1 and stays
+# put across the whole 1.x line. Without it CMake writes the full version into
+# the soname -- as libminiocpp.so.0.4.0 shows -- and every release, patches
+# included, orphans every binary already linked against its predecessor.
+set_target_properties(miniocpp PROPERTIES SOVERSION "${MINIO_CPP_MAJOR_VERSION}")
 set_target_properties(miniocpp PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 # Add a cmake alias - this is how users should use minio-cpp in their cmake projects.
@@ -381,7 +390,7 @@ configure_package_config_file(
 
 if (MINIO_CPP_ENABLE_RDMA)
   # Ship the vendored transport alongside the library and resolve it relative
-  # to whatever installed thing loads it, so an installed libminiocpp does not
+  # to whatever installed thing loads it, so an installed libminio does not
   # depend on this source tree still being present. Both names go in: the
   # soname is what the loader asks for, the link name is what -ls3rdma finds.
   install(FILES
@@ -424,7 +433,7 @@ endif()
 # installed package (via find_package(miniocpp) + CMake, as opposed to
 # consuming subprojects/miniocpp source directly, or via pkg-config/vcpkg)
 # is missing the generated module metadata CMake needs to let a downstream
-# CMake consumer `import miniocpp;` - see
+# CMake consumer `import minio;` - see
 # https://cmake.org/cmake/help/latest/command/install.html#exporting-c-modules.
 # Separately, installing module interfaces is not supported at all with
 # the Visual Studio generator (independent of the MINIO_CPP_HAS_CXX_MODULE
