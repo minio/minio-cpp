@@ -95,10 +95,12 @@ struct ClientHolder {
 
 extern "C" {
 
-miniocpp_client* miniocpp_client_new(const char* endpoint, const char* region,
-                                     const char* access_key,
-                                     const char* secret_key,
-                                     const char* session_token, int use_https) {
+static miniocpp_client* ClientNew(const char* endpoint, const char* region,
+                                  const char* access_key,
+                                  const char* secret_key,
+                                  const char* session_token, int use_https,
+                                  int ignore_cert_check,
+                                  const char* ssl_cert_file) {
   if (endpoint == nullptr || access_key == nullptr || secret_key == nullptr) {
     SetLastError("endpoint, access_key, and secret_key are required");
     return nullptr;
@@ -111,11 +113,31 @@ miniocpp_client* miniocpp_client_new(const char* endpoint, const char* region,
         access_key, secret_key, session_token != nullptr ? session_token : "");
     holder->client = std::make_unique<minio::s3::Client>(
         holder->base_url, holder->provider.get());
+    if (ignore_cert_check != 0) holder->client->IgnoreCertCheck(true);
+    if (ssl_cert_file != nullptr && *ssl_cert_file != '\0') {
+      holder->client->SetSslCertFile(ssl_cert_file);
+    }
     return reinterpret_cast<miniocpp_client*>(holder.release());
   } catch (const std::exception& e) {
     SetLastError(std::string("client construction failed: ") + e.what());
     return nullptr;
   }
+}
+
+miniocpp_client* miniocpp_client_new(const char* endpoint, const char* region,
+                                     const char* access_key,
+                                     const char* secret_key,
+                                     const char* session_token, int use_https) {
+  return ClientNew(endpoint, region, access_key, secret_key, session_token,
+                   use_https, 0, nullptr);
+}
+
+miniocpp_client* miniocpp_client_new_tls(
+    const char* endpoint, const char* region, const char* access_key,
+    const char* secret_key, const char* session_token, int use_https,
+    int ignore_cert_check, const char* ssl_cert_file) {
+  return ClientNew(endpoint, region, access_key, secret_key, session_token,
+                   use_https, ignore_cert_check, ssl_cert_file);
 }
 
 void miniocpp_client_free(miniocpp_client* c) {
