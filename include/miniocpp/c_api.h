@@ -59,6 +59,22 @@ MINIOCPP_API miniocpp_client* miniocpp_client_new(
     const char* endpoint, const char* region, const char* access_key,
     const char* secret_key, const char* session_token, int use_https);
 
+// As above, plus the TLS trust configuration for the HTTPS control plane.
+//
+// `ignore_cert_check` != 0 disables server certificate verification -- the
+// `--insecure` of the SDKs. `ssl_cert_file`, when non-NULL and non-empty, is a
+// CA bundle to verify against, and takes precedence over `ignore_cert_check`
+// (SSL_CERT_FILE in the environment does the same for every request).
+//
+// Without this, a caller has no way to reach either setting: an SDK's own TLS
+// configuration governs its HTTP client, not the requests this library makes,
+// so RDMA fails against exactly the self-signed endpoints where the caller's
+// plain S3 path works. `miniocpp_client_new` is this with both left off.
+MINIOCPP_API miniocpp_client* miniocpp_client_new_tls(
+    const char* endpoint, const char* region, const char* access_key,
+    const char* secret_key, const char* session_token, int use_https,
+    int ignore_cert_check, const char* ssl_cert_file);
+
 MINIOCPP_API void miniocpp_client_free(miniocpp_client* client);
 
 // PUT. When `buf` is non-NULL, attempts RDMA with HTTP-from-buf fallback;
