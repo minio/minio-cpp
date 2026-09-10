@@ -8,5 +8,5 @@ Description: @PROJECT_DESCRIPTION@
 Version: @PROJECT_VERSION@
 
 Requires: libcrypto libssl pugixml zlib
-Libs: -L${libdir} -lminio@MINIO_CPP_PC_EXTRA_LIBS@
-Cflags: -I${includedir}
+@MINIO_CPP_PC_REQUIRES_PRIVATE_LINE@Libs: -L${libdir} -lminio@MINIO_CPP_PC_EXTRA_LIBS@
+@MINIO_CPP_PC_LIBS_PRIVATE_LINE@Cflags: -I${includedir}
