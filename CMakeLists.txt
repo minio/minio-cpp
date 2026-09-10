@@ -99,6 +99,12 @@ include(${CMAKE_CURRENT_LIST_DIR}/cmake/miniocpp-deps.cmake)
 
 list(APPEND MINIO_CPP_LIBS ${MINIO_CPP_DEPS_LINK_LIBS})
 
+if (MINIO_CPP_ENABLE_RDMA)
+  # Installed beside libminio, so -L${libdir} on the Libs line already finds
+  # it; a static consumer still has to name it.
+  list(APPEND MINIO_CPP_PC_LIBS_PRIVATE -ls3rdma)
+endif()
+
 if (WIN32)
   list(APPEND MINIO_CPP_LIBS wsock32)
   list(APPEND MINIO_CPP_LIBS ws2_32)
@@ -459,5 +465,13 @@ install(FILES
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/tl"
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
+string(REPLACE ";" " " MINIO_CPP_PC_REQUIRES_PRIVATE_STR "${MINIO_CPP_PC_REQUIRES_PRIVATE}")
+string(REPLACE ";" " " MINIO_CPP_PC_LIBS_PRIVATE_STR "${MINIO_CPP_PC_LIBS_PRIVATE}")
+if (MINIO_CPP_PC_REQUIRES_PRIVATE_STR)
+  set(MINIO_CPP_PC_REQUIRES_PRIVATE_LINE "Requires.private: ${MINIO_CPP_PC_REQUIRES_PRIVATE_STR}\n")
+endif()
+if (MINIO_CPP_PC_LIBS_PRIVATE_STR)
+  set(MINIO_CPP_PC_LIBS_PRIVATE_LINE "Libs.private: ${MINIO_CPP_PC_LIBS_PRIVATE_STR}\n")
+endif()
 configure_file(miniocpp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/miniocpp.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/miniocpp.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
