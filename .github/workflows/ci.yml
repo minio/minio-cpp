@@ -120,7 +120,15 @@ jobs:
     - name: Install dependencies if Ubuntu
       if: startsWith(matrix.config.name, 'Ubuntu_Latest_GCC')
       run: |
-        wget --quiet https://dl.min.io/aistor/minio/release/linux-${{ matrix.config.arch }}/minio
+        . ./minio-cpp/.github/minio-release.env
+        arch=${{ matrix.config.arch }}
+        case "$arch" in
+          amd64) expected=$MINIO_SHA256_LINUX_AMD64 ;;
+          arm64) expected=$MINIO_SHA256_LINUX_ARM64 ;;
+          *) echo "no pinned digest for linux-$arch" >&2; exit 1 ;;
+        esac
+        wget --quiet -O minio "https://dl.min.io/aistor/minio/release/linux-${arch}/archive/minio.${MINIO_RELEASE}"
+        echo "${expected}  minio" | sha256sum -c -
         chmod +x minio
         cmake --version
         ./minio --version
@@ -128,16 +136,22 @@ jobs:
     - name: Install dependencies if macOS
       if: startsWith(matrix.config.os, 'macos')
       run: |
-        brew install pkg-config cmake minio/stable/minio
+        brew install pkg-config cmake
+        . ./minio-cpp/.github/minio-release.env
+        curl -fsSL -o minio "https://dl.min.io/aistor/minio/release/darwin-arm64/archive/minio.${MINIO_RELEASE}"
+        echo "${MINIO_SHA256_DARWIN_ARM64}  minio" | shasum -a 256 -c -
+        chmod +x minio
         cmake --version
-        minio --version
+        ./minio --version
 
     - name: Install dependencies if Windows
       shell: bash
       if: startsWith(matrix.config.os, 'windows')
       run: |
         choco install -y --no-progress cmake wget
-        wget --quiet https://dl.min.io/server/minio/release/windows-amd64/minio.exe
+        . ./minio-cpp/.github/minio-release.env
+        wget --quiet -O minio.exe "https://dl.min.io/aistor/minio/release/windows-amd64/archive/minio.exe.${MINIO_RELEASE}"
+        echo "${MINIO_SHA256_WINDOWS_AMD64}  minio.exe" | sha256sum -c -
         chmod +x minio.exe
         cmake --version
 
@@ -164,7 +178,8 @@ jobs:
     - name: Start MinIO server if macOS
       if: startsWith(matrix.config.name, 'macos')
       run: |
-        MINIO_CI_CD=true minio server test-xl/{1...4}/ &
+        export MINIO_LICENSE=$(cat ./minio-cpp/.github/aistor-free-license.jwt)
+        MINIO_CI_CD=true ./minio server test-xl/{1...4}/ &
         sleep 10
 
     - name: Start MinIO server if Windows
@@ -174,6 +189,7 @@ jobs:
         mkdir -p ~/.minio/certs
         cp ./minio-cpp/tests/public.crt ./minio-cpp/tests/private.key ~/.minio/certs/
         certutil -addstore -f "ROOT" ./minio-cpp/tests/public.crt
+        export MINIO_LICENSE=$(cat ./minio-cpp/.github/aistor-free-license.jwt)
         MINIO_CI_CD=true ./minio.exe server test-xl/{1...4}/ &
         sleep 10
 
@@ -219,13 +235,12 @@ jobs:
         cmake --build build
     - name: Start MinIO server
       run: |
-        MINIO_RELEASE=RELEASE.2025-09-07T16-13-09Z
-        wget --quiet https://dl.min.io/server/minio/release/linux-amd64/archive/minio.${MINIO_RELEASE}
-        wget --quiet https://dl.min.io/server/minio/release/linux-amd64/archive/minio.${MINIO_RELEASE}.sha256sum
-        sha256sum -c minio.${MINIO_RELEASE}.sha256sum
-        mv minio.${MINIO_RELEASE} minio
+        . .github/minio-release.env
+        wget --quiet -O minio "https://dl.min.io/aistor/minio/release/linux-amd64/archive/minio.${MINIO_RELEASE}"
+        echo "${MINIO_SHA256_LINUX_AMD64}  minio" | sha256sum -c -
         chmod +x minio
         mkdir -p /data
+        export MINIO_LICENSE=$(cat .github/aistor-free-license.jwt)
         MINIO_CI_CD=true ./minio server /data --address 127.0.0.1:9000 &
         MINIO_PID=$!
         for i in $(seq 1 30); do
