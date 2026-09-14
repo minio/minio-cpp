@@ -128,16 +128,18 @@ jobs:
     - name: Install dependencies if macOS
       if: startsWith(matrix.config.os, 'macos')
       run: |
-        brew install pkg-config cmake minio/stable/minio
+        brew install pkg-config cmake
+        curl -fsSL -o minio https://dl.min.io/aistor/minio/release/darwin-arm64/minio
+        chmod +x minio
         cmake --version
-        minio --version
+        ./minio --version
 
     - name: Install dependencies if Windows
       shell: bash
       if: startsWith(matrix.config.os, 'windows')
       run: |
         choco install -y --no-progress cmake wget
-        wget --quiet https://dl.min.io/server/minio/release/windows-amd64/minio.exe
+        wget --quiet https://dl.min.io/aistor/minio/release/windows-amd64/minio.exe
         chmod +x minio.exe
         cmake --version
 
@@ -164,7 +166,8 @@ jobs:
     - name: Start MinIO server if macOS
       if: startsWith(matrix.config.name, 'macos')
       run: |
-        MINIO_CI_CD=true minio server test-xl/{1...4}/ &
+        export MINIO_LICENSE=$(cat ./minio-cpp/.github/aistor-free-license.jwt)
+        MINIO_CI_CD=true ./minio server test-xl/{1...4}/ &
         sleep 10
 
     - name: Start MinIO server if Windows
@@ -174,6 +177,7 @@ jobs:
         mkdir -p ~/.minio/certs
         cp ./minio-cpp/tests/public.crt ./minio-cpp/tests/private.key ~/.minio/certs/
         certutil -addstore -f "ROOT" ./minio-cpp/tests/public.crt
+        export MINIO_LICENSE=$(cat ./minio-cpp/.github/aistor-free-license.jwt)
         MINIO_CI_CD=true ./minio.exe server test-xl/{1...4}/ &
         sleep 10
 
@@ -219,13 +223,14 @@ jobs:
         cmake --build build
     - name: Start MinIO server
       run: |
-        MINIO_RELEASE=RELEASE.2025-09-07T16-13-09Z
-        wget --quiet https://dl.min.io/server/minio/release/linux-amd64/archive/minio.${MINIO_RELEASE}
-        wget --quiet https://dl.min.io/server/minio/release/linux-amd64/archive/minio.${MINIO_RELEASE}.sha256sum
-        sha256sum -c minio.${MINIO_RELEASE}.sha256sum
-        mv minio.${MINIO_RELEASE} minio
+        wget --quiet https://dl.min.io/aistor/minio/release/linux-amd64/minio
+        wget --quiet https://dl.min.io/aistor/minio/release/linux-amd64/minio.sha256sum
+        # The published sum names the release archive, not `minio`, so check the
+        # digest itself rather than feeding the file to `sha256sum -c` verbatim.
+        echo "$(cut -d' ' -f1 minio.sha256sum)  minio" | sha256sum -c -
         chmod +x minio
         mkdir -p /data
+        export MINIO_LICENSE=$(cat .github/aistor-free-license.jwt)
         MINIO_CI_CD=true ./minio server /data --address 127.0.0.1:9000 &
         MINIO_PID=$!
         for i in $(seq 1 30); do
