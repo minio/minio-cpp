@@ -120,7 +120,15 @@ jobs:
     - name: Install dependencies if Ubuntu
       if: startsWith(matrix.config.name, 'Ubuntu_Latest_GCC')
       run: |
-        wget --quiet https://dl.min.io/aistor/minio/release/linux-${{ matrix.config.arch }}/minio
+        . ./minio-cpp/.github/minio-release.env
+        arch=${{ matrix.config.arch }}
+        case "$arch" in
+          amd64) expected=$MINIO_SHA256_LINUX_AMD64 ;;
+          arm64) expected=$MINIO_SHA256_LINUX_ARM64 ;;
+          *) echo "no pinned digest for linux-$arch" >&2; exit 1 ;;
+        esac
+        wget --quiet -O minio "https://dl.min.io/aistor/minio/release/linux-${arch}/archive/minio.${MINIO_RELEASE}"
+        echo "${expected}  minio" | sha256sum -c -
         chmod +x minio
         cmake --version
         ./minio --version
@@ -129,7 +137,9 @@ jobs:
       if: startsWith(matrix.config.os, 'macos')
       run: |
         brew install pkg-config cmake
-        curl -fsSL -o minio https://dl.min.io/aistor/minio/release/darwin-arm64/minio
+        . ./minio-cpp/.github/minio-release.env
+        curl -fsSL -o minio "https://dl.min.io/aistor/minio/release/darwin-arm64/archive/minio.${MINIO_RELEASE}"
+        echo "${MINIO_SHA256_DARWIN_ARM64}  minio" | shasum -a 256 -c -
         chmod +x minio
         cmake --version
         ./minio --version
@@ -139,7 +149,9 @@ jobs:
       if: startsWith(matrix.config.os, 'windows')
       run: |
         choco install -y --no-progress cmake wget
-        wget --quiet https://dl.min.io/aistor/minio/release/windows-amd64/minio.exe
+        . ./minio-cpp/.github/minio-release.env
+        wget --quiet -O minio.exe "https://dl.min.io/aistor/minio/release/windows-amd64/archive/minio.exe.${MINIO_RELEASE}"
+        echo "${MINIO_SHA256_WINDOWS_AMD64}  minio.exe" | sha256sum -c -
         chmod +x minio.exe
         cmake --version
 
@@ -223,11 +235,9 @@ jobs:
         cmake --build build
     - name: Start MinIO server
       run: |
-        wget --quiet https://dl.min.io/aistor/minio/release/linux-amd64/minio
-        wget --quiet https://dl.min.io/aistor/minio/release/linux-amd64/minio.sha256sum
-        # The published sum names the release archive, not `minio`, so check the
-        # digest itself rather than feeding the file to `sha256sum -c` verbatim.
-        echo "$(cut -d' ' -f1 minio.sha256sum)  minio" | sha256sum -c -
+        . .github/minio-release.env
+        wget --quiet -O minio "https://dl.min.io/aistor/minio/release/linux-amd64/archive/minio.${MINIO_RELEASE}"
+        echo "${MINIO_SHA256_LINUX_AMD64}  minio" | sha256sum -c -
         chmod +x minio
         mkdir -p /data
         export MINIO_LICENSE=$(cat .github/aistor-free-license.jwt)
