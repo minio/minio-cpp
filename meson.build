@@ -1,4 +1,4 @@
-project('miniocpp', 'cpp', version : '0.6.0', default_options : ['cpp_std=c++17'])
+project('miniocpp', 'cpp', version : '1.0.1', default_options : ['cpp_std=c++17'])
 
 cxx = meson.get_compiler('cpp')
 

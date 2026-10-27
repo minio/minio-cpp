@@ -23,7 +23,7 @@
 
 #define MINIO_CPP_MAJOR_VERSION 1
 #define MINIO_CPP_MINOR_VERSION 0
-#define MINIO_CPP_PATCH_VERSION 0
+#define MINIO_CPP_PATCH_VERSION 1
 
 #define MINIO_CPP_VERSION                                                  \
   "" MINIO_CPP_TO_STRING(MINIO_CPP_MAJOR_VERSION) "." MINIO_CPP_TO_STRING( \
