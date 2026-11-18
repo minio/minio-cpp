@@ -354,6 +354,7 @@ if (MINIO_CPP_TEST)
   add_executable(tests tests/tests.cc)
   target_compile_features(tests PUBLIC cxx_std_${MINIO_CPP_STD})
   target_include_directories(tests PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
+  target_compile_definitions(tests PRIVATE CPPHTTPLIB_OPENSSL_SUPPORT)
   target_link_libraries(tests miniocpp ${MINIO_CPP_LIBS})
 endif()
 

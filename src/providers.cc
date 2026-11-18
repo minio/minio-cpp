@@ -22,11 +22,17 @@
 #include "miniocpp/providers.h"
 
 #include <INIReader.h>
+#include <openssl/bio.h>
+#include <openssl/err.h>
+#include <openssl/pem.h>
+#include <openssl/x509.h>
 
+#include <algorithm>
 #include <fstream>
 #include <iosfwd>
 #include <list>
 #include <nlohmann/json.hpp>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 
@@ -278,7 +284,7 @@ Credentials AssumeRoleProvider::Fetch() {
 WebIdentityClientGrantsProvider::WebIdentityClientGrantsProvider(
     JwtFunction jwtfunc, http::Url sts_endpoint, unsigned int duration_seconds,
     std::string policy, std::string role_arn, std::string role_session_name,
-    std::string token_revoke_type) {
+    std::string token_revoke_type, std::string extra_ca_file) {
   this->jwtfunc_ = jwtfunc;
   this->sts_endpoint_ = sts_endpoint;
   this->duration_seconds_ = duration_seconds;
@@ -286,6 +292,7 @@ WebIdentityClientGrantsProvider::WebIdentityClientGrantsProvider(
   this->role_arn_ = role_arn;
   this->role_session_name_ = role_session_name;
   this->token_revoke_type_ = token_revoke_type;
+  this->extra_ca_file_ = extra_ca_file;
 }
 
 WebIdentityClientGrantsProvider::~WebIdentityClientGrantsProvider() {}
@@ -340,6 +347,7 @@ Credentials WebIdentityClientGrantsProvider::Fetch() {
   http::Url url = sts_endpoint_;
   url.query_string = map.ToQueryString();
   http::Request req(http::Method::kPost, url);
+  req.extra_ca_file = extra_ca_file_;
   http::Response resp = req.Execute();
   if (!resp) {
     creds_ = Credentials{resp.Error()};
@@ -373,14 +381,116 @@ bool ClientGrantsProvider::IsWebIdentity() const { return false; }
 WebIdentityProvider::WebIdentityProvider(
     JwtFunction jwtfunc, http::Url sts_endpoint, unsigned int duration_seconds,
     std::string policy, std::string role_arn, std::string role_session_name,
-    std::string token_revoke_type)
+    std::string token_revoke_type, std::string extra_ca_file)
     : WebIdentityClientGrantsProvider(jwtfunc, sts_endpoint, duration_seconds,
                                       policy, role_arn, role_session_name,
-                                      token_revoke_type) {}
+                                      token_revoke_type, extra_ca_file) {}
 
 WebIdentityProvider::~WebIdentityProvider() {}
 
 bool WebIdentityProvider::IsWebIdentity() const { return true; }
+
+namespace {
+// hasValidPort reports whether the authority of value has no port, or a port
+// that is all digits, nonzero and at most 65535. http::Url::Parse reads only a
+// numeric prefix of the port, so "host:443extra" would otherwise be accepted.
+bool hasValidPort(std::string value) {
+  size_t pos = value.find("://");
+  if (pos != std::string::npos) value.erase(0, pos + 3);
+  // Cut the authority where http::Url::Parse does: at the first '/' when
+  // there is one, even after a '?', and otherwise at the first '?'.
+  pos = value.find('/');
+  value = value.substr(0, pos != std::string::npos ? pos : value.find('?'));
+
+  std::string port;
+  if (!value.empty() && value.front() == '[') {
+    pos = value.find(']');
+    if (pos == std::string::npos) return false;
+    if (pos + 1 == value.size()) return true;
+    if (value[pos + 1] != ':') return false;
+    port = value.substr(pos + 2);
+  } else {
+    if (std::count(value.begin(), value.end(), ':') != 1) {
+      return std::count(value.begin(), value.end(), ':') == 0;
+    }
+    port = value.substr(value.find(':') + 1);
+  }
+  if (port.empty() || !std::all_of(port.begin(), port.end(), [](char c) {
+        return c >= '0' && c <= '9';
+      })) {
+    return false;
+  }
+  // Leading zeros are fine ("008443" is 8443), but port 0 means "no port" to
+  // Request and would silently select the default port.
+  port.erase(0, port.find_first_not_of('0'));
+  return !port.empty() && port.size() <= 5 && std::stoi(port) <= 65535;
+}
+}  // namespace
+
+error::Error ResolveStsEndpoint(http::Url& out, bool& from_env,
+                                const http::Url& custom,
+                                const std::string& region) {
+  from_env = false;
+  if (custom) {
+    out = custom;
+    return error::SUCCESS;
+  }
+
+  std::string sts_url, ignore_configured;
+  utils::GetEnv(sts_url, "AWS_ENDPOINT_URL_STS");
+  utils::GetEnv(ignore_configured, "AWS_IGNORE_CONFIGURED_ENDPOINT_URLS");
+  if (!sts_url.empty() && utils::ToLower(ignore_configured) != "true") {
+    // Check the port first: Url::Parse throws on one that overflows.
+    if (!hasValidPort(sts_url)) {
+      return error::Error("invalid STS endpoint " + sts_url +
+                          " from environment");
+    }
+    try {
+      out = http::Url::Parse(sts_url);
+    } catch (const std::exception&) {
+      out = http::Url();
+    }
+    if (!out) {
+      return error::Error("invalid STS endpoint " + sts_url +
+                          " from environment");
+    }
+    // Url::Parse drops the first '/' of the path and Request adds one back
+    // only when it is missing; restore it so "//a" stays "//a".
+    if (!out.path.empty() && out.path.front() == '/') out.path.insert(0, "/");
+    from_env = true;
+    return error::SUCCESS;
+  }
+
+  out = http::Url();
+  out.https = true;
+  out.host = "sts.amazonaws.com";
+  if (!region.empty()) {
+    out.host = "sts." + region + ".amazonaws.com";
+    if (region.compare(0, 3, "cn-") == 0) out.host += ".cn";
+  }
+  return error::SUCCESS;
+}
+
+error::Error CheckCaBundle(const std::string& path) {
+  BIO* bio = BIO_new_file(path.c_str(), "r");
+  if (bio == nullptr) {
+    return error::Error("unable to read AWS_CA_BUNDLE " + path);
+  }
+  // The _AUX reader also accepts "TRUSTED CERTIFICATE" blocks, like the
+  // store loader the transport uses.
+  size_t count = 0;
+  while (X509* cert = PEM_read_bio_X509_AUX(bio, nullptr, nullptr, nullptr)) {
+    X509_free(cert);
+    count++;
+  }
+  BIO_free(bio);
+  ERR_clear_error();
+  if (count == 0) {
+    return error::Error("AWS_CA_BUNDLE " + path +
+                        " contains no PEM certificates");
+  }
+  return error::SUCCESS;
+}
 
 IamAwsProvider::IamAwsProvider(http::Url custom_endpoint) {
   this->custom_endpoint_ = custom_endpoint;
@@ -402,11 +512,21 @@ Credentials IamAwsProvider::Fetch() {
 
   http::Url url = custom_endpoint_;
   if (!token_file_.empty()) {
-    if (!url) {
-      url.https = true;
-      url.host = "sts.amazonaws.com";
-      if (!aws_region_.empty()) {
-        url.host = "sts." + aws_region_ + ".amazonaws.com";
+    // The environment is read at retrieval time and only on this path.
+    std::string ca_bundle;
+    bool from_env = false;
+    if (error::Error err =
+            ResolveStsEndpoint(url, from_env, custom_endpoint_, aws_region_)) {
+      creds_ = Credentials{err};
+      return creds_;
+    }
+    // AWS_CA_BUNDLE belongs to the AWS_ENDPOINT_URL_STS opt-in: with an
+    // explicit endpoint or the AWS default it is not read at all.
+    if (from_env) utils::GetEnv(ca_bundle, "AWS_CA_BUNDLE");
+    if (!ca_bundle.empty()) {
+      if (error::Error err = CheckCaBundle(ca_bundle)) {
+        creds_ = Credentials{err};
+        return creds_;
       }
     }
 
@@ -417,8 +537,14 @@ Credentials IamAwsProvider::Fetch() {
           ifs.close();
           return Jwt(std::move(json["access_token"]), json["expires_in"]);
         },
-        url, 0, "", role_arn_, role_session_name_);
+        url, 0, "", role_arn_, role_session_name_, "", ca_bundle);
     creds_ = provider.Fetch();
+    // The transport reports a bundle that vanished after CheckCaBundle().
+    if (!ca_bundle.empty() &&
+        creds_.err.String() == "unable to load CA file " + ca_bundle) {
+      creds_ = Credentials{
+          error::Error("unable to load AWS_CA_BUNDLE " + ca_bundle)};
+    }
     return creds_;
   }
 
