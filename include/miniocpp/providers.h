@@ -57,6 +57,25 @@ using JwtFunction = std::function<Jwt()>;
 
 error::Error checkLoopbackHost(const std::string& host);
 
+// ResolveStsEndpoint selects the STS endpoint of the web identity flow into
+// out. Precedence: custom (explicit endpoint), AWS_ENDPOINT_URL_STS, then
+// sts[.<region>].amazonaws.com, with the .amazonaws.com.cn suffix for cn-
+// regions. The global AWS_ENDPOINT_URL is deliberately not read, so nothing
+// changes unless AWS_ENDPOINT_URL_STS is set. An empty variable counts as
+// unset, and it is skipped when AWS_IGNORE_CONFIGURED_ENDPOINT_URLS is "true",
+// case-insensitive. The URL path is kept. from_env is set when out came from
+// AWS_ENDPOINT_URL_STS. It returns an error when that variable is not a valid
+// URL.
+// See https://docs.aws.amazon.com/sdkref/latest/guide/feature-ss-endpoints.html
+error::Error ResolveStsEndpoint(http::Url& out, bool& from_env,
+                                const http::Url& custom,
+                                const std::string& region);
+
+// CheckCaBundle returns an error naming AWS_CA_BUNDLE when path cannot be read
+// or holds no parseable PEM certificate. IamAwsProvider reads AWS_CA_BUNDLE
+// only when the STS endpoint came from AWS_ENDPOINT_URL_STS.
+error::Error CheckCaBundle(const std::string& path);
+
 /**
  * Credential provider interface.
  */
@@ -167,14 +186,18 @@ class WebIdentityClientGrantsProvider : public Provider {
   std::string role_arn_;
   std::string role_session_name_;
   std::string token_revoke_type_;
+  std::string extra_ca_file_;
 
  public:
+  // extra_ca_file, when non-empty, is a PEM file of CA certificates trusted for
+  // the STS request in addition to SSL_CERT_FILE and the system roots.
   WebIdentityClientGrantsProvider(JwtFunction jwtfunc, http::Url sts_endpoint,
                                   unsigned int duration_seconds = 0,
                                   std::string policy = {},
                                   std::string role_arn = {},
                                   std::string role_session_name = {},
-                                  std::string token_revoke_type = {});
+                                  std::string token_revoke_type = {},
+                                  std::string extra_ca_file = {});
 
   virtual ~WebIdentityClientGrantsProvider();
 
@@ -204,7 +227,8 @@ class WebIdentityProvider : public WebIdentityClientGrantsProvider {
                       unsigned int duration_seconds = 0,
                       std::string policy = {}, std::string role_arn = {},
                       std::string role_session_name = {},
-                      std::string token_revoke_type = {});
+                      std::string token_revoke_type = {},
+                      std::string extra_ca_file = {});
 
   virtual ~WebIdentityProvider();
 

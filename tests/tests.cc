@@ -15,6 +15,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include <httplib.h>
 #include <miniocpp/args.h>
 #include <miniocpp/client.h>
 #include <miniocpp/http.h>
@@ -27,6 +28,10 @@
 
 using minio::Result;
 #include <miniocpp/utils.h>
+#include <openssl/evp.h>
+#include <openssl/pem.h>
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
 
 #include <algorithm>
 #include <array>
@@ -1707,10 +1712,471 @@ void TestUrlParse() noexcept(false) {
   }
 }
 
+// Unit tests of the web identity STS endpoint and AWS_CA_BUNDLE handling
+// (T1-T14 of the cross-SDK matrix). None of them leaves the loopback
+// interface.
+
+namespace {
+
+void Check(bool ok, const std::string& what) {
+  if (!ok) throw std::runtime_error(what);
+}
+
+// The Microsoft CRT has _putenv_s() instead of setenv() and unsetenv(); an
+// empty value removes the variable there.
+void PutEnv(const std::string& name, const std::string& value) {
+#ifdef _WIN32
+  _putenv_s(name.c_str(), value.c_str());
+#else
+  setenv(name.c_str(), value.c_str(), 1);
+#endif
+}
+
+void RemoveEnv(const std::string& name) {
+#ifdef _WIN32
+  _putenv_s(name.c_str(), "");
+#else
+  unsetenv(name.c_str());
+#endif
+}
+
+// Sets or unsets environment variables for one scope and restores them.
+class ScopedEnv {
+ private:
+  std::map<std::string, std::pair<bool, std::string>> saved_;
+
+ public:
+  ScopedEnv() = default;
+  ScopedEnv(const ScopedEnv&) = delete;
+  ScopedEnv& operator=(const ScopedEnv&) = delete;
+
+  void Set(const std::string& name, const std::string& value) {
+    Save(name);
+    PutEnv(name, value);
+  }
+
+  void Unset(const std::string& name) {
+    Save(name);
+    RemoveEnv(name);
+  }
+
+  ~ScopedEnv() {
+    for (const auto& [name, old] : saved_) {
+      if (old.first) {
+        PutEnv(name, old.second);
+      } else {
+        RemoveEnv(name);
+      }
+    }
+  }
+
+ private:
+  void Save(const std::string& name) {
+    if (saved_.count(name)) return;
+    std::string value;
+    bool found = minio::utils::GetEnv(value, name.c_str());
+    saved_[name] = {found, value};
+  }
+};
+
+// Resolves the endpoint from the environment, which the caller has set up.
+minio::http::Url Resolve(const minio::http::Url& custom,
+                         const std::string& region, bool* from_env = nullptr) {
+  minio::http::Url out;
+  bool from = false;
+  minio::error::Error err =
+      minio::creds::ResolveStsEndpoint(out, from, custom, region);
+  Check(!err, "ResolveStsEndpoint(): " + err.String());
+  if (from_env != nullptr) *from_env = from;
+  return out;
+}
+
+// Generates a self-signed certificate (subject CN=cn) for 127.0.0.1 and writes
+// the key and the certificate as PEM files.
+void GenerateCert(const std::string& cert_file, const std::string& key_file,
+                  const std::string& cn) {
+  EVP_PKEY* pkey = EVP_RSA_gen(2048);
+  Check(pkey != nullptr, "unable to generate key");
+  X509* x509 = X509_new();
+  ASN1_INTEGER_set(X509_get_serialNumber(x509), 1);
+  X509_gmtime_adj(X509_getm_notBefore(x509), 0);
+  X509_gmtime_adj(X509_getm_notAfter(x509), 3600);
+  X509_set_pubkey(x509, pkey);
+  X509_NAME* name = X509_get_subject_name(x509);
+  X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC,
+                             reinterpret_cast<const unsigned char*>(cn.c_str()),
+                             -1, -1, 0);
+  X509_set_issuer_name(x509, name);
+  X509V3_CTX ctx;
+  X509V3_set_ctx_nodb(&ctx);
+  X509V3_set_ctx(&ctx, x509, x509, nullptr, nullptr, 0);
+  char san[] = "IP:127.0.0.1";
+  X509_EXTENSION* ext =
+      X509V3_EXT_conf_nid(nullptr, &ctx, NID_subject_alt_name, san);
+  Check(ext != nullptr, "unable to create SAN");
+  X509_add_ext(x509, ext, -1);
+  X509_EXTENSION_free(ext);
+  Check(X509_sign(x509, pkey, EVP_sha256()) > 0, "unable to sign certificate");
+
+  FILE* f = fopen(cert_file.c_str(), "w");
+  Check(f != nullptr, "unable to write " + cert_file);
+  PEM_write_X509(f, x509);
+  fclose(f);
+  f = fopen(key_file.c_str(), "w");
+  Check(f != nullptr, "unable to write " + key_file);
+  PEM_write_PrivateKey(f, pkey, nullptr, nullptr, 0, nullptr, nullptr);
+  fclose(f);
+  X509_free(x509);
+  EVP_PKEY_free(pkey);
+}
+
+X509* ReadCert(const std::string& file) {
+  FILE* f = fopen(file.c_str(), "r");
+  Check(f != nullptr, "unable to read " + file);
+  X509* x509 = PEM_read_X509(f, nullptr, nullptr, nullptr);
+  fclose(f);
+  Check(x509 != nullptr, "unable to parse " + file);
+  return x509;
+}
+
+constexpr const char* kStsResponse =
+    "<AssumeRoleWithWebIdentityResponse><AssumeRoleWithWebIdentityResult>"
+    "<Credentials><AccessKeyId>AK</AccessKeyId><SecretAccessKey>SK"
+    "</SecretAccessKey><SessionToken>ST</SessionToken>"
+    "<Expiration>2099-01-01T00:00:00.000Z</Expiration></Credentials>"
+    "</AssumeRoleWithWebIdentityResult></AssumeRoleWithWebIdentityResponse>";
+
+// Runs an httplib server on the loopback interface for one scope.
+template <typename SERVER>
+class ScopedServer {
+ private:
+  SERVER& svr_;
+  std::thread thread_;
+
+ public:
+  int port = 0;
+  explicit ScopedServer(SERVER& svr) : svr_(svr) {
+    port = svr_.bind_to_any_port("127.0.0.1");
+    Check(port > 0, "unable to bind test server");
+    thread_ = std::thread([this] { svr_.listen_after_bind(); });
+    svr_.wait_until_ready();
+  }
+  ~ScopedServer() {
+    svr_.stop();
+    thread_.join();
+  }
+};
+
+}  // namespace
+
+void TestStsEndpointResolution() noexcept(false) {
+  std::cout << "TestStsEndpointResolution()" << std::endl;
+
+  ScopedEnv env;
+  for (const char* name : {"AWS_ENDPOINT_URL_STS", "AWS_ENDPOINT_URL",
+                           "AWS_IGNORE_CONFIGURED_ENDPOINT_URLS"}) {
+    env.Unset(name);
+  }
+
+  const minio::http::Url none;
+  const minio::http::Url custom =
+      minio::http::Url::Parse("https://custom.example.com");
+  const std::string sts = "https://sts.example.com";
+  bool from_env = false;
+
+  // The explicit endpoint wins over the variable and over the ignore flag.
+  env.Set("AWS_ENDPOINT_URL_STS", sts);
+  Check(
+      Resolve(custom, "", &from_env).host == "custom.example.com" && !from_env,
+      "explicit endpoint");
+  env.Set("AWS_IGNORE_CONFIGURED_ENDPOINT_URLS", "true");
+  Check(Resolve(custom, "").host == "custom.example.com", "explicit, ignored");
+  env.Unset("AWS_IGNORE_CONFIGURED_ENDPOINT_URLS");
+
+  // AWS_ENDPOINT_URL_STS wins over the default, with and without a region.
+  Check(Resolve(none, "", &from_env).host == "sts.example.com" && from_env,
+        "AWS_ENDPOINT_URL_STS");
+  Check(Resolve(none, "eu-west-1").host == "sts.example.com", "over region");
+
+  // The global AWS_ENDPOINT_URL is not read: the default host is used.
+  env.Unset("AWS_ENDPOINT_URL_STS");
+  env.Set("AWS_ENDPOINT_URL", "https://all.example.com");
+  Check(Resolve(none, "", &from_env).host == "sts.amazonaws.com" && !from_env,
+        "AWS_ENDPOINT_URL alone is ignored");
+  env.Set("AWS_ENDPOINT_URL_STS", sts);
+  Check(Resolve(none, "").host == "sts.example.com", "STS over global");
+  env.Unset("AWS_ENDPOINT_URL");
+
+  // An empty variable counts as unset.
+  env.Set("AWS_ENDPOINT_URL_STS", "");
+  Check(Resolve(none, "").host == "sts.amazonaws.com", "empty");
+  env.Set("AWS_ENDPOINT_URL_STS", sts);
+
+  // The ignore flag selects the default host; "true" is case-insensitive and
+  // other values have no effect.
+  env.Set("AWS_IGNORE_CONFIGURED_ENDPOINT_URLS", "true");
+  Check(Resolve(none, "eu-west-1", &from_env).host ==
+                "sts.eu-west-1.amazonaws.com" &&
+            !from_env,
+        "ignore flag");
+  env.Set("AWS_IGNORE_CONFIGURED_ENDPOINT_URLS", "TRUE");
+  Check(Resolve(none, "").host == "sts.amazonaws.com", "ignore flag TRUE");
+  env.Set("AWS_IGNORE_CONFIGURED_ENDPOINT_URLS", "false");
+  Check(Resolve(none, "").host == "sts.example.com", "ignore flag false");
+  env.Set("AWS_IGNORE_CONFIGURED_ENDPOINT_URLS", "1");
+  Check(Resolve(none, "").host == "sts.example.com", "ignore flag 1");
+  env.Unset("AWS_IGNORE_CONFIGURED_ENDPOINT_URLS");
+
+  // The path is kept, including repeated leading slashes.
+  env.Set("AWS_ENDPOINT_URL_STS", "https://sts.example.com/sts/ns/name");
+  Check(Resolve(none, "").path == "sts/ns/name", "path");
+  env.Set("AWS_ENDPOINT_URL_STS", "https://sts.example.com//tenant/sts");
+  Check(Resolve(none, "").path == "//tenant/sts", "double slash");
+
+  // The defaults, including the China partition.
+  env.Unset("AWS_ENDPOINT_URL_STS");
+  minio::http::Url cn = Resolve(none, "cn-north-1");
+  Check(cn.https && cn.host == "sts.cn-north-1.amazonaws.com.cn", "cn region");
+  Check(Resolve(none, "us-east-1").host == "sts.us-east-1.amazonaws.com",
+        "region");
+
+  // Malformed ports are rejected; valid ones and IPv6 authorities are not.
+  for (const char* bad :
+       {"https://sts.example.com:443extra", "https://h:abc", "https://h:",
+        "https://h:65536", "https://h:0", "https://h:000", "https://[::1]x",
+        "https://h:99999999999", "ftp://x", "https://h?next=:99999999999/x"}) {
+    env.Set("AWS_ENDPOINT_URL_STS", bad);
+    minio::http::Url out;
+    bool from = false;
+    Check(bool(minio::creds::ResolveStsEndpoint(out, from, none, "")),
+          std::string("endpoint must be rejected: ") + bad);
+  }
+  env.Set("AWS_ENDPOINT_URL_STS", "https://sts.example.com:8443/x");
+  Check(Resolve(none, "").port == 8443, "valid port");
+  env.Set("AWS_ENDPOINT_URL_STS", "https://sts.example.com:008443");
+  Check(Resolve(none, "").port == 8443, "port with leading zeros");
+  env.Set("AWS_ENDPOINT_URL_STS", "https://[::1]:9000");
+  Check(Resolve(none, "").port == 9000, "ipv6 port");
+  env.Set("AWS_ENDPOINT_URL_STS", sts);
+  Check(Resolve(none, "").port == 0, "no port");
+}
+
+void TestIamAwsProviderEnv() noexcept(false) {
+  std::cout << "TestIamAwsProviderEnv()" << std::endl;
+
+  namespace fs = std::filesystem;
+  const fs::path dir =
+      fs::temp_directory_path() /
+      ("minio-cpp-sts-" + std::to_string(std::random_device{}()));
+  fs::create_directories(dir);
+  struct Cleanup {
+    fs::path dir;
+    ~Cleanup() {
+      std::error_code ec;
+      fs::remove_all(dir, ec);
+    }
+  } cleanup{dir};
+
+  const std::string cert = (dir / "cert.pem").string();
+  const std::string key = (dir / "key.pem").string();
+  const std::string other_cert = (dir / "other-cert.pem").string();
+  const std::string other_key = (dir / "other-key.pem").string();
+  const std::string empty_bundle = (dir / "empty.pem").string();
+  const std::string token = (dir / "token").string();
+  GenerateCert(cert, key, "server");
+  GenerateCert(other_cert, other_key, "other");
+  std::ofstream(empty_bundle) << "not a certificate\n";
+  std::ofstream(token) << R"({"access_token":"jwt","expires_in":3600})";
+
+  ScopedEnv env;
+  for (const char* name :
+       {"AWS_ENDPOINT_URL_STS", "AWS_ENDPOINT_URL",
+        "AWS_IGNORE_CONFIGURED_ENDPOINT_URLS", "AWS_CA_BUNDLE", "SSL_CERT_FILE",
+        "AWS_REGION", "AWS_ROLE_ARN", "AWS_ROLE_SESSION_NAME",
+        "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI",
+        "AWS_CONTAINER_CREDENTIALS_FULL_URI", "AWS_WEB_IDENTITY_TOKEN_FILE"}) {
+    env.Unset(name);
+  }
+
+  // T8: the container credentials path ignores the endpoint variables.
+  {
+    httplib::Server svr;
+    svr.Get("/creds", [](const httplib::Request&, httplib::Response& res) {
+      res.set_content(
+          R"({"Code":"Success","AccessKeyId":"AK","SecretAccessKey":"SK",)"
+          R"("Token":"T","Expiration":"2099-01-01T00:00:00Z"})",
+          "application/json");
+    });
+    ScopedServer<httplib::Server> running(svr);
+    env.Set("AWS_ENDPOINT_URL_STS", "https://127.0.0.1:1");
+    env.Set("AWS_ENDPOINT_URL", "https://127.0.0.1:1");
+    env.Set("AWS_CONTAINER_CREDENTIALS_FULL_URI",
+            "http://127.0.0.1:" + std::to_string(running.port) + "/creds");
+    minio::creds::IamAwsProvider provider;
+    minio::creds::Credentials creds = provider.Fetch();
+    Check(bool(creds) && creds.access_key == "AK", "T8: " + creds.err.String());
+    env.Unset("AWS_CONTAINER_CREDENTIALS_FULL_URI");
+    env.Unset("AWS_ENDPOINT_URL_STS");
+    env.Unset("AWS_ENDPOINT_URL");
+  }
+
+  env.Set("AWS_WEB_IDENTITY_TOKEN_FILE", token);
+
+  httplib::SSLServer svr(cert.c_str(), key.c_str());
+  Check(svr.is_valid(), "unable to start TLS test server");
+  // Only the exact request targets succeed, so a path that is altered on the
+  // way makes the fetch fail.
+  svr.Post(R"(.*)", [](const httplib::Request& req, httplib::Response& res) {
+    if (req.path == "/sts/ns/name" || req.path == "//tenant/sts") {
+      res.set_content(kStsResponse, "text/xml");
+    } else {
+      res.status = 404;
+    }
+  });
+  ScopedServer<httplib::SSLServer> running(svr);
+  const std::string endpoint =
+      "https://127.0.0.1:" + std::to_string(running.port) + "/sts/ns/name";
+  env.Set("AWS_ENDPOINT_URL_STS", endpoint);
+
+  // T10: without AWS_CA_BUNDLE the self-signed server is rejected.
+  {
+    minio::creds::IamAwsProvider provider;
+    minio::creds::Credentials creds = provider.Fetch();
+    Check(
+        !creds && creds.err.String().find("verification") != std::string::npos,
+        "T10: expected a verification failure, got: " + creds.err.String());
+  }
+
+  // AWS_CA_BUNDLE is read only for an endpoint from AWS_ENDPOINT_URL_STS: with
+  // an explicit endpoint, a missing or valid bundle changes nothing.
+  {
+    minio::http::Url explicit_url = minio::http::Url::Parse(
+        "https://127.0.0.1:" + std::to_string(running.port) + "/sts/ns/name");
+    for (const std::string& bundle : {(dir / "missing.pem").string(), cert}) {
+      env.Set("AWS_CA_BUNDLE", bundle);
+      minio::creds::IamAwsProvider provider(explicit_url);
+      minio::creds::Credentials creds = provider.Fetch();
+      Check(!creds &&
+                creds.err.String().find("AWS_CA_BUNDLE") == std::string::npos &&
+                creds.err.String().find("verification") != std::string::npos,
+            "explicit endpoint ignores AWS_CA_BUNDLE: " + creds.err.String());
+    }
+    env.Unset("AWS_CA_BUNDLE");
+  }
+
+  // T9: AWS_CA_BUNDLE is trusted, and the endpoint path reaches the server.
+  {
+    env.Set("AWS_CA_BUNDLE", cert);
+    minio::creds::IamAwsProvider provider;
+    minio::creds::Credentials creds = provider.Fetch();
+    Check(bool(creds) && creds.access_key == "AK", "T9: " + creds.err.String());
+
+    // T7: repeated leading slashes of the path reach the server unchanged.
+    env.Set(
+        "AWS_ENDPOINT_URL_STS",
+        "https://127.0.0.1:" + std::to_string(running.port) + "//tenant/sts");
+    minio::creds::IamAwsProvider provider2;
+    creds = provider2.Fetch();
+    Check(bool(creds), "T7 double slash: " + creds.err.String());
+    env.Set("AWS_ENDPOINT_URL_STS", endpoint);
+  }
+
+  // A bundle with an OpenSSL "TRUSTED CERTIFICATE" block is accepted and
+  // trusted, as the store loader of the transport does.
+  {
+    const std::string trusted = (dir / "trusted.pem").string();
+    X509* x509 = ReadCert(cert);
+    FILE* f = fopen(trusted.c_str(), "w");
+    Check(f != nullptr, "unable to write " + trusted);
+    PEM_write_X509_AUX(f, x509);
+    fclose(f);
+    X509_free(x509);
+    env.Set("AWS_CA_BUNDLE", trusted);
+    minio::creds::IamAwsProvider provider;
+    minio::creds::Credentials creds = provider.Fetch();
+    Check(bool(creds), "TRUSTED CERTIFICATE bundle: " + creds.err.String());
+    env.Set("AWS_CA_BUNDLE", cert);
+  }
+
+  // B6: the bundle adds to SSL_CERT_FILE instead of losing to it.
+  {
+    env.Set("SSL_CERT_FILE", other_cert);
+    minio::creds::IamAwsProvider provider;
+    minio::creds::Credentials creds = provider.Fetch();
+    Check(bool(creds), "B6 additive: " + creds.err.String());
+    // SSL_CERT_FILE still contributes when the bundle is set: the server
+    // certificate is in SSL_CERT_FILE, an unrelated one in AWS_CA_BUNDLE.
+    env.Set("AWS_CA_BUNDLE", other_cert);
+    env.Set("SSL_CERT_FILE", cert);
+    minio::creds::IamAwsProvider provider3;
+    creds = provider3.Fetch();
+    Check(bool(creds), "B6 combined SSL_CERT_FILE: " + creds.err.String());
+    // An unreadable SSL_CERT_FILE is an error, not silently skipped.
+    env.Set("SSL_CERT_FILE", (dir / "missing-ssl.pem").string());
+    minio::creds::IamAwsProvider provider4;
+    creds = provider4.Fetch();
+    Check(!creds &&
+              creds.err.String().find("missing-ssl.pem") != std::string::npos,
+          "unreadable SSL_CERT_FILE: " + creds.err.String());
+    // SSL_CERT_FILE alone still works for its own certificate.
+    env.Unset("AWS_CA_BUNDLE");
+    env.Set("SSL_CERT_FILE", cert);
+    minio::creds::IamAwsProvider provider2;
+    creds = provider2.Fetch();
+    Check(bool(creds), "B6 SSL_CERT_FILE: " + creds.err.String());
+    env.Unset("SSL_CERT_FILE");
+  }
+
+  // B6 system roots: a certificate that is only in the system trust
+  // directory (SSL_CERT_DIR, an OpenSSL hashed name) stays trusted next to
+  // AWS_CA_BUNDLE, through the system-root path and not SSL_CERT_FILE.
+  {
+    X509* x509 = ReadCert(cert);
+    char hash[16];
+    snprintf(hash, sizeof(hash), "%08lx.0", X509_subject_name_hash(x509));
+    X509_free(x509);
+    const fs::path certs_dir = dir / "certs";
+    fs::create_directories(certs_dir);
+    fs::copy_file(cert, certs_dir / hash);
+
+    env.Set("SSL_CERT_DIR", certs_dir.string());
+    env.Set("AWS_CA_BUNDLE", other_cert);
+    minio::creds::IamAwsProvider provider;
+    minio::creds::Credentials creds = provider.Fetch();
+    Check(bool(creds), "B6 system roots: " + creds.err.String());
+    env.Unset("SSL_CERT_DIR");
+  }
+
+  // T11: the provider takes no HTTP client, so the bundle always applies; the
+  // case does not exist in this SDK.
+
+  // T12: a missing bundle is an error naming AWS_CA_BUNDLE.
+  {
+    env.Set("AWS_CA_BUNDLE", (dir / "missing.pem").string());
+    minio::creds::IamAwsProvider provider;
+    minio::creds::Credentials creds = provider.Fetch();
+    Check(
+        !creds && creds.err.String().find("AWS_CA_BUNDLE") != std::string::npos,
+        "T12: " + creds.err.String());
+  }
+
+  // T13: a bundle without certificates is an error naming AWS_CA_BUNDLE.
+  {
+    env.Set("AWS_CA_BUNDLE", empty_bundle);
+    minio::creds::IamAwsProvider provider;
+    minio::creds::Credentials creds = provider.Fetch();
+    Check(
+        !creds && creds.err.String().find("AWS_CA_BUNDLE") != std::string::npos,
+        "T13: " + creds.err.String());
+  }
+}
+
 int main(int /*argc*/, char* /*argv*/[]) {
   // Unit check first so a parsing regression fails fast without a server.
   try {
     TestUrlParse();
+    TestStsEndpointResolution();
+    TestIamAwsProviderEnv();
   } catch (const std::runtime_error& e) {
     std::cerr << e.what() << std::endl;
     return EXIT_FAILURE;

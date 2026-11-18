@@ -22,6 +22,7 @@
 // header-only library's class layout depends on that macro, so every
 // translation unit must agree on it.
 #include <httplib.h>
+#include <openssl/x509.h>
 
 #include <algorithm>
 #include <exception>
@@ -36,6 +37,7 @@
 #include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <utility>
 
 #include "miniocpp/error.h"
 #include "miniocpp/utils.h"
@@ -195,6 +197,24 @@ Request::Request(Method method, Url url) {
   }
 }
 
+namespace {
+// httplib >= 0.47 can load the platform's native roots (Windows certificate
+// store, macOS Keychain, OpenSSL default paths elsewhere) into a custom CA
+// store via enable_system_ca(). Older versions lack it; the OpenSSL default
+// paths added to the store below still apply there.
+template <typename C, typename = void>
+struct HasEnableSystemCa : std::false_type {};
+template <typename C>
+struct HasEnableSystemCa<
+    C, std::void_t<decltype(std::declval<C&>().enable_system_ca(true))>>
+    : std::true_type {};
+
+template <typename C>
+void EnableSystemCa(C& cli) {
+  if constexpr (HasEnableSystemCa<C>::value) cli.enable_system_ca(true);
+}
+}  // namespace
+
 Response Request::execute() {
   Response response;
   response.datafunc = datafunc;
@@ -240,7 +260,33 @@ Response Request::execute() {
   if (url.https) {
     // An explicit CA bundle overrides IGNORE_CERT_CHECK, matching the curl
     // backend: verification is enabled against the given CA file.
-    if (!ssl_cert_file.empty()) {
+    if (!extra_ca_file.empty()) {
+      // Add to, not replace, the system roots and ssl_cert_file.
+      X509_STORE* store = X509_STORE_new();
+      if (store == nullptr) {
+        response.error = "unable to create certificate store";
+        return response;
+      }
+      X509_STORE_set_default_paths(store);
+      if (!ssl_cert_file.empty() &&
+          X509_STORE_load_locations(store, ssl_cert_file.c_str(), nullptr) !=
+              1) {
+        X509_STORE_free(store);
+        response.error = "unable to load CA file " + ssl_cert_file;
+        return response;
+      }
+      if (X509_STORE_load_locations(store, extra_ca_file.c_str(), nullptr) !=
+          1) {
+        X509_STORE_free(store);
+        response.error = "unable to load CA file " + extra_ca_file;
+        return response;
+      }
+      cli.set_ca_cert_store(store);  // cli takes ownership.
+      // A custom store makes httplib skip its native root loading; ask for it
+      // explicitly so the bundle adds to the system roots on every platform.
+      EnableSystemCa(cli);
+      cli.enable_server_certificate_verification(true);
+    } else if (!ssl_cert_file.empty()) {
       cli.set_ca_cert_path(ssl_cert_file);
       cli.enable_server_certificate_verification(true);
     } else {
