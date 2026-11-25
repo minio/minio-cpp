@@ -130,20 +130,43 @@ $ cd minio-cpp
 $ ./configure.sh -DMINIO_CPP_TEST=ON
 ```
 
+### Choosing the HTTP backend
+
+The SDK can be built on either of two HTTP client implementations:
+
+- `cpp-httplib` (default) - [cpp-httplib](https://github.com/yhirose/cpp-httplib),
+  header-only, nothing to build. It uses blocking socket I/O and speaks
+  HTTP/1.1 only: no HTTP/2 or HTTP/3, no proxy configured from the
+  environment, and no libcurl-style low-speed stall guard.
+- `curl` - libcurl's C API directly, no curlpp wrapper. Costs a compiled
+  dependency (`libcurl`) and gets connection pooling, environment proxies and
+  HTTP/2 (when libcurl has it) in return.
+
+Exactly one is compiled and linked into the library:
+
+```bash
+$ cmake . -B build -DMINIO_CPP_HTTP_BACKEND=curl
+# Meson: -Dhttp=curl
+```
+
+The public headers are backend-neutral either way: neither `httplib.h` nor
+`curl/curl.h` is needed by code that includes `miniocpp/*.h`.
+
 ### Building on Alpine Linux (musl)
 
 `vcpkg` can run on Alpine, but its default setup downloads glibc-linked tools
 such as CMake, which do not run on musl (setting `VCPKG_FORCE_SYSTEM_BINARIES`
 forces use of the apk-installed tools instead). Alpine also has no packages
-for `cpp-httplib` or the C++ `INIReader`. The dependency resolver
+for `libcurl` / `cpp-httplib` or the C++ `INIReader`. The dependency resolver
 (`cmake/miniocpp-deps.cmake`) therefore falls back to `pkg-config` and then
-to fetching those two libraries from source, so a plain system-package build
+to fetching those libraries from source, so a plain system-package build
 works:
 
 ```bash
 $ apk add build-base cmake git ninja pkgconf \
-    inih-dev nlohmann-json openssl-dev pugixml-dev zlib-dev
-$ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMINIO_CPP_TEST=ON
+    curl-dev inih-dev nlohmann-json openssl-dev pugixml-dev zlib-dev
+$ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMINIO_CPP_TEST=ON \
+    -DMINIO_CPP_HTTP_BACKEND=curl
 $ cmake --build build
 ```
 

@@ -212,7 +212,7 @@ Result<Response> BaseClient::execute(Request& req) {
   if (!ssl_cert_file_.empty()) req.ssl_cert_file = ssl_cert_file_;
   http::Request request = req.ToHttpRequest(provider_);
   request.debug = debug_;
-  http::Response response = request.Execute();
+  http::Response response = http_client_.Execute(request);
   if (response) {
     Response resp;
     resp.status_code = response.status_code;

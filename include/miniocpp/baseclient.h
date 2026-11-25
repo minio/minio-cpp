@@ -64,6 +64,10 @@ class BaseClient {
   bool ignore_cert_check_ = false;
   std::string ssl_cert_file_;
   std::string user_agent_ = DEFAULT_USER_AGENT;
+  // Owns the HTTP backend and its connection pool, so every S3 call this
+  // client makes reuses the connections earlier calls established. Requests
+  // lease a connection, so the *Async overloads can run concurrently.
+  http::Client http_client_;
 
  public:
   explicit BaseClient(BaseUrl base_url,

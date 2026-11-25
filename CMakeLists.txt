@@ -23,9 +23,9 @@ endif()
 # Minio C++ Project
 # -----------------
 
-set(MINIO_CPP_MAJOR_VERSION "1")
+set(MINIO_CPP_MAJOR_VERSION "2")
 set(MINIO_CPP_MINOR_VERSION "0")
-set(MINIO_CPP_PATCH_VERSION "1")
+set(MINIO_CPP_PATCH_VERSION "0")
 set(MINIO_CPP_VERSION_STRING "${MINIO_CPP_MAJOR_VERSION}.${MINIO_CPP_MINOR_VERSION}.${MINIO_CPP_PATCH_VERSION}")
 
 project(miniocpp
@@ -53,6 +53,24 @@ set(MINIO_CPP_CFLAGS)
 set(MINIO_CPP_INCLUDES)
 set(MINIO_CPP_LIBS)
 set(MINIO_CPP_STD "17" CACHE STRING "C++ standard (17 or 20)")
+
+# HTTP backend. Both are first-class; a build compiles and links exactly one,
+# so the library carries only that backend's dependency.
+#
+# cpp-httplib is blocking, HTTP/1.1 only (no HTTP/2 or HTTP/3) and has no
+# proxy-from-environment or low-speed stall guard; curl calls libcurl's C API
+# directly, which brings those, at the cost of a compiled dependency.
+set(MINIO_CPP_HTTP_BACKEND "cpp-httplib" CACHE STRING
+    "HTTP backend: cpp-httplib (header-only, HTTP/1.1) or curl (libcurl)")
+set_property(CACHE MINIO_CPP_HTTP_BACKEND PROPERTY STRINGS cpp-httplib curl)
+if (MINIO_CPP_HTTP_BACKEND STREQUAL "cpp-httplib")
+  set(MINIO_CPP_HTTP_SOURCE src/http_httplib.cc)
+elseif (MINIO_CPP_HTTP_BACKEND STREQUAL "curl")
+  set(MINIO_CPP_HTTP_SOURCE src/http_curl.cc)
+else()
+  message(FATAL_ERROR
+    "Set MINIO_CPP_HTTP_BACKEND to 'cpp-httplib' or 'curl' (got '${MINIO_CPP_HTTP_BACKEND}').")
+endif()
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_COMPILER_FRONTEND_VARIANT}" STREQUAL "xMSVC")
   # MSVC
@@ -113,7 +131,7 @@ if (WIN32)
   # (getaddrinfo, select, ...).
   set(MINIO_CPP_PC_EXTRA_LIBS " -lwsock32 -lws2_32")
 endif()
-if (APPLE)
+if (MINIO_CPP_HTTP_BACKEND STREQUAL "cpp-httplib" AND APPLE)
   # httplib loads macOS system certificates from the Keychain
   # (SecTrustSettingsCopyCertificates); the vcpkg httplib target does not
   # link the Security framework, so add it here.
@@ -139,6 +157,7 @@ set(MINIO_CPP_SOURCES
   src/sse.cc
   src/types.cc
   src/utils.cc
+  ${MINIO_CPP_HTTP_SOURCE}
 )
 
 set(MINIO_CPP_HEADERS
@@ -261,9 +280,11 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.28" AND MINIO_CPP_STD STREQUAL "20")
   endif()
 endif()
 
-# httplib's class layout depends on CPPHTTPLIB_OPENSSL_SUPPORT; define it once
-# target-wide so every translation unit compiles httplib.h identically.
-target_compile_definitions(miniocpp PRIVATE CPPHTTPLIB_OPENSSL_SUPPORT)
+if (MINIO_CPP_HTTP_BACKEND STREQUAL "cpp-httplib")
+  # httplib's class layout depends on CPPHTTPLIB_OPENSSL_SUPPORT; define it
+  # once target-wide so every translation unit compiles httplib.h identically.
+  target_compile_definitions(miniocpp PRIVATE CPPHTTPLIB_OPENSSL_SUPPORT)
+endif()
 if (MINIO_CPP_ENABLE_RDMA)
   target_compile_definitions(miniocpp PUBLIC MINIO_CPP_RDMA)
 endif()
@@ -272,8 +293,8 @@ endif()
 # existing find_package() and #include lines keep working.
 set_target_properties(miniocpp PROPERTIES OUTPUT_NAME minio)
 set_target_properties(miniocpp PROPERTIES VERSION "${MINIO_CPP_VERSION_STRING}")
-# SOVERSION carries the major alone, so the soname is libminio.so.1 and stays
-# put across the whole 1.x line. Without it CMake writes the full version into
+# SOVERSION carries the major alone, so the soname is libminio.so.<major> and
+# only moves on a major bump. Without it CMake writes the full version into
 # the soname -- as libminiocpp.so.0.4.0 shows -- and every release, patches
 # included, orphans every binary already linked against its predecessor.
 set_target_properties(miniocpp PROPERTIES SOVERSION "${MINIO_CPP_MAJOR_VERSION}")

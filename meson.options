@@ -1,0 +1,1 @@
+option('http', type : 'combo', choices : ['cpp-httplib', 'curl'], value : 'cpp-httplib')
