@@ -168,8 +168,13 @@ jobs:
       run: |
         ./vcpkg/bootstrap-vcpkg.sh
         cd minio-cpp
-        ../vcpkg/vcpkg install
-        cmake . -B ./build -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} -DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake -DMINIO_CPP_TEST:BOOL=ON -DMINIO_CPP_STD=${{matrix.config.cpp_std}} -DMINIO_CPP_HTTP_BACKEND=${{matrix.config.http_backend}}
+        ../vcpkg/vcpkg install --x-no-default-features --x-feature=${{matrix.config.http_backend}}
+        cmake . -B ./build \
+          -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} \
+          -DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake \
+          -DMINIO_CPP_TEST:BOOL=ON \
+          -DMINIO_CPP_STD=${{matrix.config.cpp_std}} \
+          -DMINIO_CPP_HTTP_BACKEND=${{matrix.config.http_backend}}
         cmake --build ./build --config ${{matrix.config.build_type}} -j 4
 
     - name: Start MinIO server if Ubuntu

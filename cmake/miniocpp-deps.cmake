@@ -148,7 +148,9 @@ if (MINIO_CPP_HTTP_BACKEND STREQUAL "cpp-httplib")
 else()
   # libcurl -- the backend calls the C API directly, so curlpp is not needed.
   # FindCURL is a CMake builtin and exports CURL::libcurl.
-  find_package(CURL REQUIRED)
+  # 7.68.0 is where curl_multi_wakeup() and CURL_PROGRESSFUNC_CONTINUE
+  # appeared; the backend uses both unconditionally.
+  find_package(CURL 7.68.0 REQUIRED)
   set(MINIO_CPP_CURL_TARGET CURL::libcurl)
   miniocpp_pc_private_dep(libcurl "-lcurl")
 endif()

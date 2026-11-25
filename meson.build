@@ -22,9 +22,12 @@ if http_backend == 'curl'
   # vcpkg and most distros ship libcurl.pc; curl also installs CURLConfig.cmake
   # exporting CURL::libcurl, which is what the Windows runners have when
   # pkg-config is a stub there.
-  http_dep = dependency('libcurl', required : false)
+  # 7.68.0 is where curl_multi_wakeup() and CURL_PROGRESSFUNC_CONTINUE
+  # appeared; the backend uses both unconditionally.
+  http_dep = dependency('libcurl', version : '>=7.68.0', required : false)
   if not http_dep.found()
-    http_dep = dependency('CURL', method : 'cmake', modules : ['CURL::libcurl'])
+    http_dep = dependency('CURL', method : 'cmake', modules : ['CURL::libcurl'],
+                          version : '>=7.68.0')
   endif
   http_source = 'src/http_curl.cc'
 elif http_backend == 'cpp-httplib'

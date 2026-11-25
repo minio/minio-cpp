@@ -28,6 +28,24 @@ set(MINIO_CPP_MINOR_VERSION "0")
 set(MINIO_CPP_PATCH_VERSION "0")
 set(MINIO_CPP_VERSION_STRING "${MINIO_CPP_MAJOR_VERSION}.${MINIO_CPP_MINOR_VERSION}.${MINIO_CPP_PATCH_VERSION}")
 
+# HTTP backend. Both are first-class; a build compiles and links exactly one,
+# so the library carries only that backend's dependency.
+#
+# cpp-httplib is blocking, HTTP/1.1 only (no HTTP/2 or HTTP/3) and has no
+# proxy-from-environment or low-speed stall guard; curl calls libcurl's C API
+# directly, which brings those, at the cost of a compiled dependency.
+#
+# Declared before project() because the vcpkg toolchain reads
+# VCPKG_MANIFEST_FEATURES there: the manifest keeps each backend behind a
+# feature so that only the selected backend's dependency is resolved.
+set(MINIO_CPP_HTTP_BACKEND "cpp-httplib" CACHE STRING
+    "HTTP backend: cpp-httplib (header-only, HTTP/1.1) or curl (libcurl)")
+set_property(CACHE MINIO_CPP_HTTP_BACKEND PROPERTY STRINGS cpp-httplib curl)
+if (NOT MINIO_CPP_HTTP_BACKEND STREQUAL "cpp-httplib")
+  set(VCPKG_MANIFEST_NO_DEFAULT_FEATURES ON)
+  set(VCPKG_MANIFEST_FEATURES ${MINIO_CPP_HTTP_BACKEND})
+endif()
+
 project(miniocpp
   DESCRIPTION "MinIO C++ Client SDK provides simple APIs to access S3 compatible object storage"
   VERSION ${MINIO_CPP_VERSION_STRING}
@@ -54,15 +72,6 @@ set(MINIO_CPP_INCLUDES)
 set(MINIO_CPP_LIBS)
 set(MINIO_CPP_STD "17" CACHE STRING "C++ standard (17 or 20)")
 
-# HTTP backend. Both are first-class; a build compiles and links exactly one,
-# so the library carries only that backend's dependency.
-#
-# cpp-httplib is blocking, HTTP/1.1 only (no HTTP/2 or HTTP/3) and has no
-# proxy-from-environment or low-speed stall guard; curl calls libcurl's C API
-# directly, which brings those, at the cost of a compiled dependency.
-set(MINIO_CPP_HTTP_BACKEND "cpp-httplib" CACHE STRING
-    "HTTP backend: cpp-httplib (header-only, HTTP/1.1) or curl (libcurl)")
-set_property(CACHE MINIO_CPP_HTTP_BACKEND PROPERTY STRINGS cpp-httplib curl)
 if (MINIO_CPP_HTTP_BACKEND STREQUAL "cpp-httplib")
   set(MINIO_CPP_HTTP_SOURCE src/http_httplib.cc)
 elseif (MINIO_CPP_HTTP_BACKEND STREQUAL "curl")

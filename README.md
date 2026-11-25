@@ -149,6 +149,16 @@ $ cmake . -B build -DMINIO_CPP_HTTP_BACKEND=curl
 # Meson: -Dhttp=curl
 ```
 
+The vcpkg manifest keeps each backend behind a feature and installs the
+`cpp-httplib` one by default, so only the selected backend's dependency is
+resolved. `-DMINIO_CPP_HTTP_BACKEND` selects the matching manifest feature for
+you; a `vcpkg install` run before configuring has to name it itself:
+
+```bash
+$ vcpkg install --x-no-default-features --x-feature=curl
+$ cmake . -B build -DMINIO_CPP_HTTP_BACKEND=curl
+```
+
 The public headers are backend-neutral either way: neither `httplib.h` nor
 `curl/curl.h` is needed by code that includes `miniocpp/*.h`.
 

@@ -1454,8 +1454,8 @@ Result<PutObjectResponse> BaseClient::PutObject(PutObjectApiArgs args) {
                                      {},        std::nullopt, {},
                                      base_url_, region};
 
-    ssize_t ret =
-        rdmaPutWithRetry(args.rdmaclient, &putCtx, args.buf, args.size);
+    ssize_t ret = rdmaPutWithRetry(http_client_, args.rdmaclient, &putCtx,
+                                   args.buf, args.size);
     if (ret > 0) {
       PutObjectResponse resp;
       resp.etag = putCtx.etag;
@@ -2110,8 +2110,8 @@ Result<UploadPartResponse> BaseClient::UploadPart(UploadPartArgs args) {
         base_url_,      region,           args.checksum_crc64nvme,
     };
 
-    ssize_t ret =
-        rdmaPutWithRetry(args.rdmaclient, &putCtx, args.buf, args.part_size);
+    ssize_t ret = rdmaPutWithRetry(http_client_, args.rdmaclient, &putCtx,
+                                   args.buf, args.part_size);
     if (ret > 0) {
       UploadPartResponse resp;
       resp.etag = putCtx.etag;

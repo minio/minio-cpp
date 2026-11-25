@@ -104,6 +104,8 @@ Response Client::Impl::Perform(Request& req) {
   // Everything set on the client rather than per request belongs in the key:
   // a lease must come back configured the same way it went out.
   std::string key = endpoint + "|" + req.cert_file + "|" + req.key_file + "|" +
+                    req.nic_interface + "|" + req.ssl_cert_file + "|" +
+                    (req.ignore_cert_check ? "1" : "0") + "|" +
                     std::to_string(req.connect_timeout_secs) + "|" +
                     std::to_string(req.timeout_secs);
 

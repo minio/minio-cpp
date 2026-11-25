@@ -217,6 +217,15 @@ error::Error CurlTransferState::ReadStatusCode() {
 }
 
 error::Error CurlTransferState::ReadHeaders() {
+  // A response may carry no header fields at all; its section is then just the
+  // empty line that terminated the status line, which never forms the
+  // "\r\n\r\n" searched for below.
+  if (pending_.size() >= 2 && pending_.compare(0, 2, "\r\n") == 0) {
+    headers_read_ = true;
+    pending_.erase(0, 2);
+    return error::SUCCESS;
+  }
+
   size_t pos = pending_.find("\r\n\r\n");
   if (pos == std::string::npos) {
     // Not yet received the headers.
@@ -230,13 +239,20 @@ error::Error CurlTransferState::ReadHeaders() {
 
   auto add_header = [&headers = response_.headers](std::string line)
       -> error::Error {
-    size_t pos = line.find(": ");
-    if (pos != std::string::npos) {
-      headers.Add(line.substr(0, pos), line.substr(pos + 2));
-      return error::SUCCESS;
+    size_t pos = line.find(':');
+    if (pos == std::string::npos) {
+      return error::Error("invalid HTTP header: " + line);
     }
 
-    return error::Error("invalid HTTP header: " + line);
+    // The whitespace after the colon is optional and not part of the value.
+    size_t begin = line.find_first_not_of(" \t", pos + 1);
+    if (begin == std::string::npos) {
+      headers.Add(line.substr(0, pos), "");
+      return error::SUCCESS;
+    }
+    size_t end = line.find_last_not_of(" \t");
+    headers.Add(line.substr(0, pos), line.substr(begin, end - begin + 1));
+    return error::SUCCESS;
   };
 
   while ((pos = lines.find("\r\n")) != std::string::npos) {
@@ -432,6 +448,9 @@ Response Client::Impl::Perform(Request& req) {
   std::string urlstring = req.url.String();
   curl_easy_setopt(handle, CURLOPT_CUSTOMREQUEST, method.c_str());
   curl_easy_setopt(handle, CURLOPT_URL, urlstring.c_str());
+  // The path is signed exactly as built, so libcurl must not normalize dot
+  // segments away: "/bucket/a/../b" is not "/bucket/b".
+  curl_easy_setopt(handle, CURLOPT_PATH_AS_IS, 1L);
   if (req.debug) curl_easy_setopt(handle, CURLOPT_VERBOSE, 1L);
   if (req.ignore_cert_check) {
     curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
@@ -499,6 +518,9 @@ Response Client::Impl::Perform(Request& req) {
 
   // Response settings.
   curl_easy_setopt(handle, CURLOPT_HEADER, 1L);
+  // A proxy's CONNECT response would otherwise reach the parser ahead of the
+  // origin's and be taken for it.
+  curl_easy_setopt(handle, CURLOPT_SUPPRESS_CONNECT_HEADERS, 1L);
 
   Response response;
   response.datafunc = req.datafunc;
