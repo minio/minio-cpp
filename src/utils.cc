@@ -31,9 +31,6 @@
 #include <unistd.h>
 #endif
 
-// CPPHTTPLIB_OPENSSL_SUPPORT is set target-wide in CMakeLists.txt so every
-// translation unit compiles httplib.h with the same macro set.
-#include <httplib.h>
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 #include <openssl/crypto.h>

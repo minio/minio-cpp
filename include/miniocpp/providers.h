@@ -20,6 +20,7 @@
 
 #include <functional>
 #include <list>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <type_traits>
@@ -137,6 +138,7 @@ class MinioClientConfigProvider : public Provider {
 
 class AssumeRoleProvider : public Provider {
  private:
+  std::shared_ptr<http::Client> http_client_;
   http::Url sts_endpoint_;
   std::string access_key_;
   std::string secret_key_;
@@ -151,7 +153,8 @@ class AssumeRoleProvider : public Provider {
                      std::string role_arn = {},
                      std::string role_session_name = {},
                      std::string external_id = {},
-                     std::string token_revoke_type = {});
+                     std::string token_revoke_type = {},
+                     std::shared_ptr<http::Client> http_client = nullptr);
 
   virtual ~AssumeRoleProvider();
 
@@ -160,6 +163,7 @@ class AssumeRoleProvider : public Provider {
 
 class WebIdentityClientGrantsProvider : public Provider {
  private:
+  std::shared_ptr<http::Client> http_client_;
   JwtFunction jwtfunc_ = nullptr;
   http::Url sts_endpoint_;
   unsigned int duration_seconds_ = 0;
@@ -174,7 +178,9 @@ class WebIdentityClientGrantsProvider : public Provider {
                                   std::string policy = {},
                                   std::string role_arn = {},
                                   std::string role_session_name = {},
-                                  std::string token_revoke_type = {});
+                                  std::string token_revoke_type = {},
+                                  std::shared_ptr<http::Client> http_client =
+                                      nullptr);
 
   virtual ~WebIdentityClientGrantsProvider();
 
@@ -191,7 +197,8 @@ class ClientGrantsProvider : public WebIdentityClientGrantsProvider {
                        unsigned int duration_seconds = 0,
                        std::string policy = {}, std::string role_arn = {},
                        std::string role_session_name = {},
-                       std::string token_revoke_type = {});
+                       std::string token_revoke_type = {},
+                       std::shared_ptr<http::Client> http_client = nullptr);
 
   virtual ~ClientGrantsProvider();
 
@@ -204,7 +211,8 @@ class WebIdentityProvider : public WebIdentityClientGrantsProvider {
                       unsigned int duration_seconds = 0,
                       std::string policy = {}, std::string role_arn = {},
                       std::string role_session_name = {},
-                      std::string token_revoke_type = {});
+                      std::string token_revoke_type = {},
+                      std::shared_ptr<http::Client> http_client = nullptr);
 
   virtual ~WebIdentityProvider();
 
@@ -213,6 +221,7 @@ class WebIdentityProvider : public WebIdentityClientGrantsProvider {
 
 class IamAwsProvider : public Provider {
  private:
+  std::shared_ptr<http::Client> http_client_;
   http::Url custom_endpoint_;
   std::string token_file_;
   std::string aws_region_;
@@ -222,7 +231,8 @@ class IamAwsProvider : public Provider {
   std::string full_uri_;
 
  public:
-  explicit IamAwsProvider(http::Url custom_endpoint = http::Url());
+  explicit IamAwsProvider(http::Url custom_endpoint = http::Url(),
+                          std::shared_ptr<http::Client> http_client = nullptr);
   virtual ~IamAwsProvider();
 
   virtual Credentials Fetch() override;
@@ -234,6 +244,7 @@ class IamAwsProvider : public Provider {
 
 class LdapIdentityProvider : public Provider {
  private:
+  std::shared_ptr<http::Client> http_client_;
   http::Url sts_endpoint_;
 
  public:
@@ -241,7 +252,8 @@ class LdapIdentityProvider : public Provider {
                        std::string ldap_password, std::string policy = {},
                        unsigned int duration_seconds = 0,
                        std::string token_revoke_type = {},
-                       std::string config_name = {});
+                       std::string config_name = {},
+                       std::shared_ptr<http::Client> http_client = nullptr);
 
   virtual ~LdapIdentityProvider();
 
@@ -250,6 +262,7 @@ class LdapIdentityProvider : public Provider {
 
 struct CertificateIdentityProvider : public Provider {
  private:
+  std::shared_ptr<http::Client> http_client_;
   http::Url sts_endpoint_;
   std::string key_file_;
   std::string cert_file_;
@@ -260,7 +273,8 @@ struct CertificateIdentityProvider : public Provider {
                               std::string cert_file,
                               std::string ssl_cert_file = {},
                               unsigned int duration_seconds = 0,
-                              std::string token_revoke_type = {});
+                              std::string token_revoke_type = {},
+                              std::shared_ptr<http::Client> http_client = nullptr);
 
   virtual ~CertificateIdentityProvider();
 
@@ -269,6 +283,7 @@ struct CertificateIdentityProvider : public Provider {
 
 class CustomTokenIdentityProvider : public Provider {
  private:
+  std::shared_ptr<http::Client> http_client_;
   http::Url sts_endpoint_;
   std::string role_arn_;
   std::string token_;
@@ -279,7 +294,8 @@ class CustomTokenIdentityProvider : public Provider {
   CustomTokenIdentityProvider(http::Url sts_endpoint, std::string role_arn,
                               std::string token,
                               unsigned int duration_seconds = 0,
-                              std::string token_revoke_type = {});
+                              std::string token_revoke_type = {},
+                              std::shared_ptr<http::Client> http_client = nullptr);
 
   virtual ~CustomTokenIdentityProvider();
 

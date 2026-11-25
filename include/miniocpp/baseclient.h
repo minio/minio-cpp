@@ -19,8 +19,7 @@
 #define MINIO_CPP_BASECLIENT_H_INCLUDED
 
 #include <future>
-#include <map>
-#include <shared_mutex>
+#include <memory>
 #include <string>
 #include <type_traits>
 
@@ -33,11 +32,6 @@
 #include "response.h"
 #include "result.h"
 #include "utils.h"
-
-#ifdef MINIO_CPP_RDMA
-#include "rdma.h"
-#include "rdma_client.h"
-#endif
 
 #if defined(_WIN32) && defined(GetObject)
 #pragma push_macro("GetObject")
@@ -56,35 +50,31 @@ utils::Multimap GetCommonListObjectsQueryParams(
  */
 class BaseClient {
  protected:
-  BaseUrl base_url_;
-  creds::Provider* const provider_ = nullptr;
-  std::map<std::string, std::string> region_map_;
-  mutable std::shared_mutex region_map_mutex_;
-  bool debug_ = false;
-  bool ignore_cert_check_ = false;
-  std::string ssl_cert_file_;
-  std::string user_agent_ = DEFAULT_USER_AGENT;
+  // Every data member lives behind this pointer (see src/baseclient_impl.h),
+  // so the object stays one pointer plus the vtable pointer and adding a
+  // member no longer changes the layout downstream binaries were built
+  // against.
+  struct Impl;
+  std::unique_ptr<Impl> d_;
 
  public:
   explicit BaseClient(BaseUrl base_url,
                       creds::Provider* const provider = nullptr);
 
-  virtual ~BaseClient() = default;
+  virtual ~BaseClient();
 
   // Read-only access to the configured BaseUrl. Used by FFI shims that need
   // the region/endpoint at call time without re-plumbing it through every
   // call site (e.g. PutObjectRDMA / GetObjectRDMA in minio-go's C glue, where
   // it propagates onto PutObjectRDMAArgs so the HTTP fallback inherits a
   // known region instead of paying a GetRegion() roundtrip).
-  const BaseUrl& GetBaseUrl() const { return base_url_; }
+  const BaseUrl& GetBaseUrl() const;
 
-  void Debug(bool flag) { debug_ = flag; }
+  void Debug(bool flag);
 
-  void IgnoreCertCheck(bool flag) { ignore_cert_check_ = flag; }
+  void IgnoreCertCheck(bool flag);
 
-  void SetSslCertFile(std::string ssl_cert_file) {
-    ssl_cert_file_ = std::move(ssl_cert_file);
-  }
+  void SetSslCertFile(std::string ssl_cert_file);
 
   error::Error SetAppInfo(std::string_view app_name,
                           std::string_view app_version);

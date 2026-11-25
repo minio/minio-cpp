@@ -24,14 +24,6 @@
 #include <unistd.h>
 #endif
 
-#include <httplib.h>
-
-// windows.h (via httplib) maps GetObject to GetObjectA; undo it so the
-// Client::GetObject members keep their real names.
-#ifdef _WIN32
-#undef GetObject
-#endif
-
 #include <deque>
 #include <filesystem>
 #include <fstream>
@@ -44,6 +36,8 @@
 #include <system_error>
 #include <type_traits>
 #include <vector>
+
+#include "baseclient_impl.h"
 
 #include "miniocpp/args.h"
 #include "miniocpp/baseclient.h"
@@ -462,7 +456,7 @@ Result<StatObjectResponse> Client::CalculatePartCount(
   size_t object_size = 0;
   size_t i = 0;
   for (auto& source : sources) {
-    if (source.ssec != nullptr && !base_url_.https) {
+    if (source.ssec != nullptr && !d_->base_url.https) {
       std::string msg = "source " + source.bucket + "/" + source.object;
       if (!source.version_id.empty()) {
         msg += "?versionId=" + source.version_id;
@@ -712,16 +706,17 @@ Result<GetObjectResponse> Client::GetObject(GetObjectArgs args) {
         size <= kRDMAMaxMemoryRegSize && rdma_client.Register(args.buf, size);
 
     if (use_rdma) {
-      minio::rdma::ClientCtx getCtx = {provider_, args.bucket,  args.object,
+      minio::rdma::ClientCtx getCtx = {d_->provider, args.bucket,  args.object,
                                        {},        std::nullopt, {},
-                                       base_url_, region};
+                                       d_->base_url, region};
 
       // Keep the buffer registered through rdmaGetWithRetry. The RAII guard
       // deregisters it when this block exits, including on early returns.
       ScopedRDMARegistration reg(&rdma_client, args.buf);
 
       ssize_t ret =
-          rdmaGetWithRetry(&rdma_client, &getCtx, args.buf, size, range_offset);
+          rdmaGetWithRetry(d_->http_client, &rdma_client, &getCtx, args.buf, size,
+                           range_offset);
 
       if (ret > 0) {
         GetObjectResponse go_result;
@@ -1008,7 +1003,7 @@ Result<ComposeObjectResponse> Client::ComposeObject(ComposeObjectArgs args) {
     return tl::make_unexpected(err);
   }
 
-  if (args.sse != nullptr && args.sse->TlsRequired() && !base_url_.https) {
+  if (args.sse != nullptr && args.sse->TlsRequired() && !d_->base_url.https) {
     return error::make<ComposeObjectResponse>(
         "SSE operation must be performed over a secure connection");
   }
@@ -1032,12 +1027,12 @@ Result<CopyObjectResponse> Client::CopyObject(CopyObjectArgs args) {
     return tl::make_unexpected(err);
   }
 
-  if (args.sse != nullptr && args.sse->TlsRequired() && !base_url_.https) {
+  if (args.sse != nullptr && args.sse->TlsRequired() && !d_->base_url.https) {
     return error::make<CopyObjectResponse>(
         "SSE operation must be performed over a secure connection");
   }
 
-  if (args.source.ssec != nullptr && !base_url_.https) {
+  if (args.source.ssec != nullptr && !d_->base_url.https) {
     return error::make<CopyObjectResponse>(
         "SSE-C operation must be performed over a secure connection");
   }
@@ -1117,7 +1112,7 @@ Result<CopyObjectResponse> Client::CopyObject(CopyObjectArgs args) {
     return tl::make_unexpected(get_resp.error());
   }
 
-  Request req(http::Method::kPut, region, base_url_, args.extra_headers,
+  Request req(http::Method::kPut, region, d_->base_url, args.extra_headers,
               args.extra_query_params);
   req.bucket_name = args.bucket;
   req.object_name = args.object;
@@ -1140,7 +1135,7 @@ Result<DownloadObjectResponse> Client::DownloadObject(DownloadObjectArgs args) {
     return tl::make_unexpected(err);
   }
 
-  if (args.ssec != nullptr && !base_url_.https) {
+  if (args.ssec != nullptr && !d_->base_url.https) {
     return error::make<DownloadObjectResponse>(
         "SSE-C operation must be performed over a secure connection");
   }
@@ -1178,7 +1173,7 @@ Result<DownloadObjectResponse> Client::DownloadObject(DownloadObjectArgs args) {
     return tl::make_unexpected(get_resp.error());
   }
 
-  Request req(http::Method::kGet, region, base_url_, args.extra_headers,
+  Request req(http::Method::kGet, region, d_->base_url, args.extra_headers,
               args.extra_query_params);
   req.bucket_name = args.bucket;
   req.object_name = args.object;
@@ -1213,7 +1208,7 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
     return tl::make_unexpected(err);
   }
 
-  if (args.sse != nullptr && args.sse->TlsRequired() && !base_url_.https) {
+  if (args.sse != nullptr && args.sse->TlsRequired() && !d_->base_url.https) {
     return error::make<PutObjectResponse>(
         "SSE operation must be performed over a secure connection");
   }
@@ -1240,15 +1235,16 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
         size <= kRDMAMaxMemoryRegSize && rdma_client.Register(args.buf, size);
 
     if (use_rdma) {
-      minio::rdma::ClientCtx putCtx = {provider_, args.bucket,  args.object,
+      minio::rdma::ClientCtx putCtx = {d_->provider, args.bucket,  args.object,
                                        {},        std::nullopt, {},
-                                       base_url_, region};
+                                       d_->base_url, region};
 
       // RAII, matching the multipart paths below -- see the GET path for why
       // a manual Deregister after the call is not enough.
       ScopedRDMARegistration reg(&rdma_client, args.buf);
 
-      ssize_t ret = rdmaPutWithRetry(&rdma_client, &putCtx, args.buf, size);
+      ssize_t ret = rdmaPutWithRetry(d_->http_client, &rdma_client, &putCtx,
+                                     args.buf, size);
 
       if (ret > 0) {
         PutObjectResponse resp;
