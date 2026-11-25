@@ -62,7 +62,10 @@ Examples are built when `MINIO_CPP_TEST=ON`. Run individual examples:
 - **`args.h`** - Argument structs for each S3 operation (e.g., `PutObjectArgs`, `GetObjectArgs`)
 - **`response.h`** - Response types returned by operations
 - **`request.h`** - HTTP request construction
-- **`http.h`** - HTTP client abstraction using httplib
+- **`http.h`** - backend-neutral HTTP client: `http::Client` owns the selected
+  backend (`src/http_httplib.cc` or `src/http_curl.cc`, chosen with
+  `MINIO_CPP_HTTP_BACKEND` / `-Dhttp`), leases a pooled connection per
+  request, and keeps no third-party type in the installed headers
 
 ### Authentication
 
@@ -85,7 +88,9 @@ RDMA and the caller falls back to HTTP.
 
 ## Dependencies (vcpkg)
 
-- cpp-httplib - HTTP client
+- cpp-httplib or libcurl - HTTP client (one per build, selected with
+  `MINIO_CPP_HTTP_BACKEND` / `-Dhttp`). cpp-httplib is blocking and HTTP/1.1
+  only; the `curl` backend calls libcurl's C API directly
 - inih - INI file parsing for config
 - nlohmann-json - JSON handling
 - openssl - TLS/crypto

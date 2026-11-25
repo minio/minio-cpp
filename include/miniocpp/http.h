@@ -21,6 +21,7 @@
 #include <exception>
 #include <functional>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <type_traits>
 
@@ -137,15 +138,10 @@ struct Request {
   Request(Method method, Url url);
   ~Request() = default;
 
-  Response Execute();
-
   explicit operator bool() const {
     if (method < Method::kGet || method > Method::kDelete) return false;
     return static_cast<bool>(url);
   }
-
- private:
-  Response execute();
 };  // struct Request
 
 struct Response {
@@ -165,6 +161,33 @@ struct Response {
 
   error::Error Error() const;
 };  // struct Response
+
+/**
+ * Client owns the backend and the connections it keeps for reuse. One
+ * instance lives as long as the minio::s3::BaseClient that created it, so
+ * consecutive S3 calls reuse established TCP/TLS connections instead of
+ * paying a handshake per request.
+ *
+ * Requests are leased a connection from an internal pool, so Execute() may be
+ * called from several threads at once (the *Async overloads do exactly that)
+ * and a request never waits on another thread's transfer.
+ */
+class Client {
+ public:
+  Client();
+  ~Client();
+
+  Client(Client&&) noexcept;
+  Client& operator=(Client&&) noexcept;
+  Client(const Client&) = delete;
+  Client& operator=(const Client&) = delete;
+
+  Response Execute(Request& request);
+
+ private:
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
+};  // class Client
 
 }  // namespace minio::http
 

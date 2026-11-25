@@ -24,14 +24,6 @@
 #include <unistd.h>
 #endif
 
-#include <httplib.h>
-
-// windows.h (via httplib) maps GetObject to GetObjectA; undo it so the
-// Client::GetObject members keep their real names.
-#ifdef _WIN32
-#undef GetObject
-#endif
-
 #include <deque>
 #include <filesystem>
 #include <fstream>
@@ -721,7 +713,8 @@ Result<GetObjectResponse> Client::GetObject(GetObjectArgs args) {
       ScopedRDMARegistration reg(&rdma_client, args.buf);
 
       ssize_t ret =
-          rdmaGetWithRetry(&rdma_client, &getCtx, args.buf, size, range_offset);
+          rdmaGetWithRetry(http_client_, &rdma_client, &getCtx, args.buf, size,
+                           range_offset);
 
       if (ret > 0) {
         GetObjectResponse go_result;
@@ -1248,7 +1241,8 @@ Result<PutObjectResponse> Client::PutObject(PutObjectArgs args) {
       // a manual Deregister after the call is not enough.
       ScopedRDMARegistration reg(&rdma_client, args.buf);
 
-      ssize_t ret = rdmaPutWithRetry(&rdma_client, &putCtx, args.buf, size);
+      ssize_t ret = rdmaPutWithRetry(http_client_, &rdma_client, &putCtx,
+                                     args.buf, size);
 
       if (ret > 0) {
         PutObjectResponse resp;

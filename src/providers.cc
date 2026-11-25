@@ -48,6 +48,18 @@
 
 namespace minio::creds {
 
+namespace {
+
+// A provider constructed without a client of its own keeps one for as long as
+// it lives, so its STS / metadata calls reuse connections. Passing a client in
+// lets several providers share one pool.
+std::shared_ptr<http::Client> OwnClient(std::shared_ptr<http::Client> client) {
+  if (!client) return std::make_shared<http::Client>();
+  return client;
+}
+
+}  // namespace
+
 error::Error checkLoopbackHost(const std::string& host) {
   struct addrinfo hints = {};
   hints.ai_family = AF_INET;
@@ -209,7 +221,9 @@ AssumeRoleProvider::AssumeRoleProvider(
     http::Url sts_endpoint, std::string access_key, std::string secret_key,
     unsigned int duration_seconds, std::string policy, std::string region,
     std::string role_arn, std::string role_session_name,
-    std::string external_id, std::string token_revoke_type) {
+    std::string external_id, std::string token_revoke_type,
+    std::shared_ptr<http::Client> http_client)
+    : http_client_(OwnClient(std::move(http_client))) {
   this->sts_endpoint_ = sts_endpoint;
   if (this->sts_endpoint_.path.empty()) this->sts_endpoint_.path = "/";
   this->access_key_ = access_key;
@@ -241,6 +255,7 @@ AssumeRoleProvider::AssumeRoleProvider(
 AssumeRoleProvider::~AssumeRoleProvider() {}
 
 Credentials AssumeRoleProvider::Fetch() {
+  std::lock_guard<std::mutex> lock(fetch_mutex_);
   if (err_) return Credentials{err_};
 
   if (creds_) return creds_;
@@ -259,7 +274,7 @@ Credentials AssumeRoleProvider::Fetch() {
   http::Request req(method, sts_endpoint_);
   req.headers = headers;
   req.body = body_;
-  http::Response resp = req.Execute();
+  http::Response resp = http_client_->Execute(req);
   if (!resp) {
     creds_ = Credentials{resp.Error()};
   } else {
@@ -278,7 +293,8 @@ Credentials AssumeRoleProvider::Fetch() {
 WebIdentityClientGrantsProvider::WebIdentityClientGrantsProvider(
     JwtFunction jwtfunc, http::Url sts_endpoint, unsigned int duration_seconds,
     std::string policy, std::string role_arn, std::string role_session_name,
-    std::string token_revoke_type) {
+    std::string token_revoke_type, std::shared_ptr<http::Client> http_client)
+    : http_client_(OwnClient(std::move(http_client))) {
   this->jwtfunc_ = jwtfunc;
   this->sts_endpoint_ = sts_endpoint;
   this->duration_seconds_ = duration_seconds;
@@ -300,6 +316,7 @@ unsigned int WebIdentityClientGrantsProvider::getDurationSeconds(
 }
 
 Credentials WebIdentityClientGrantsProvider::Fetch() {
+  std::lock_guard<std::mutex> lock(fetch_mutex_);
   if (creds_) return creds_;
 
   Jwt jwt = jwtfunc_();
@@ -340,7 +357,7 @@ Credentials WebIdentityClientGrantsProvider::Fetch() {
   http::Url url = sts_endpoint_;
   url.query_string = map.ToQueryString();
   http::Request req(http::Method::kPost, url);
-  http::Response resp = req.Execute();
+  http::Response resp = http_client_->Execute(req);
   if (!resp) {
     creds_ = Credentials{resp.Error()};
   } else {
@@ -361,10 +378,11 @@ Credentials WebIdentityClientGrantsProvider::Fetch() {
 ClientGrantsProvider::ClientGrantsProvider(
     JwtFunction jwtfunc, http::Url sts_endpoint, unsigned int duration_seconds,
     std::string policy, std::string role_arn, std::string role_session_name,
-    std::string token_revoke_type)
+    std::string token_revoke_type, std::shared_ptr<http::Client> http_client)
     : WebIdentityClientGrantsProvider(jwtfunc, sts_endpoint, duration_seconds,
                                       policy, role_arn, role_session_name,
-                                      token_revoke_type) {}
+                                      token_revoke_type,
+                                      std::move(http_client)) {}
 
 ClientGrantsProvider::~ClientGrantsProvider() {}
 
@@ -373,16 +391,19 @@ bool ClientGrantsProvider::IsWebIdentity() const { return false; }
 WebIdentityProvider::WebIdentityProvider(
     JwtFunction jwtfunc, http::Url sts_endpoint, unsigned int duration_seconds,
     std::string policy, std::string role_arn, std::string role_session_name,
-    std::string token_revoke_type)
+    std::string token_revoke_type, std::shared_ptr<http::Client> http_client)
     : WebIdentityClientGrantsProvider(jwtfunc, sts_endpoint, duration_seconds,
                                       policy, role_arn, role_session_name,
-                                      token_revoke_type) {}
+                                      token_revoke_type,
+                                      std::move(http_client)) {}
 
 WebIdentityProvider::~WebIdentityProvider() {}
 
 bool WebIdentityProvider::IsWebIdentity() const { return true; }
 
-IamAwsProvider::IamAwsProvider(http::Url custom_endpoint) {
+IamAwsProvider::IamAwsProvider(http::Url custom_endpoint,
+                               std::shared_ptr<http::Client> http_client)
+    : http_client_(OwnClient(std::move(http_client))) {
   this->custom_endpoint_ = custom_endpoint;
   utils::GetEnv(this->token_file_, "AWS_WEB_IDENTITY_TOKEN_FILE");
   utils::GetEnv(this->aws_region_, "AWS_REGION");
@@ -398,6 +419,7 @@ IamAwsProvider::IamAwsProvider(http::Url custom_endpoint) {
 IamAwsProvider::~IamAwsProvider() {}
 
 Credentials IamAwsProvider::Fetch() {
+  std::lock_guard<std::mutex> lock(fetch_mutex_);
   if (creds_) return creds_;
 
   http::Url url = custom_endpoint_;
@@ -456,7 +478,7 @@ Credentials IamAwsProvider::Fetch() {
 
 Credentials IamAwsProvider::fetch(http::Url url) {
   http::Request req(http::Method::kGet, url);
-  http::Response resp = req.Execute();
+  http::Response resp = http_client_->Execute(req);
   if (!resp) return Credentials{resp.Error()};
 
   nlohmann::json json = nlohmann::json::parse(resp.body);
@@ -476,7 +498,7 @@ Credentials IamAwsProvider::fetch(http::Url url) {
 error::Error IamAwsProvider::getRoleName(std::string& role_name,
                                          http::Url url) const {
   http::Request req(http::Method::kGet, url);
-  http::Response resp = req.Execute();
+  http::Response resp = http_client_->Execute(req);
   if (!resp) return resp.Error();
 
   std::list<std::string> role_names;
@@ -503,7 +525,9 @@ LdapIdentityProvider::LdapIdentityProvider(http::Url sts_endpoint,
                                            std::string policy,
                                            unsigned int duration_seconds,
                                            std::string token_revoke_type,
-                                           std::string config_name) {
+                                           std::string config_name,
+                                           std::shared_ptr<http::Client> http_client)
+    : http_client_(OwnClient(std::move(http_client))) {
   this->sts_endpoint_ = sts_endpoint;
   utils::Multimap map;
   map.Add("Action", "AssumeRoleWithLDAPIdentity");
@@ -524,10 +548,11 @@ LdapIdentityProvider::LdapIdentityProvider(http::Url sts_endpoint,
 LdapIdentityProvider::~LdapIdentityProvider() {}
 
 Credentials LdapIdentityProvider::Fetch() {
+  std::lock_guard<std::mutex> lock(fetch_mutex_);
   if (creds_) return creds_;
 
   http::Request req(http::Method::kPost, sts_endpoint_);
-  http::Response resp = req.Execute();
+  http::Response resp = http_client_->Execute(req);
   if (!resp) return Credentials{resp.Error()};
 
   auto parse_res = Credentials::ParseXML(
@@ -544,7 +569,8 @@ Credentials LdapIdentityProvider::Fetch() {
 CertificateIdentityProvider::CertificateIdentityProvider(
     http::Url sts_endpoint, std::string key_file, std::string cert_file,
     std::string ssl_cert_file, unsigned int duration_seconds,
-    std::string token_revoke_type) {
+    std::string token_revoke_type, std::shared_ptr<http::Client> http_client)
+    : http_client_(OwnClient(std::move(http_client))) {
   if (!sts_endpoint.https) {
     this->err_ = error::Error("sts endpoint scheme must be HTTPS");
     return;
@@ -578,6 +604,7 @@ CertificateIdentityProvider::CertificateIdentityProvider(
 CertificateIdentityProvider::~CertificateIdentityProvider() {}
 
 Credentials CertificateIdentityProvider::Fetch() {
+  std::lock_guard<std::mutex> lock(fetch_mutex_);
   if (err_) return Credentials{err_};
 
   if (creds_) return creds_;
@@ -587,7 +614,7 @@ Credentials CertificateIdentityProvider::Fetch() {
   req.key_file = key_file_;
   req.cert_file = cert_file_;
 
-  http::Response resp = req.Execute();
+  http::Response resp = http_client_->Execute(req);
   if (!resp) return Credentials{resp.Error()};
 
   auto parse_res = Credentials::ParseXML(
@@ -603,7 +630,9 @@ Credentials CertificateIdentityProvider::Fetch() {
 
 CustomTokenIdentityProvider::CustomTokenIdentityProvider(
     http::Url sts_endpoint, std::string role_arn, std::string token,
-    unsigned int duration_seconds, std::string token_revoke_type) {
+    unsigned int duration_seconds, std::string token_revoke_type,
+    std::shared_ptr<http::Client> http_client)
+    : http_client_(OwnClient(std::move(http_client))) {
   if (sts_endpoint.host.empty()) {
     this->err_ = error::Error("STS endpoint unknown");
     return;
@@ -618,6 +647,7 @@ CustomTokenIdentityProvider::CustomTokenIdentityProvider(
 CustomTokenIdentityProvider::~CustomTokenIdentityProvider() {}
 
 Credentials CustomTokenIdentityProvider::Fetch() {
+  std::lock_guard<std::mutex> lock(fetch_mutex_);
   if (err_) return Credentials{err_};
 
   if (creds_) return creds_;
@@ -637,7 +667,7 @@ Credentials CustomTokenIdentityProvider::Fetch() {
   http::Url url = sts_endpoint_;
   url.query_string = map.ToQueryString();
   http::Request req(http::Method::kPost, url);
-  http::Response resp = req.Execute();
+  http::Response resp = http_client_->Execute(req);
   if (!resp) {
     creds_ = Credentials{resp.Error()};
   } else {

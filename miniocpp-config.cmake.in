@@ -4,6 +4,10 @@
 # dependency resolver, so it can be reused instead of re-fetched.
 include("${CMAKE_CURRENT_LIST_DIR}/miniocpp-targets.cmake")
 
+# Which HTTP backend the installed library was built against; the dependency
+# resolver below needs it to pull in the same client.
+set(MINIO_CPP_HTTP_BACKEND "@MINIO_CPP_HTTP_BACKEND@")
+
 include("${CMAKE_CURRENT_LIST_DIR}/miniocpp-deps.cmake")
 
 # The link interface is not exported; re-apply it.  set_property is used

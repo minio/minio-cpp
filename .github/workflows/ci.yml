@@ -28,7 +28,8 @@ jobs:
             build_type: "Release",
             cc: "gcc",
             cxx: "g++",
-            cpp_std: "17"
+            cpp_std: "17",
+            http_backend: "curl"
           }
         - {
             name: "Ubuntu_Latest_GCC_CXX20",
@@ -37,7 +38,8 @@ jobs:
             build_type: "Release",
             cc: "gcc",
             cxx: "g++",
-            cpp_std: "20"
+            cpp_std: "20",
+            http_backend: "cpp-httplib"
           }
         - {
             name: "Ubuntu_Latest_GCC_arm64",
@@ -46,7 +48,8 @@ jobs:
             build_type: "Release",
             cc: "gcc",
             cxx: "g++",
-            cpp_std: "17"
+            cpp_std: "17",
+            http_backend: "cpp-httplib"
           }
         - {
             name: "Ubuntu_Latest_GCC_arm64_CXX20",
@@ -55,7 +58,8 @@ jobs:
             build_type: "Release",
             cc: "gcc",
             cxx: "g++",
-            cpp_std: "20"
+            cpp_std: "20",
+            http_backend: "cpp-httplib"
           }
         - {
             name: "macOS Latest Clang",
@@ -63,7 +67,8 @@ jobs:
             build_type: "Release",
             cc: "clang",
             cxx: "clang++",
-            cpp_std: "17"
+            cpp_std: "17",
+            http_backend: "cpp-httplib"
           }
         - {
             name: "macOS Latest Clang CXX20",
@@ -71,7 +76,8 @@ jobs:
             build_type: "Release",
             cc: "clang",
             cxx: "clang++",
-            cpp_std: "20"
+            cpp_std: "20",
+            http_backend: "cpp-httplib"
           }
         - {
             name: "Windows Latest MSVC",
@@ -79,7 +85,8 @@ jobs:
             build_type: "Release",
             cc: "cl",
             cxx: "cl",
-            cpp_std: "17"
+            cpp_std: "17",
+            http_backend: "cpp-httplib"
           }
         - {
             name: "Windows Latest MSVC CXX20",
@@ -87,7 +94,8 @@ jobs:
             build_type: "Release",
             cc: "cl",
             cxx: "cl",
-            cpp_std: "20"
+            cpp_std: "20",
+            http_backend: "cpp-httplib"
           }
 
     name: ${{ matrix.config.name }}
@@ -160,8 +168,13 @@ jobs:
       run: |
         ./vcpkg/bootstrap-vcpkg.sh
         cd minio-cpp
-        ../vcpkg/vcpkg install
-        cmake . -B ./build -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} -DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake -DMINIO_CPP_TEST:BOOL=ON -DMINIO_CPP_STD=${{matrix.config.cpp_std}}
+        ../vcpkg/vcpkg install --x-no-default-features --x-feature=${{matrix.config.http_backend}}
+        cmake . -B ./build \
+          -DCMAKE_BUILD_TYPE=${{matrix.config.build_type}} \
+          -DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake \
+          -DMINIO_CPP_TEST:BOOL=ON \
+          -DMINIO_CPP_STD=${{matrix.config.cpp_std}} \
+          -DMINIO_CPP_HTTP_BACKEND=${{matrix.config.http_backend}}
         cmake --build ./build --config ${{matrix.config.build_type}} -j 4
 
     - name: Start MinIO server if Ubuntu
@@ -225,13 +238,13 @@ jobs:
     - name: Install dependencies
       run: |
         apk add --no-cache build-base cmake git ninja pkgconf \
-          inih-dev nlohmann-json openssl-dev pugixml-dev zlib-dev
+          curl-dev inih-dev nlohmann-json openssl-dev pugixml-dev zlib-dev
     - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       with:
         persist-credentials: false
     - name: Configure and Build
       run: |
-        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMINIO_CPP_TEST=ON
+        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMINIO_CPP_TEST=ON -DMINIO_CPP_HTTP_BACKEND=curl
         cmake --build build
     - name: Start MinIO server
       run: |

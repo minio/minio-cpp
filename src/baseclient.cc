@@ -212,7 +212,7 @@ Result<Response> BaseClient::execute(Request& req) {
   if (!ssl_cert_file_.empty()) req.ssl_cert_file = ssl_cert_file_;
   http::Request request = req.ToHttpRequest(provider_);
   request.debug = debug_;
-  http::Response response = request.Execute();
+  http::Response response = http_client_.Execute(request);
   if (response) {
     Response resp;
     resp.status_code = response.status_code;
@@ -1454,8 +1454,8 @@ Result<PutObjectResponse> BaseClient::PutObject(PutObjectApiArgs args) {
                                      {},        std::nullopt, {},
                                      base_url_, region};
 
-    ssize_t ret =
-        rdmaPutWithRetry(args.rdmaclient, &putCtx, args.buf, args.size);
+    ssize_t ret = rdmaPutWithRetry(http_client_, args.rdmaclient, &putCtx,
+                                   args.buf, args.size);
     if (ret > 0) {
       PutObjectResponse resp;
       resp.etag = putCtx.etag;
@@ -2110,8 +2110,8 @@ Result<UploadPartResponse> BaseClient::UploadPart(UploadPartArgs args) {
         base_url_,      region,           args.checksum_crc64nvme,
     };
 
-    ssize_t ret =
-        rdmaPutWithRetry(args.rdmaclient, &putCtx, args.buf, args.part_size);
+    ssize_t ret = rdmaPutWithRetry(http_client_, args.rdmaclient, &putCtx,
+                                   args.buf, args.part_size);
     if (ret > 0) {
       UploadPartResponse resp;
       resp.etag = putCtx.etag;

@@ -20,11 +20,11 @@ jobs:
       fail-fast: false
       matrix:
         config:
-        - { name: "Ubuntu_Latest_GCC_Meson", os: ubuntu-latest, triplet: "x64-linux" }
-        - { name: "Ubuntu_Latest_GCC_arm64_Meson", os: ubuntu-24.04-arm, triplet: "arm64-linux" }
-        - { name: "Ubuntu_Latest_Clang_Meson", os: ubuntu-latest, triplet: "x64-linux" }
-        - { name: "macOS_Latest_Clang_Meson", os: macos-latest, triplet: "arm64-osx" }
-        - { name: "Windows_Latest_MSVC_Meson", os: windows-latest, triplet: "x64-windows" }
+        - { name: "Ubuntu_Latest_GCC_Meson", os: ubuntu-latest, triplet: "x64-linux", http_backend: "curl" }
+        - { name: "Ubuntu_Latest_GCC_arm64_Meson", os: ubuntu-24.04-arm, triplet: "arm64-linux", http_backend: "cpp-httplib" }
+        - { name: "Ubuntu_Latest_Clang_Meson", os: ubuntu-latest, triplet: "x64-linux", http_backend: "cpp-httplib" }
+        - { name: "macOS_Latest_Clang_Meson", os: macos-latest, triplet: "arm64-osx", http_backend: "cpp-httplib" }
+        - { name: "Windows_Latest_MSVC_Meson", os: windows-latest, triplet: "x64-windows", http_backend: "cpp-httplib" }
 
     name: ${{ matrix.config.name }}
     runs-on: ${{ matrix.config.os }}
@@ -114,8 +114,13 @@ jobs:
     - name: Install dependencies via vcpkg
       shell: bash
       run: |
+        if [ "${{ matrix.config.http_backend }}" = "curl" ]; then
+          http_dep="curl:${{ matrix.config.triplet }}"
+        else
+          http_dep="cpp-httplib[core,openssl]:${{ matrix.config.triplet }}"
+        fi
         ./vcpkg/vcpkg install \
-          "cpp-httplib[core,openssl]:${{ matrix.config.triplet }}" \
+          "$http_dep" \
           "inih[core,cpp]:${{ matrix.config.triplet }}" \
           "nlohmann-json:${{ matrix.config.triplet }}" \
           "openssl:${{ matrix.config.triplet }}" \
@@ -128,6 +133,7 @@ jobs:
       run: |
         cd minio-cpp
         meson setup build \
+          -Dhttp=${{ matrix.config.http_backend }} \
           -Dpkg_config_path="${{ github.workspace }}/vcpkg/installed/${{ matrix.config.triplet }}/lib/pkgconfig" \
           -Dcmake_prefix_path="${{ github.workspace }}/vcpkg/installed/${{ matrix.config.triplet }}"
         meson compile -C build
@@ -137,5 +143,5 @@ jobs:
       shell: cmd
       run: |
         cd minio-cpp
-        meson setup build -Dpkg_config_path="${{ github.workspace }}/vcpkg/installed/${{ matrix.config.triplet }}/lib/pkgconfig" -Dcmake_prefix_path="${{ github.workspace }}/vcpkg/installed/${{ matrix.config.triplet }}"
+        meson setup build -Dhttp=${{ matrix.config.http_backend }} -Dpkg_config_path="${{ github.workspace }}/vcpkg/installed/${{ matrix.config.triplet }}/lib/pkgconfig" -Dcmake_prefix_path="${{ github.workspace }}/vcpkg/installed/${{ matrix.config.triplet }}"
         meson compile -C build
