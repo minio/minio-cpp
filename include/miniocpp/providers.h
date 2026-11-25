@@ -64,6 +64,10 @@ class Provider {
  protected:
   error::Error err_;
   Credentials creds_;
+  // Fetch() runs once per S3 request, so the first fetch can race when one
+  // client serves several threads; every override that touches creds_ or
+  // err_ holds this for its whole body.
+  std::mutex fetch_mutex_;
 
  public:
   Provider() = default;
@@ -78,7 +82,6 @@ class ChainedProvider : public Provider {
  private:
   std::list<Provider*> providers_;
   Provider* provider_ = nullptr;
-  std::mutex fetch_mutex_;
 
  public:
   explicit ChainedProvider(std::list<Provider*> providers)
