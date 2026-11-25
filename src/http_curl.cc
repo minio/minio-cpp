@@ -40,9 +40,13 @@ namespace {
 constexpr long kStallTimeoutSecs = 60;
 
 // How long a waiting request blocks in curl_multi_poll() before looking at the
-// completion state again. curl_multi_wakeup() cuts this short whenever another
-// thread adds a transfer.
-constexpr long kPollTimeoutMs = 1000;
+// completion state again. The poll runs under mutex_, so this is also the
+// worst-case wait for another thread's curl_multi_add_handle() while every
+// connection is idle - curl_multi_wakeup() cannot help there, because it is
+// only sent after the add, which needs the lock back first. Keep it short
+// enough that admission onto a keep-alive connection does not cost a visible
+// delay; the cost is a cheap perform pass per timeout.
+constexpr long kPollTimeoutMs = 100;
 
 // Idle easy handles kept for reuse. Handles are cheap next to a transfer; the
 // cap only stops a burst of concurrency from pinning memory forever. The

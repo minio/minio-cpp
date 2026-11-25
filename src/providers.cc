@@ -255,6 +255,7 @@ AssumeRoleProvider::AssumeRoleProvider(
 AssumeRoleProvider::~AssumeRoleProvider() {}
 
 Credentials AssumeRoleProvider::Fetch() {
+  std::lock_guard<std::mutex> lock(fetch_mutex_);
   if (err_) return Credentials{err_};
 
   if (creds_) return creds_;
@@ -315,6 +316,7 @@ unsigned int WebIdentityClientGrantsProvider::getDurationSeconds(
 }
 
 Credentials WebIdentityClientGrantsProvider::Fetch() {
+  std::lock_guard<std::mutex> lock(fetch_mutex_);
   if (creds_) return creds_;
 
   Jwt jwt = jwtfunc_();
@@ -417,6 +419,7 @@ IamAwsProvider::IamAwsProvider(http::Url custom_endpoint,
 IamAwsProvider::~IamAwsProvider() {}
 
 Credentials IamAwsProvider::Fetch() {
+  std::lock_guard<std::mutex> lock(fetch_mutex_);
   if (creds_) return creds_;
 
   http::Url url = custom_endpoint_;
@@ -545,6 +548,7 @@ LdapIdentityProvider::LdapIdentityProvider(http::Url sts_endpoint,
 LdapIdentityProvider::~LdapIdentityProvider() {}
 
 Credentials LdapIdentityProvider::Fetch() {
+  std::lock_guard<std::mutex> lock(fetch_mutex_);
   if (creds_) return creds_;
 
   http::Request req(http::Method::kPost, sts_endpoint_);
@@ -600,6 +604,7 @@ CertificateIdentityProvider::CertificateIdentityProvider(
 CertificateIdentityProvider::~CertificateIdentityProvider() {}
 
 Credentials CertificateIdentityProvider::Fetch() {
+  std::lock_guard<std::mutex> lock(fetch_mutex_);
   if (err_) return Credentials{err_};
 
   if (creds_) return creds_;
@@ -642,6 +647,7 @@ CustomTokenIdentityProvider::CustomTokenIdentityProvider(
 CustomTokenIdentityProvider::~CustomTokenIdentityProvider() {}
 
 Credentials CustomTokenIdentityProvider::Fetch() {
+  std::lock_guard<std::mutex> lock(fetch_mutex_);
   if (err_) return Credentials{err_};
 
   if (creds_) return creds_;

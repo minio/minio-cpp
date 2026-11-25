@@ -236,6 +236,17 @@ int main(int argc, char* argv[]) {
 }
 ```
 
+## Thread safety
+
+Create one `minio::s3::Client` and share it: every operation, sync or `*Async`,
+may be called from many threads at once, and the underlying connection pool
+reuses TCP/TLS connections across those calls. Finish the configuration calls
+(`Debug()`, `SetSslCertFile()`, ...) before concurrent use, and make your
+data/progress callbacks thread-safe — with the curl backend they may run on a
+thread other than the caller's. The full model, including per-provider
+credential caching and the RDMA singleton, is described in
+[docs/threading.md](docs/threading.md).
+
 ## RDMA (optional)
 
 This SDK has optional support for RDMA-direct S3 PUT/GET against MinIO
