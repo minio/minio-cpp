@@ -161,7 +161,8 @@ inline static int parseRDMAReply(const std::string& rdma_reply) {
   }
 }
 
-inline static ssize_t rdmaPut(minio::rdma::ClientCtx* sctx, const char* token,
+inline static ssize_t rdmaPut(minio::http::Client& http_client,
+                              minio::rdma::ClientCtx* sctx, const char* token,
                               size_t size) {
   // The token is the RDMA descriptor verbatim; its leading fields already
   // carry the buffer address and transfer size, so it is sent as-is.
@@ -226,7 +227,7 @@ inline static ssize_t rdmaPut(minio::rdma::ClientCtx* sctx, const char* token,
     req.nic_interface = client_nic;
   }
 
-  minio::http::Response res = req.Execute();
+  minio::http::Response res = http_client.Execute(req);
   if (!res.error.empty()) {
     return -1;
   }
@@ -258,7 +259,8 @@ inline static ssize_t rdmaPut(minio::rdma::ClientCtx* sctx, const char* token,
 // starting at that object offset. The object offset travels in a Range header
 // (the server derives its rangeBase from it) and is independent of the buffer
 // address carried in the RDMA token — see AIStor rdmaTransferBounds().
-inline static ssize_t rdmaGet(minio::rdma::ClientCtx* sctx, const char* token,
+inline static ssize_t rdmaGet(minio::http::Client& http_client,
+                              minio::rdma::ClientCtx* sctx, const char* token,
                               size_t size, int64_t range_offset = -1) {
   // The token is the RDMA descriptor verbatim; its leading fields already
   // carry the buffer address and transfer size, so it is sent as-is.
@@ -315,7 +317,7 @@ inline static ssize_t rdmaGet(minio::rdma::ClientCtx* sctx, const char* token,
     req.nic_interface = client_nic;
   }
 
-  minio::http::Response res = req.Execute();
+  minio::http::Response res = http_client.Execute(req);
   if (!res.error.empty()) {
     return -1;
   }
@@ -357,14 +359,15 @@ inline static ssize_t rdmaGet(minio::rdma::ClientCtx* sctx, const char* token,
 //   >0                 bytes transferred (success)
 //   kRDMANotSupported  server sent x-amz-rdma-reply: 501 (fall back to HTTP)
 //   -1                 exhausted retries (fall back to HTTP)
-inline static ssize_t rdmaPutWithRetry(minio::rdma::Client* rdmaclient,
+inline static ssize_t rdmaPutWithRetry(minio::http::Client& http_client,
+                                       minio::rdma::Client* rdmaclient,
                                        minio::rdma::ClientCtx* sctx, void* buf,
                                        size_t size) {
   ssize_t ret = -1;
   for (int attempt = 0; attempt < kRDMAMaxAttempts; ++attempt) {
     minio::rdma::Token token = rdmaclient->GetToken(buf, size);
     if (!token) return -1;
-    ret = rdmaPut(sctx, token.c_str(), size);
+    ret = rdmaPut(http_client, sctx, token.c_str(), size);
     if (ret > 0 || ret == kRDMANotSupported || ret == kRDMALocalError) {
       return ret;
     }
@@ -385,14 +388,15 @@ inline static ssize_t rdmaPutWithRetry(minio::rdma::Client* rdmaclient,
 // rdmaGetWithRetry is the GET counterpart to rdmaPutWithRetry. Same
 // contract: caller registers the buffer, this helper handles token
 // lifecycle and the retry.
-inline static ssize_t rdmaGetWithRetry(minio::rdma::Client* rdmaclient,
+inline static ssize_t rdmaGetWithRetry(minio::http::Client& http_client,
+                                       minio::rdma::Client* rdmaclient,
                                        minio::rdma::ClientCtx* sctx, void* buf,
                                        size_t size, int64_t range_offset = -1) {
   ssize_t ret = -1;
   for (int attempt = 0; attempt < kRDMAMaxAttempts; ++attempt) {
     minio::rdma::Token token = rdmaclient->GetToken(buf, size);
     if (!token) return -1;
-    ret = rdmaGet(sctx, token.c_str(), size, range_offset);
+    ret = rdmaGet(http_client, sctx, token.c_str(), size, range_offset);
     if (ret > 0 || ret == kRDMANotSupported || ret == kRDMALocalError) {
       return ret;
     }

@@ -23,9 +23,9 @@ endif()
 # Minio C++ Project
 # -----------------
 
-set(MINIO_CPP_MAJOR_VERSION "1")
+set(MINIO_CPP_MAJOR_VERSION "2")
 set(MINIO_CPP_MINOR_VERSION "0")
-set(MINIO_CPP_PATCH_VERSION "1")
+set(MINIO_CPP_PATCH_VERSION "0")
 set(MINIO_CPP_VERSION_STRING "${MINIO_CPP_MAJOR_VERSION}.${MINIO_CPP_MINOR_VERSION}.${MINIO_CPP_PATCH_VERSION}")
 
 project(miniocpp
@@ -131,6 +131,7 @@ set(MINIO_CPP_SOURCES
   src/credentials.cc
   src/error.cc
   src/http.cc
+  src/http_httplib.cc
   src/providers.cc
   src/request.cc
   src/response.cc
@@ -272,8 +273,8 @@ endif()
 # existing find_package() and #include lines keep working.
 set_target_properties(miniocpp PROPERTIES OUTPUT_NAME minio)
 set_target_properties(miniocpp PROPERTIES VERSION "${MINIO_CPP_VERSION_STRING}")
-# SOVERSION carries the major alone, so the soname is libminio.so.1 and stays
-# put across the whole 1.x line. Without it CMake writes the full version into
+# SOVERSION carries the major alone, so the soname is libminio.so.<major> and
+# only moves on a major bump. Without it CMake writes the full version into
 # the soname -- as libminiocpp.so.0.4.0 shows -- and every release, patches
 # included, orphans every binary already linked against its predecessor.
 set_target_properties(miniocpp PROPERTIES SOVERSION "${MINIO_CPP_MAJOR_VERSION}")

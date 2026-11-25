@@ -1,4 +1,5 @@
-project('miniocpp', 'cpp', version : '1.0.1', default_options : ['cpp_std=c++17'])
+project('miniocpp', 'cpp', version : '2.0.0',
+  meson_version : '>= 1.1.0', default_options : ['cpp_std=c++17'])
 
 cxx = meson.get_compiler('cpp')
 
@@ -30,6 +31,7 @@ miniocpp_sources = files(
   'src/credentials.cc',
   'src/error.cc',
   'src/http.cc',
+  'src/http_httplib.cc',
   'src/providers.cc',
   'src/request.cc',
   'src/response.cc',
